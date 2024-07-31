@@ -1,0 +1,38 @@
+<div
+  class="flex bg-slate-50 backdrop-filter bg-opacity-30 backdrop-blur-sm m-1 border rounded-lg p-1 shadow-lg"
+>
+  <div class="flex justify-between w-full">
+    <div class="flex space-x-1">
+      <button mat-mini-fab [routerLink]="''">
+        <mat-icon svgIcon="home" />
+      </button>
+      @if (chs.running()) {
+      <button mat-mini-fab (click)="chs.pause()">
+        <mat-icon svgIcon="pause" />
+      </button>
+      }@else{
+      <button mat-mini-fab (click)="chs.resume()">
+        <mat-icon svgIcon="play" /></button
+      >}
+      <button mat-mini-fab [routerLink]="['notes']">
+        <mat-icon svgIcon="note" />
+      </button>
+      <button mat-mini-fab [routerLink]="['notes', 'new']">
+        <mat-icon svgIcon="new" />
+      </button>
+      <!-- <button mat-mini-fab [routerLink]="['settings']">
+        <mat-icon svgIcon="settings" />
+      </button> -->
+    </div>
+    <div class="flex space-x-1">
+      <button mat-mini-fab (click)="was.hideWindow()">
+        <mat-icon svgIcon="hide" />
+      </button>
+      @if (showClear()) {
+      <button mat-mini-fab (click)="chs.clear()">
+        <mat-icon svgIcon="clearAll" />
+      </button>
+      }
+    </div>
+  </div>
+</div>

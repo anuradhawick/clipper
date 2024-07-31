@@ -1,0 +1,26 @@
+<div
+  class="rounded-lg border m-1 flex flex-row space-x-1 bg-slate-50 backdrop-filter bg-opacity-30 backdrop-blur-sm shadow-lg"
+>
+  <div class="flex flex-col space-y-2 m-2 w-full">
+    <div class="overflow-hidden w-full">
+      <div
+        #editor
+        [contentEditable]="true"
+        class="overflow-hidden whitespace-pre-wrap font-mono w-full min-h-[100px]"
+        [textContent]="entry()"
+        (input)="change($event)"
+      ></div>
+    </div>
+    <br />
+    <div class="flex flex-row space-x-1">
+      @if (newEntry().trim()) {
+      <button mat-mini-fab color="primary" (click)="save()">
+        <mat-icon svgIcon="save"></mat-icon>
+      </button>
+      }
+      <button mat-mini-fab color="primary" [routerLink]="['/notes']">
+        <mat-icon svgIcon="delete"></mat-icon>
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,13 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.teal-theme {
+  @apply bg-gradient-to-br from-teal-700 to-cyan-800;
+}
+
+.gray-theme {
+  @apply bg-gradient-to-br from-gray-700 to-gray-800;
+}

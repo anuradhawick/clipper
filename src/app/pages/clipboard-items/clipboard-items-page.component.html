@@ -1,0 +1,9 @@
+@for (clipperEntry of clipperEntries(); track $index) {
+<app-clipboard-item
+  [clipperEntry]="clipperEntry"
+  (copyClicked)="chs.copy($index)"
+  (deleteClicked)="chs.delete(clipperEntry.id)"
+/>
+} @empty {
+<div class="text-white m-1">Your clipboard entries will appear here! 📖</div>
+}

@@ -1,0 +1,61 @@
+<div class="wrapper">
+  <div class="absolute bottom-0 text-xs text-slate-700 px-3">
+    @if(note().updated_time){
+    <!-- updated  -->
+    Updated: {{ note().updated_time | date : "yyyy-MM-dd HH:mm" }}
+    }
+    <!-- created -->
+    Created: {{ note().created_time | date : "yyyy-MM-dd HH:mm" }}
+  </div>
+  <!-- editor -->
+  <div
+    class="flex-1 min-h-[100px] overflow-hidden rounded-lg p-2 mb-4"
+    [class.h-[100px]]="!expanded()"
+  >
+    <div class="overflow-hidden h-full">
+      <div
+        #editor
+        [contentEditable]="editable()"
+        class="overflow-hidden whitespace-pre-wrap font-mono mb-2"
+        [textContent]="note().entry"
+        [class.min-h-[100px]]="editable()"
+      ></div>
+    </div>
+  </div>
+  <!-- buttons -->
+  <div class="flex flex-row mt-3 space-x-1 justify-end">
+    <div class="flex flex-col space-y-2 w-[50px] items-center">
+      <button mat-mini-fab class="w-full" (click)="toggleView()">
+        <mat-icon [svgIcon]="expanded() ? 'collapse' : 'expand'" />
+      </button>
+      @if(editable()) {
+      <button
+        mat-mini-fab
+        class="w-full"
+        (click)="
+          contentUpdated.emit(editor.innerText || ''); uneditable(); collapse()
+        "
+      >
+        <mat-icon svgIcon="save" />
+      </button>
+      } @else {
+      <button mat-mini-fab class="w-full" (click)="toggleEditable()">
+        <mat-icon svgIcon="edit" />
+      </button>
+      }
+    </div>
+    <div class="flex flex-col space-y-2 w-[50px]">
+      <button
+        mat-mini-fab
+        class="w-full"
+        (click)="copyClicked.emit()"
+        [disabled]="editable()"
+      >
+        <mat-icon svgIcon="copy" />
+      </button>
+      <button mat-mini-fab class="w-full" (click)="deleteClicked.emit()">
+        <mat-icon svgIcon="delete" />
+      </button>
+    </div>
+  </div>
+</div>

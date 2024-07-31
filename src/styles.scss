@@ -1,0 +1,36 @@
+@use "@angular/material" as mat;
+
+@include mat.core();
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+$clipper-cyan-theme: mat.define-theme(
+  (
+    color: (
+      theme-type: dark,
+      primary: mat.$cyan-palette,
+    ),
+  )
+);
+
+$clipper-azure-theme: mat.define-theme(
+  (
+    color: (
+      theme-type: dark,
+      primary: mat.$azure-palette,
+    ),
+  )
+);
+
+html,
+body {
+  @include mat.all-component-themes($clipper-azure-theme);
+  @apply overflow-hidden p-0 m-0 rounded-lg bg-transparent;
+  @layer mat-typography;
+}
+
+.wrapper {
+  @apply rounded-lg border m-1 mt-0 flex flex-row space-x-1 bg-slate-50 backdrop-filter bg-opacity-30 backdrop-blur-sm shadow-lg relative;
+}

@@ -1,0 +1,11 @@
+<router-outlet />
+@for (note of notes(); track $index) {
+<app-note-item
+  [note]="note"
+  (copyClicked)="ns.copy(note.entry)"
+  (deleteClicked)="ns.delete(note.id)"
+  (contentUpdated)="ns.update(note.id, $event)"
+/>
+} @empty {
+<div class="text-white m-1">Your notes will appear here! 📖</div>
+}
