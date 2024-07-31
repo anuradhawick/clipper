@@ -6,6 +6,10 @@
 
 Clipper by AW is a versatile clipboard management and note-taking application designed specifically for developers. It runs on Mac and Linux, leveraging the Tauri framework for a lightweight and secure experience. With Clipper, accessing your clipboard history and jotting down notes becomes seamless and integrated into your development workflow.
 
+## 🛑 Disclaimer 🛑
+
+The app itself is secure, however, your clipboard might see your passwords if you manually copy them. Usually it is recommended that you autofill fields that skips clipboard involvement. No efforts have made so far to detect passwords or ignore copied passwords, yet.
+
 ## Features
 
 Clipboard Access Shortcut: Quickly access your clipboard history with a simple shortcut, optimised for both Mac and Linux systems.
