@@ -3,7 +3,6 @@ import { CommonModule } from "@angular/common";
 import { RouterOutlet } from "@angular/router";
 import { invoke } from "@tauri-apps/api/tauri";
 import { ClipboardItemsPageComponent } from "./pages/clipboard-items/clipboard-items-page.component";
-import { IconsRegistrar } from "./app.icons";
 import { ClipboardHistoryService } from "./services/clipboard-history.service";
 import { NavBarComponent } from "./components/nav-bar/nav-bar.component";
 import { ThemeService } from "./services/theme.service";
@@ -19,18 +18,15 @@ import { ThemeService } from "./services/theme.service";
   ],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.scss",
-  providers: [IconsRegistrar, RouterOutlet],
+  providers: [RouterOutlet],
 })
 export class AppComponent {
   greetingMessage = "";
 
   constructor(
-    private icons: IconsRegistrar,
     private ts: ThemeService,
     protected chs: ClipboardHistoryService
-  ) {
-    this.icons.registerIcons();
-  }
+  ) {}
 
   greet(event: SubmitEvent, name: string): void {
     event.preventDefault();

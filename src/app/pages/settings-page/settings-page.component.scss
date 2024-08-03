@@ -1,0 +1,38 @@
+@use "@angular/material" as mat;
+@import "../../../styles.scss";
+
+.default-light {
+  @include mat.icon-color($clipper-default-light, $color-variant: primary);
+}
+
+.default-dark {
+  @include mat.icon-color($clipper-default-dark, $color-variant: primary);
+}
+
+.azure-light {
+  @include mat.icon-color($clipper-azure-light, $color-variant: primary);
+}
+
+.azure-dark {
+  @include mat.icon-color($clipper-azure-dark, $color-variant: primary);
+}
+
+.yellow-light {
+  @include mat.icon-color($clipper-yellow-light, $color-variant: primary);
+}
+
+.yellow-dark {
+  @include mat.icon-color($clipper-yellow-dark, $color-variant: primary);
+}
+
+.cyan-light {
+  @include mat.icon-color($clipper-cyan-light, $color-variant: primary);
+}
+
+.cyan-dark {
+  @include mat.icon-color($clipper-cyan-dark, $color-variant: primary);
+}
+
+.selected {
+  @apply border-white border-2;
+}

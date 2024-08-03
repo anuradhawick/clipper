@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, OnInit, signal } from "@angular/core";
+import { Injectable, OnDestroy, signal } from "@angular/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/tauri";
 

@@ -26,7 +26,7 @@
   <div class="flex flex-row mt-3 space-x-1 justify-end">
     <div class="flex flex-col space-y-2 w-[50px] items-center">
       <button mat-mini-fab class="w-full" (click)="toggleView()">
-        <mat-icon [svgIcon]="expanded() ? 'collapse' : 'expand'" />
+        <mat-icon>{{ expanded() ? "zoom_in_map" : "zoom_out_map" }}</mat-icon>
       </button>
       @if(editable()) {
       <button
@@ -36,11 +36,11 @@
           contentUpdated.emit(editor.innerText || ''); uneditable(); collapse()
         "
       >
-        <mat-icon svgIcon="save" />
+        <mat-icon>save</mat-icon>
       </button>
       } @else {
       <button mat-mini-fab class="w-full" (click)="toggleEditable()">
-        <mat-icon svgIcon="edit" />
+        <mat-icon>edit</mat-icon>
       </button>
       }
     </div>
@@ -51,10 +51,10 @@
         (click)="copyClicked.emit()"
         [disabled]="editable()"
       >
-        <mat-icon svgIcon="copy" />
+        <mat-icon>content_copy</mat-icon>
       </button>
       <button mat-mini-fab class="w-full" (click)="deleteClicked.emit()">
-        <mat-icon svgIcon="delete" />
+        <mat-icon>delete</mat-icon>
       </button>
     </div>
   </div>

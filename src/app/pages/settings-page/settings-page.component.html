@@ -1,1 +1,68 @@
-<div>Theme</div>
+<div class="wrapper p-2 flex-col">
+  <h2 class="block mb-1">Select Theme</h2>
+
+  <div class="flex flex-row justify-between w-full cursor-pointer">
+    @for (color of colors; track $index) {
+    <div
+      matRipple
+      class="w-[180px] h-[100px] rounded-lg flex flex-row overflow-hidden default"
+      [class.selected]="ts.selectedColor == color.name"
+      (click)="changeColor(color)"
+    >
+      <div
+        class="w-1/2 h-full flex items-center bg-gradient-to-br"
+        [class]="[color.light.from, color.light.to]"
+      >
+        <mat-icon
+          class="block mx-auto scale-150"
+          [class]="color.name + '-light'"
+          >light_mode</mat-icon
+        >
+      </div>
+      <div
+        class="w-1/2 h-full flex items-center bg-gradient-to-br"
+        [class]="[color.dark.from, color.dark.to]"
+      >
+        <mat-icon class="block mx-auto scale-150" [class]="color.name + '-dark'"
+          >dark_mode</mat-icon
+        >
+      </div>
+    </div>
+    }
+  </div>
+</div>
+<div class="wrapper p-2 flex-col">
+  <h2 class="block mb-1">Select Lighting</h2>
+  <div class="flex flex-row justify-between w-full cursor-pointer space-x-1">
+    <div
+      matRipple
+      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden default"
+      [class]="ts.userLightingPreference == 'light' ? 'selected' : ''"
+      (click)="changeLighting($any('light'))"
+    >
+      <div class="w-full h-full flex items-center bg-gradient-to-br">
+        <mat-icon class="block mx-auto scale-150">light_mode</mat-icon>
+      </div>
+    </div>
+    <div
+      matRipple
+      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden default"
+      [class]="ts.userLightingPreference == 'system' ? 'selected' : ''"
+      (click)="changeLighting($any('system'))"
+    >
+      <div class="w-full h-full flex items-center bg-gradient-to-br">
+        <mat-icon class="block mx-auto scale-150">computer</mat-icon>
+      </div>
+    </div>
+    <div
+      matRipple
+      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden default"
+      [class]="ts.userLightingPreference == 'dark' ? 'selected' : ''"
+      (click)="changeLighting($any('dark'))"
+    >
+      <div class="w-full h-full flex items-center bg-gradient-to-br">
+        <mat-icon class="block mx-auto scale-150">dark_mode</mat-icon>
+      </div>
+    </div>
+  </div>
+</div>

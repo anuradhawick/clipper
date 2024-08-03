@@ -30,27 +30,32 @@ export class ClipboardItemsPageComponent {
     //     id: "1",
     //     kind: ClipperEntryKind.Text,
     //     entry: "This is an inline test",
+    //     timestamp: "2024-08-02T09:18:00.776Z",
     //   },
     //   {
     //     id: "2",
     //     kind: ClipperEntryKind.Text,
     //     entry:
     //       "This is an inline test for a very very very long one that might actually have some very ugly overflow",
+    //     timestamp: "2024-08-02T09:18:00.776Z",
     //   },
     //   {
     //     id: "3",
     //     kind: ClipperEntryKind.Text,
     //     entry: `This is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>`,
+    //     timestamp: '2024-08-02T09:18:00.776Z'
     //   },
     //   {
     //     id: "4",
     //     kind: ClipperEntryKind.Text,
     //     entry: `This is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>`,
+    //     timestamp: '2024-08-02T09:18:00.776Z'
     //   },
     //   {
     //     id: "5",
     //     kind: ClipperEntryKind.Text,
     //     entry: `This is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nThis is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nThis is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nThis is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nThis is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>`,
+    //     timestamp: '2024-08-02T09:18:00.776Z'
     //   },
     // ]);
   }

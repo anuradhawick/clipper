@@ -1,12 +1,22 @@
 @use "@angular/material" as mat;
-
+@import "material-icons/iconfont/material-icons.scss";
 @include mat.core();
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-$clipper-cyan-theme: mat.define-theme(
+$clipper-default-light: mat.define-theme();
+
+$clipper-default-dark: mat.define-theme(
+  (
+    color: (
+      theme-type: dark,
+    ),
+  )
+);
+
+$clipper-cyan-dark: mat.define-theme(
   (
     color: (
       theme-type: dark,
@@ -15,7 +25,16 @@ $clipper-cyan-theme: mat.define-theme(
   )
 );
 
-$clipper-azure-theme: mat.define-theme(
+$clipper-cyan-light: mat.define-theme(
+  (
+    color: (
+      theme-type: light,
+      primary: mat.$cyan-palette,
+    ),
+  )
+);
+
+$clipper-azure-dark: mat.define-theme(
   (
     color: (
       theme-type: dark,
@@ -24,13 +43,127 @@ $clipper-azure-theme: mat.define-theme(
   )
 );
 
+$clipper-azure-light: mat.define-theme(
+  (
+    color: (
+      theme-type: light,
+      primary: mat.$azure-palette,
+    ),
+  )
+);
+
+$clipper-yellow-dark: mat.define-theme(
+  (
+    color: (
+      theme-type: dark,
+      primary: mat.$yellow-palette,
+    ),
+  )
+);
+
+$clipper-yellow-light: mat.define-theme(
+  (
+    color: (
+      theme-type: light,
+      primary: mat.$yellow-palette,
+    ),
+  )
+);
+
+.azure-dark {
+  @include mat.all-component-colors($clipper-azure-dark);
+  .clipper-bg {
+    @apply bg-gradient-to-br from-blue-700 to-blue-800;
+  }
+
+  div {
+    @apply text-blue-100;
+  }
+}
+
+.azure-light {
+  @include mat.all-component-colors($clipper-azure-light);
+  .clipper-bg {
+    @apply bg-gradient-to-br from-blue-400 to-blue-500;
+  }
+
+  div {
+    @apply text-blue-950;
+  }
+}
+
+.cyan-dark {
+  @include mat.all-component-colors($clipper-cyan-dark);
+  .clipper-bg {
+    @apply bg-gradient-to-br from-cyan-700 to-cyan-800;
+  }
+
+  div {
+    @apply text-cyan-300;
+  }
+}
+
+.cyan-light {
+  @include mat.all-component-colors($clipper-cyan-light);
+  .clipper-bg {
+    @apply bg-gradient-to-br from-cyan-300 to-cyan-400;
+  }
+
+  div {
+    @apply text-cyan-700;
+  }
+}
+
+.yellow-dark {
+  @include mat.all-component-colors($clipper-yellow-dark);
+  .clipper-bg {
+    @apply bg-gradient-to-br from-yellow-500 to-yellow-600;
+  }
+
+  div {
+    @apply text-yellow-700;
+  }
+}
+
+.yellow-light {
+  @include mat.all-component-colors($clipper-yellow-light);
+  .clipper-bg {
+    @apply bg-gradient-to-br from-yellow-300 to-yellow-400;
+  }
+
+  div {
+    @apply text-yellow-700;
+  }
+}
+
+.default-dark {
+  @include mat.all-component-colors($clipper-default-dark);
+  .clipper-bg {
+    @apply bg-gradient-to-br from-gray-700 to-gray-800;
+  }
+
+  div {
+    @apply text-purple-100;
+  }
+}
+
+.default-light {
+  .clipper-bg {
+    @apply bg-gradient-to-br from-gray-400 to-gray-500;
+  }
+
+  div {
+    @apply text-violet-700;
+  }
+}
+
 html,
 body {
-  @include mat.all-component-themes($clipper-azure-theme);
+  @include mat.all-component-themes($clipper-default-light);
   @apply overflow-hidden p-0 m-0 rounded-lg bg-transparent;
   @layer mat-typography;
 }
 
 .wrapper {
-  @apply rounded-lg border m-1 mt-0 flex flex-row space-x-1 bg-slate-50 backdrop-filter bg-opacity-30 backdrop-blur-sm shadow-lg relative;
+  @apply rounded-lg border m-1 mt-0 flex bg-slate-50 backdrop-filter bg-opacity-30 backdrop-blur-sm shadow-lg relative;
 }
