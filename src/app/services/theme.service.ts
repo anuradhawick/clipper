@@ -35,7 +35,7 @@ export class ThemeService implements OnDestroy {
     this.renderer = rendererFactory.createRenderer(null, null);
     this.darkThemeMediaQuery.addEventListener(
       "change",
-      this.themeChangeListener
+      this.themeChangeListener.bind(this)
     );
     if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
       console.log("System theme is dark");
@@ -55,7 +55,19 @@ export class ThemeService implements OnDestroy {
   }
 
   private themeChangeListener(event: MediaQueryListEvent): void {
-    console.log("System theme changed:", event.matches ? "Dark" : "Light");
+    this.systemLighting = event.matches
+      ? LightingPreference.DARK
+      : LightingPreference.LIGHT;
+
+    if (this.userLightingPreference === LightingPreference.SYSTEM) {
+      const body = document.body;
+      const themeOld = `${this.selectedColor}-${this.selectedLighting}`;
+      const themeNew = `${this.selectedColor}-${this.systemLighting}`;
+      this.renderer.removeClass(body, themeOld);
+      this.renderer.addClass(body, themeNew);
+      this.selectedLighting = this.systemLighting;
+      console.log("Auto change theme", themeOld, themeNew);
+    }
   }
 
   ngOnDestroy(): void {
@@ -69,29 +81,31 @@ export class ThemeService implements OnDestroy {
     const themeOld = `${this.selectedColor}-${this.selectedLighting}`;
     const themeNew = `${color}-${this.selectedLighting}`;
     const body = document.body;
-    console.log(themeOld, themeNew);
+
     this.renderer.removeClass(body, themeOld);
     this.renderer.addClass(body, themeNew);
     this.selectedColor = color;
+
+    console.log("Replace color", themeOld, themeNew);
   }
 
   changeLighting(lighting: LightingPreference) {
     this.userLightingPreference = lighting;
     const body = document.body;
+    const themeOld = `${this.selectedColor}-${this.selectedLighting}`;
     let themeNew = `${this.selectedColor}-${lighting}`;
-    let themeOld = `${this.selectedColor}-${this.selectedLighting}`;
 
-    if (this.selectedLighting == LightingPreference.SYSTEM) {
-      themeOld = `${this.selectedColor}-${this.systemLighting}`;
-    }
-
-    if (lighting == LightingPreference.SYSTEM) {
+    // if users selects system lighting
+    if (lighting === LightingPreference.SYSTEM) {
       themeNew = `${this.selectedColor}-${this.systemLighting}`;
+      this.selectedLighting = this.systemLighting;
+    } else {
+      this.selectedLighting = lighting;
     }
 
-    console.log("Replacement", themeOld, themeNew);
     this.renderer.removeClass(body, themeOld);
     this.renderer.addClass(body, themeNew);
-    this.selectedLighting = lighting;
+
+    console.log("Replace lighting", themeOld, themeNew);
   }
 }
