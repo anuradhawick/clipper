@@ -4,6 +4,7 @@ import {
   Renderer2,
   RendererFactory2,
 } from "@angular/core";
+import { invoke } from "@tauri-apps/api/tauri";
 
 export enum LightingPreference {
   SYSTEM = "system",
@@ -39,19 +40,30 @@ export class ThemeService implements OnDestroy {
     );
     if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
       console.log("System theme is dark");
-      this.selectedLighting = LightingPreference.DARK;
       this.systemLighting = LightingPreference.DARK;
     } else {
       console.log("System theme is light");
-      this.selectedLighting = LightingPreference.LIGHT;
       this.systemLighting = LightingPreference.LIGHT;
     }
-    const body = document.body;
-    this.renderer.addClass(
-      body,
-      `${this.selectedColor}-${this.selectedLighting}`
-    );
     // get user preference and override if different
+    invoke<{ color: ColorPreference; lighting: LightingPreference }>(
+      "read_settings",
+      {}
+    ).then((saved) => {
+      // is saved pref is system
+      if (saved.lighting === LightingPreference.SYSTEM) {
+        this.selectedLighting = this.systemLighting;
+      } else {
+        this.selectedColor = saved.color;
+        this.selectedLighting = saved.lighting;
+        this.userLightingPreference = saved.lighting;
+      }
+      const body = document.body;
+      this.renderer.addClass(
+        body,
+        `${this.selectedColor}-${this.selectedLighting}`
+      );
+    });
   }
 
   private themeChangeListener(event: MediaQueryListEvent): void {
@@ -77,7 +89,7 @@ export class ThemeService implements OnDestroy {
     );
   }
 
-  changeColor(color: ColorPreference) {
+  async changeColor(color: ColorPreference) {
     const themeOld = `${this.selectedColor}-${this.selectedLighting}`;
     const themeNew = `${color}-${this.selectedLighting}`;
     const body = document.body;
@@ -87,9 +99,10 @@ export class ThemeService implements OnDestroy {
     this.selectedColor = color;
 
     console.log("Replace color", themeOld, themeNew);
+    await invoke("update_settings", { lighting: this.selectedLighting, color });
   }
 
-  changeLighting(lighting: LightingPreference) {
+  async changeLighting(lighting: LightingPreference) {
     this.userLightingPreference = lighting;
     const body = document.body;
     const themeOld = `${this.selectedColor}-${this.selectedLighting}`;
@@ -105,6 +118,8 @@ export class ThemeService implements OnDestroy {
 
     this.renderer.removeClass(body, themeOld);
     this.renderer.addClass(body, themeNew);
+
+    await invoke("update_settings", { lighting, color: this.selectedColor });
 
     console.log("Replace lighting", themeOld, themeNew);
   }

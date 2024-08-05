@@ -14,6 +14,8 @@ use content_managers::db::DbConnection;
 use content_managers::notes_manager::{
     create_note, delete_note, read_notes, update_note, NotesManager,
 };
+use content_managers::settings::SettingsManager;
+use content_managers::settings::{read_settings, update_settings};
 use tauri::{async_runtime, CustomMenuItem, Manager, SystemTray, SystemTrayMenu};
 use tauri_plugin_positioner::{Position, WindowExt};
 use tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
@@ -48,6 +50,9 @@ async fn main() {
             delete_note,
             read_notes,
             update_note,
+            // settings related
+            update_settings,
+            read_settings
         ])
         .system_tray(system_tray)
         .on_system_tray_event(handle_system_tray_icon_event)
@@ -67,6 +72,9 @@ async fn main() {
                 let clipboard_watcher =
                     ClipboardWatcher::new(Arc::clone(&db), app_handle.clone()).await;
                 app_handle.manage(clipboard_watcher);
+                // register settings service
+                let settings_manager = SettingsManager::new(Arc::clone(&db)).await;
+                app_handle.manage(settings_manager);
             });
             #[cfg(target_os = "macos")]
             {
