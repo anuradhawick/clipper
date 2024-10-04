@@ -160,10 +160,10 @@ $clipper-yellow-light: mat.define-theme(
 html,
 body {
   @include mat.all-component-themes($clipper-default-light);
-  @apply overflow-hidden p-0 m-0 rounded-lg bg-transparent;
+  @apply overflow-hidden p-0 m-0 rounded-lg;
   @layer mat-typography;
 }
 
 .wrapper {
-  @apply rounded-lg border m-1 mt-0 flex bg-slate-50 backdrop-filter bg-opacity-30 backdrop-blur-sm shadow-lg relative;
+  @apply rounded-lg border m-1 mt-0 flex bg-slate-50 bg-opacity-30 shadow-lg relative;
 }

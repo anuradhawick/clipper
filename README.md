@@ -24,7 +24,7 @@ Before you install Clipper, ensure you have the following:
 
 - PNPM (9+) from [https://pnpm.io/](https://pnpm.io/)
 - Node.js (LTS version 22+) [https://nodejs.org/en](https://nodejs.org/en)
-- Rust (rustc 1.79.0 (129f3b996 2024-06-10)) [https://www.rust-lang.org/](https://www.rust-lang.org/)
+- Rust (rustc 1.81.0 (eeb90cda1 2024-09-04)) [https://www.rust-lang.org/](https://www.rust-lang.org/)
 - Tauri CLI from [https://tauri.app/](https://tauri.app/)
 
 You can install Tauri CLI by running:
@@ -63,10 +63,8 @@ pnpm tauri build
 
 Compiling in Mac is very easy and can be tricky on Linux. Please follow the guidelines here.
 
-* [https://tauri.app/v1/guides/getting-started/prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites)
-* [https://tauri.app/v1/guides/building/](https://tauri.app/v1/guides/building/)
-
-I will stick to [Tauri V1](https://tauri.app/v1/guides/) until [Tauri V2](https://v2.tauri.app/blog/tauri-2-0-0-beta/) becomes officially stable (out of beta)!
+* [https://v2.tauri.app/start/prerequisites/](https://v2.tauri.app/start/prerequisites/)
+* [https://v2.tauri.app/distribute/](https://v2.tauri.app/distribute/)
 
 ## Contact
 

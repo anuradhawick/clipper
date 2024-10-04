@@ -4,7 +4,7 @@ import {
   Renderer2,
   RendererFactory2,
 } from "@angular/core";
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 
 export enum LightingPreference {
   SYSTEM = "system",

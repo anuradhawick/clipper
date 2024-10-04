@@ -1,5 +1,5 @@
 import { Injectable, signal } from "@angular/core";
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 import { v4 as uuidv4 } from "uuid";
 
 export interface NoteItem {
@@ -21,7 +21,6 @@ export class NotesService {
 
   async read() {
     const notes = await invoke<NoteItem[]>("read_notes", {});
-    console.log(notes);
     this.notes.set(notes);
   }
 

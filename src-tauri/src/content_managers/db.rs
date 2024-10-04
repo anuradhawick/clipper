@@ -1,6 +1,6 @@
 use sqlx::sqlite::SqlitePool;
 use std::sync::Arc;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tokio::fs;
 use tokio::sync::Mutex;
 
@@ -12,8 +12,8 @@ impl DbConnection {
     pub async fn new(app_handle: AppHandle) -> Self {
         // Ensure the database file is created if it doesn't exist
         let app_dir = app_handle
-            .path_resolver()
-            .app_data_dir()
+            .path()
+            .home_dir()
             .expect("failed to get app data dir");
         let db_path = app_dir.join("clipper.db");
         let db_url = format!("sqlite://{}", db_path.to_string_lossy());

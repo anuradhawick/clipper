@@ -5,7 +5,8 @@ use sqlx::Row;
 use sqlx::SqlitePool;
 use std::sync::Arc;
 use std::time::Duration;
-use tauri::{self, async_runtime, AppHandle, Manager, State};
+use tauri::Emitter;
+use tauri::{self, async_runtime, AppHandle, State};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -124,7 +125,7 @@ impl ClipboardWatcher {
                     println!("Clipboard text changed:\n{:#?}", entry);
                     if app_state
                         .app_handle
-                        .emit_all("clipboard_entry_added", entry.clone())
+                        .emit("clipboard_entry_added", entry.clone())
                         .is_err()
                     {
                         eprintln!("Unable to emit: clipboard_entry_added");

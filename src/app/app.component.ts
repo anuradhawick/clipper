@@ -1,7 +1,7 @@
 import { Component } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { RouterOutlet } from "@angular/router";
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 import { ClipboardItemsPageComponent } from "./pages/clipboard-items/clipboard-items-page.component";
 import { ClipboardHistoryService } from "./services/clipboard-history.service";
 import { NavBarComponent } from "./components/nav-bar/nav-bar.component";
