@@ -45,9 +45,6 @@ async fn main() {
             update_settings,
             read_settings
         ])
-        // .system_tray(system_tray)
-        // .on_system_tray_event(handle_system_tray_icon_event)
-        // .on_system_tray_event(handle_system_tray_menu_event)
         .setup(|app| {
             // reposition
             let window = app
@@ -73,12 +70,10 @@ async fn main() {
                 .build(app)?;
 
             async_runtime::spawn(setup(app.handle().clone()));
-
             // hide menu on left click
             tray.set_show_menu_on_left_click(false)?;
             // hide app icon
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-
             Ok(())
         })
         .plugin(tauri_plugin_positioner::init())
