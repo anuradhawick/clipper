@@ -1,10 +1,14 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(target_os = "macos")]
+extern crate objc;
+
+mod app_handle;
 mod content_managers;
 mod tray_handlers;
 mod window_commands;
-use std::sync::Arc;
+mod window_custom;
 
 use content_managers::clipboard_watcher::{
     clipboard_add_entry, delete_all_clipboard_entries, delete_one_clipboard_entry,
@@ -15,17 +19,71 @@ use content_managers::notes_manager::{
     create_note, delete_note, read_notes, update_note, NotesManager,
 };
 use content_managers::settings::{read_settings, update_settings, SettingsManager};
+use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::{async_runtime, AppHandle, Manager};
 use tauri_plugin_positioner::{Position, WindowExt};
 use tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
 use window_commands::hide_window;
+use window_custom::WebviewWindowExt;
+
+#[cfg(target_os = "macos")]
+use window_custom::macos::WebviewWindowExtMacos;
+
+#[cfg(target_os = "macos")]
+use app_handle::AppHandleExt;
+
+#[cfg(target_os = "macos")]
+use tauri::WebviewWindow;
+
+#[cfg(target_os = "macos")]
+use system_notification::WorkspaceListener;
+
+/// window levels
+// NOTE: league sets it's window to 1000 so we go one higher
+#[cfg(target_os = "macos")]
+pub static HIGHER_LEVEL_THAN_LEAGUE: i32 = 1001;
+/// Float panel window level
+#[cfg(target_os = "macos")]
+pub static OVERLAYED_NORMAL_LEVEL: i32 = 8;
+
+#[cfg(target_os = "macos")]
+fn apply_macos_specifics(window: &WebviewWindow) {
+    use tauri::{AppHandle, Wry};
+    use tauri_nspanel::ManagerExt;
+
+    window.remove_shadow();
+
+    window.set_float_panel(OVERLAYED_NORMAL_LEVEL);
+
+    let app_handle = window.app_handle();
+
+    app_handle.listen_workspace(
+        "NSWorkspaceDidActivateApplicationNotification",
+        |app_handle| {
+            let bundle_id = AppHandle::<Wry>::frontmost_application_bundle_id();
+
+            if let Some(bundle_id) = bundle_id {
+                let is_league_of_legends = bundle_id == "com.riotgames.LeagueofLegends.GameClient";
+
+                let panel = app_handle.get_webview_panel("main").unwrap();
+
+                panel.set_level(if is_league_of_legends {
+                    HIGHER_LEVEL_THAN_LEAGUE
+                } else {
+                    OVERLAYED_NORMAL_LEVEL
+                });
+            }
+        },
+    );
+}
 
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_nspanel::init())
         .invoke_handler(tauri::generate_handler![
             // clipboard related
             pause_clipboard_watcher,
@@ -51,8 +109,17 @@ async fn main() {
                 .get_webview_window("main")
                 .ok_or("Unable to load window")?;
             window.move_window(Position::TopCenter)?;
-            window.set_always_on_top(true)?;
-            window.set_visible_on_all_workspaces(true)?;
+            window.set_document_title("Clipper - Main");
+            // mac specific settings
+            #[cfg(target_os = "macos")]
+            {
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                window.set_float_panel(HIGHER_LEVEL_THAN_LEAGUE);
+                // the window should always be on top
+                window.set_always_on_top(true)?;
+                // this helps bringing window on top
+                apply_macos_specifics(&window);
+            }
             // create tray
             let toggle = MenuItemBuilder::with_id("toggle", "Show/Hide").build(app)?;
             let about = MenuItemBuilder::with_id("about", "About").build(app)?;
@@ -68,12 +135,10 @@ async fn main() {
                 .icon(app.default_window_icon().unwrap().clone())
                 .icon_as_template(true)
                 .build(app)?;
-
-            async_runtime::spawn(setup(app.handle().clone()));
             // hide menu on left click
             tray.set_show_menu_on_left_click(false)?;
-            // hide app icon
-            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+            async_runtime::spawn(setup(app.handle().clone()));
             Ok(())
         })
         .plugin(tauri_plugin_positioner::init())
