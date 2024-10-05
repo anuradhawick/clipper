@@ -82,6 +82,7 @@ fn apply_macos_specifics(window: &WebviewWindow) {
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_nspanel::init())
         .invoke_handler(tauri::generate_handler![
@@ -104,6 +105,34 @@ async fn main() {
             read_settings
         ])
         .setup(|app| {
+            // global shortcut
+            // #[cfg(desktop)]
+            // {
+            //     use tauri_plugin_global_shortcut::{
+            //         Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
+            //     };
+
+            //     let ctrl_n_shortcut = Shortcut::new(Some(Modifiers::ALT), Code::Space);
+            //     app.handle().plugin(
+            //         tauri_plugin_global_shortcut::Builder::new()
+            //             .with_handler(move |_app, shortcut, event| {
+            //                 println!("{:?}", shortcut);
+            //                 if shortcut == &ctrl_n_shortcut {
+            //                     match event.state() {
+            //                         ShortcutState::Pressed => {
+            //                             println!("Ctrl-N Pressed!");
+            //                         }
+            //                         ShortcutState::Released => {
+            //                             println!("Ctrl-N Released!");
+            //                         }
+            //                     }
+            //                 }
+            //             })
+            //             .build(),
+            //     )?;
+
+            //     app.global_shortcut().register(ctrl_n_shortcut)?;
+            // }
             // reposition
             let window = app
                 .get_webview_window("main")
@@ -146,7 +175,7 @@ async fn main() {
         .expect("error while running tauri application");
 }
 
-async fn setup(app: AppHandle) -> Result<(), ()> {
+async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
     let db = Arc::new(DbConnection::new(app.clone()).await);
     // register notes manager
     let notes_manager = NotesManager::new(Arc::clone(&db)).await;
