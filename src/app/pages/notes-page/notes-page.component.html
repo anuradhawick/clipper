@@ -1,5 +1,5 @@
 <router-outlet />
-@for (note of notes(); track $index) {
+@for (note of notes(); track note.id) {
 <app-note-item
   [note]="note"
   (copyClicked)="ns.copy(note.entry)"

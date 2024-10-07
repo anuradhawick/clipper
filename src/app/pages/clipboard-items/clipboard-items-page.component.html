@@ -1,4 +1,4 @@
-@for (clipperEntry of clipperEntries(); track $index) {
+@for (clipperEntry of clipperEntries(); track clipperEntry.id) {
 <app-clipboard-item
   [clipperEntry]="clipperEntry"
   (copyClicked)="chs.copy($index)"
