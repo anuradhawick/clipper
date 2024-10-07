@@ -24,9 +24,9 @@ pub fn handle_system_tray_menu_event(app: &AppHandle, event: MenuEvent) {
             std::process::exit(0);
         }
         "about" => {
-            println!("Open author website");
+            log::info!("Open author website");
             if let Err(e) = open::that("https://anuradhawick.com") {
-                println!("Could not open author website {:?}", e);
+                log::error!("Could not open author website {:?}", e);
             }
         }
         _ => {}
@@ -37,27 +37,26 @@ pub fn handle_system_tray_icon_event(tray: &TrayIcon, event: TrayIconEvent) {
     if let TrayIconEvent::Click {
         button: MouseButton::Left,
         button_state: MouseButtonState::Up,
-        position: _,
         ..
     } = event
     {
-        println!("system tray received a left click");
+        log::info!("system tray received a left click");
         let app = tray.app_handle();
         let Some(window) = app.get_webview_window("main") else {
-            eprintln!("Unable to get window");
+            log::error!("Unable to get window");
             return;
         };
 
         if window.is_visible().expect("Unable to check visibility") {
             window.hide().expect("Unable to hide");
-            println!("window made invisible");
+            log::info!("window made invisible");
         } else {
             window
                 .move_window(Position::TopCenter)
                 .expect("Unable to move window");
             window.show().expect("Unable to show");
-            window.set_focus().expect("Unable to focus");
-            println!("window made visible");
+            // window.set_focus().expect("Unable to focus");
+            log::info!("window made visible");
         }
     }
 }

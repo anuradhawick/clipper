@@ -33,6 +33,7 @@ export class ThemeService implements OnDestroy {
   );
 
   constructor(rendererFactory: RendererFactory2) {
+    console.log("ThemeService created");
     this.renderer = rendererFactory.createRenderer(null, null);
     this.darkThemeMediaQuery.addEventListener(
       "change",

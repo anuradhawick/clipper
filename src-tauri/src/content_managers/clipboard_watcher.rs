@@ -96,8 +96,9 @@ impl ClipboardWatcher {
         async_runtime::spawn(async move {
             let mut clipboard = Clipboard::new().expect("Clipboard must be accessible");
             if clipboard.clear().is_err() {
-                eprintln!("Unable to clear clipboard");
+                log::error!("Unable to clear clipboard");
             };
+            log::info!("Clipboard watcher started");
 
             loop {
                 {
@@ -122,20 +123,20 @@ impl ClipboardWatcher {
                         kind: ClipboardEventKind::Text,
                         timestamp: Utc::now().to_rfc3339(),
                     };
-                    println!("Clipboard text changed:\n{:#?}", entry);
+                    log::info!("Clipboard text changed:\n{:#?}", entry);
                     if app_state
                         .app_handle
                         .emit("clipboard_entry_added", entry.clone())
                         .is_err()
                     {
-                        eprintln!("Unable to emit: clipboard_entry_added");
+                        log::error!("Unable to emit: clipboard_entry_added");
                     }
                     if app_state.save(entry).await.is_err() {
-                        eprintln!("Unable to save: clipboard_entry_added");
+                        log::error!("Unable to save: clipboard_entry_added");
                     }
                 }
                 // when sleeping lock is released
-                tokio::time::sleep(Duration::from_millis(500)).await;
+                tokio::time::sleep(Duration::from_millis(1000)).await;
             }
         });
 
@@ -144,12 +145,12 @@ impl ClipboardWatcher {
 
     pub fn pause(&mut self) {
         self.running = false;
-        println!("Clipboard watcher paused");
+        log::info!("Clipboard watcher paused");
     }
 
     pub fn resume(&mut self) {
         self.running = true;
-        println!("Clipboard watcher resumed");
+        log::info!("Clipboard watcher resumed");
     }
 
     pub async fn read(&self) -> Result<Vec<ClipboardEvent>, sqlx::Error> {
@@ -174,11 +175,12 @@ impl ClipboardWatcher {
                 timestamp: row.get("timestamp"),
             });
         }
-
+        log::info!("Read clipboard entries: {:#?}", events.len());
         Ok(events)
     }
 
     pub async fn delete_one(&self, id: String) -> Result<(), sqlx::Error> {
+        log::info!("Deleted clipboard entry: {:#?}", id);
         let pool = self.pool.lock().await;
         sqlx::query(
             r#"
@@ -201,10 +203,12 @@ impl ClipboardWatcher {
         )
         .execute(&*pool)
         .await?;
+        log::info!("Deleted all clipboard entries");
         Ok(())
     }
 
     async fn save(&self, event: ClipboardEvent) -> Result<(), sqlx::Error> {
+        log::info!("Saved clipboard entry: {:#?}", event.id);
         let pool = self.pool.lock().await;
         sqlx::query(
             r#"
@@ -228,7 +232,7 @@ pub async fn pause_clipboard_watcher(
 ) -> Result<(), String> {
     let mut clipboard_watcher = state.lock().await;
     clipboard_watcher.pause();
-
+    log::info!("CMD:Clipboard watcher paused");
     Ok(())
 }
 
@@ -242,7 +246,7 @@ pub async fn resume_clipboard_watcher(
         clipboard_watcher.last_text = value;
     }
     clipboard_watcher.resume();
-
+    log::info!("CMD:Clipboard watcher resumed");
     Ok(())
 }
 
@@ -251,10 +255,10 @@ pub async fn clipboard_add_entry(
     entry: &str,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
+    log::info!("CMD:Clipboard entry added: {:#?}", entry);
     let mut clipboard_watcher = state.lock().await;
     let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
     clipboard_watcher.last_text = String::from(entry);
-
     clipboard.set_text(entry).map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -263,6 +267,7 @@ pub async fn clipboard_add_entry(
 pub async fn read_clipboard_entries(
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<Vec<ClipboardEvent>, String> {
+    log::info!("CMD:Reading clipboard entries");
     state.lock().await.read().await.map_err(|e| e.to_string())
 }
 
@@ -271,6 +276,7 @@ pub async fn delete_one_clipboard_entry(
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
     id: String,
 ) -> Result<(), String> {
+    log::info!("CMD:Deleting clipboard entry: {:#?}", id);
     state
         .lock()
         .await
@@ -283,6 +289,7 @@ pub async fn delete_one_clipboard_entry(
 pub async fn delete_all_clipboard_entries(
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
+    log::info!("CMD:Deleting all clipboard entries");
     state
         .lock()
         .await

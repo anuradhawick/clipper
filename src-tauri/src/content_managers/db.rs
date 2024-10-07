@@ -17,7 +17,7 @@ impl DbConnection {
             .expect("failed to get app data dir");
         let db_path = app_dir.join("clipper.db");
         let db_url = format!("sqlite://{}", db_path.to_string_lossy());
-        println!("Clipper db_url: {:?}", &db_url);
+        log::info!("Clipper db_url: {:?}", &db_url);
 
         if !db_path.exists() {
             if let Some(parent) = db_path.parent() {
@@ -27,7 +27,7 @@ impl DbConnection {
         }
 
         let pool = SqlitePool::connect(&db_url).await.unwrap();
-
+        log::info!("Clipper db connected");
         Self {
             pool: Arc::new(Mutex::new(pool)),
         }

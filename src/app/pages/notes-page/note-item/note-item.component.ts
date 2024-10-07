@@ -49,8 +49,8 @@ export class NoteItemComponent {
     this.editable.update((x) => !x);
     if (this.editable()) {
       this.expanded.set(true);
-      this.cd.detectChanges();
-      this.editor().nativeElement.focus();
+      // this.cd.detectChanges();
+      // this.editor().nativeElement.focus();
     }
   }
 }

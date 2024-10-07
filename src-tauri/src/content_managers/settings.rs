@@ -42,13 +42,14 @@ impl SettingsManager {
         .execute(&*pool)
         .await
         .unwrap();
-
+        log::info!("Settings manager initialized");
         Arc::new(Mutex::new(Self {
             pool: Arc::clone(&db.pool),
         }))
     }
 
     pub async fn update(&self, settings: SettingsEntry) -> Result<(), sqlx::Error> {
+        log::info!("Updating settings: {:#?}", settings);
         let pool = self.pool.lock().await;
         sqlx::query(
             r#"
@@ -65,6 +66,7 @@ impl SettingsManager {
     }
 
     pub async fn read(&self) -> Result<SettingsEntry, sqlx::Error> {
+        log::info!("Reading settings");
         let pool = self.pool.lock().await;
         let result = sqlx::query(
             r#"
@@ -89,6 +91,11 @@ pub async fn update_settings(
     color: String,
     lighting: String,
 ) -> Result<(), String> {
+    log::info!(
+        "CMD:Updating settings: color: {}, lighting: {}",
+        color,
+        lighting
+    );
     let settings = SettingsEntry { color, lighting };
     let mgr = state.lock().await;
     mgr.update(settings).await.map_err(|e| e.to_string())
@@ -98,5 +105,6 @@ pub async fn update_settings(
 pub async fn read_settings(
     state: State<'_, Arc<Mutex<SettingsManager>>>,
 ) -> Result<SettingsEntry, String> {
+    log::info!("CMD:Reading settings");
     state.lock().await.read().await.map_err(|e| e.to_string())
 }

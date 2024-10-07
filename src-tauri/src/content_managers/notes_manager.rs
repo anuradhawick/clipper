@@ -35,13 +35,14 @@ impl NotesManager {
         .execute(&*pool)
         .await
         .unwrap();
-
+        log::info!("Notes manager initialized");
         Arc::new(Mutex::new(Self {
             pool: Arc::clone(&db.pool),
         }))
     }
 
     pub async fn create(&self, note: NoteItem) -> Result<(), sqlx::Error> {
+        log::info!("Creating note: {:#?}", note);
         let pool = self.pool.lock().await;
         sqlx::query(
             r#"
@@ -59,6 +60,7 @@ impl NotesManager {
     }
 
     pub async fn update(&self, note: NoteItem) -> Result<(), sqlx::Error> {
+        log::info!("Updating note: {:#?}", note);
         let pool = self.pool.lock().await;
         sqlx::query(
             r#"
@@ -76,6 +78,7 @@ impl NotesManager {
     }
 
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
+        log::info!("Deleting note: {:#?}", id);
         let pool = self.pool.lock().await;
         sqlx::query(
             r#"
@@ -90,6 +93,7 @@ impl NotesManager {
     }
 
     pub async fn read(&self) -> Result<Vec<NoteItem>, sqlx::Error> {
+        log::info!("Reading notes");
         let pool = self.pool.lock().await;
         let rows = sqlx::query(
             r#"
@@ -115,6 +119,7 @@ impl NotesManager {
     }
 
     pub async fn get(&self, id: &str) -> Result<NoteItem, sqlx::Error> {
+        log::info!("Getting note: {:#?}", id);
         let pool = self.pool.lock().await;
         let item = sqlx::query(
             r#"
@@ -142,6 +147,7 @@ pub async fn create_note(
     id: String,
     entry: String,
 ) -> Result<NoteItem, String> {
+    log::info!("CMD:Creating note: {:#?} {:#?}", id, entry);
     let note = NoteItem {
         id: id.clone(),
         entry,
@@ -159,6 +165,7 @@ pub async fn update_note(
     id: String,
     entry: String,
 ) -> Result<NoteItem, String> {
+    log::info!("CMD:Updating note: {:#?} {:#?}", id, entry);
     let note = NoteItem {
         id: id.clone(),
         entry,
@@ -175,6 +182,7 @@ pub async fn delete_note(
     state: State<'_, Arc<Mutex<NotesManager>>>,
     id: String,
 ) -> Result<(), String> {
+    log::info!("CMD:Deleting note: {:#?}", id);
     state
         .lock()
         .await
@@ -187,5 +195,6 @@ pub async fn delete_note(
 pub async fn read_notes(
     state: State<'_, Arc<Mutex<NotesManager>>>,
 ) -> Result<Vec<NoteItem>, String> {
+    log::info!("CMD:Reading notes");
     state.lock().await.read().await.map_err(|e| e.to_string())
 }

@@ -16,10 +16,12 @@ export class NotesService {
   notes = signal<NoteItem[]>([]);
 
   constructor() {
+    console.log("NotesService created");
     this.read();
   }
 
   async read() {
+    console.log("Reading all notes");
     const notes = await invoke<NoteItem[]>("read_notes", {});
     this.notes.set(notes);
   }
@@ -29,6 +31,7 @@ export class NotesService {
     if (entry.trim().length === 0) {
       return;
     }
+    console.log("Creating note", entry);
     // otherwise save without trimming
     const item: NoteItem = { id: uuidv4(), entry };
     const savedItem = await invoke<NoteItem>("create_note", { ...item });
@@ -36,15 +39,18 @@ export class NotesService {
   }
 
   async copy(entry: string) {
+    console.log("Copying note", entry);
     await invoke("clipboard_add_entry", { entry: entry });
   }
 
   async delete(id: string) {
+    console.log("Deleting note", id);
     await invoke("delete_note", { id });
     this.notes.update((notes) => notes.filter((item) => item.id !== id));
   }
 
   async update(id: string, entry: string) {
+    console.log("Updating note", id, entry);
     // delete is only spaces
     if (entry.trim().length === 0) {
       await this.delete(id);

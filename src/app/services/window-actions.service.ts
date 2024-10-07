@@ -5,7 +5,9 @@ import { invoke } from "@tauri-apps/api/core";
   providedIn: "root",
 })
 export class WindowActionsService {
-  constructor() {}
+  constructor() {
+    console.log("WindowActionsService created");
+  }
 
   hideWindow() {
     invoke("hide_window", {});

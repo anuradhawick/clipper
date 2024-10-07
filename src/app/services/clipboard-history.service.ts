@@ -22,6 +22,7 @@ export class ClipboardHistoryService implements OnDestroy {
   running = signal(true);
 
   constructor() {
+    console.log("ClipboardHistoryService created");
     listen("clipboard_entry_added", (event: { payload: ClipperEntry }) => {
       this.items.update((entries) => [event.payload, ...entries].slice(0, 10));
     }).then((func) => (this.unlisten = func));
