@@ -1,10 +1,10 @@
-# Clipper by AW
+# Clipper
 
 <p align="center" wi>
   <img src="./src-tauri//icons/icon.png" alt="Clipper by AW" width="300">
 </p>
 
-Clipper by AW is a versatile clipboard management and note-taking application designed specifically for developers. It runs on Mac and Linux, leveraging the Tauri framework for a lightweight and secure experience. With Clipper, accessing your clipboard history and jotting down notes becomes seamless and integrated into your development workflow.
+Clipper is a versatile clipboard management and note-taking application designed specifically for developers. It runs on Mac and Linux, leveraging the Tauri framework for a lightweight and secure experience. With Clipper, accessing your clipboard history and jotting down notes becomes seamless and integrated into your development workflow.
 
 ## 🛑 Disclaimer 🛑
 
