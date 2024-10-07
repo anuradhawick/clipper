@@ -56,8 +56,10 @@ pnpm tauri dev
 To build a production version of Clipper, execute:
 
 ```bash
-pnpm tauri build
+pnpm tauri build --debug
 ```
+
+Note: please use `--debug` flag, because the current release version leaks memory of webview. This does not happen in debug builds.
 
 ## Troubleshooting
 
