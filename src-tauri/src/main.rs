@@ -153,6 +153,8 @@ async fn main() {
                 // the window should always be on top
                 window.set_always_on_top(true)?;
                 // this helps bringing window on top
+                window.set_visible_on_all_workspaces(true)?;
+                // mac settings
                 apply_macos_specifics(&window);
             }
             // create tray
