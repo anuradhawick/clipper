@@ -6,6 +6,8 @@ import {
   LightingPreference,
   ThemeService,
 } from "../../services/theme.service";
+import { invoke } from "@tauri-apps/api/core";
+import { SettingsService } from "../../services/settings.service";
 
 interface ColorDuo {
   from: string;
@@ -50,13 +52,17 @@ export class SettingsPageComponent {
   ];
   selectedLighting = "system";
 
-  constructor(protected ts: ThemeService) {}
+  constructor(protected ts: ThemeService, private ss: SettingsService) {}
 
-  changeColor(theme: Color) {
-    this.ts.changeColor(theme.name);
+  async changeColor(theme: Color) {
+    const newTheme = this.ts.changeColor(theme.name);
+    const settings = await this.ss.get();
+    this.ss.update({ ...settings, ...newTheme });
   }
 
-  changeLighting(lighting: LightingPreference) {
-    this.ts.changeLighting(lighting);
+  async changeLighting(lighting: LightingPreference) {
+    const newTheme = this.ts.changeLighting(lighting);
+    const settings = await this.ss.get();
+    this.ss.update({ ...settings, ...newTheme });
   }
 }

@@ -1,11 +1,12 @@
 use super::db::DbConnection;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sqlx::{sqlite::SqlitePool, Row};
 use std::sync::Arc;
 use tauri::State;
 use tokio::sync::Mutex;
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SettingsEntry {
     color: String,
     lighting: String,
@@ -88,15 +89,10 @@ impl SettingsManager {
 #[tauri::command]
 pub async fn update_settings(
     state: State<'_, Arc<Mutex<SettingsManager>>>,
-    color: String,
-    lighting: String,
+    settings: Value,
 ) -> Result<(), String> {
-    log::info!(
-        "CMD:Updating settings: color: {}, lighting: {}",
-        color,
-        lighting
-    );
-    let settings = SettingsEntry { color, lighting };
+    let settings: SettingsEntry = serde_json::from_value(settings).map_err(|e| e.to_string())?;
+    log::info!("CMD:Updating settings: {:#?}", settings);
     let mgr = state.lock().await;
     mgr.update(settings).await.map_err(|e| e.to_string())
 }
@@ -105,6 +101,7 @@ pub async fn update_settings(
 pub async fn read_settings(
     state: State<'_, Arc<Mutex<SettingsManager>>>,
 ) -> Result<SettingsEntry, String> {
-    log::info!("CMD:Reading settings");
-    state.lock().await.read().await.map_err(|e| e.to_string())
+    let settings = state.lock().await.read().await.map_err(|e| e.to_string())?;
+    log::info!("CMD:Reading settings: {:#?}", settings);
+    Ok(settings)
 }

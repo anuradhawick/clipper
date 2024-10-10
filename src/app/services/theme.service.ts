@@ -5,6 +5,7 @@ import {
   RendererFactory2,
 } from "@angular/core";
 import { invoke } from "@tauri-apps/api/core";
+import { SettingsService } from "./settings.service";
 
 export enum LightingPreference {
   SYSTEM = "system",
@@ -17,6 +18,11 @@ export enum ColorPreference {
   AZURE = "azure",
   YELLOW = "yellow",
   CYAN = "cyan",
+}
+
+export interface ThemeSettings {
+  color: ColorPreference;
+  lighting: LightingPreference;
 }
 
 @Injectable({
@@ -32,7 +38,7 @@ export class ThemeService implements OnDestroy {
     "(prefers-color-scheme: dark)"
   );
 
-  constructor(rendererFactory: RendererFactory2) {
+  constructor(rendererFactory: RendererFactory2, ss: SettingsService) {
     console.log("ThemeService created");
     this.renderer = rendererFactory.createRenderer(null, null);
     this.darkThemeMediaQuery.addEventListener(
@@ -47,18 +53,15 @@ export class ThemeService implements OnDestroy {
       this.systemLighting = LightingPreference.LIGHT;
     }
     // get user preference and override if different
-    invoke<{ color: ColorPreference; lighting: LightingPreference }>(
-      "read_settings",
-      {}
-    ).then((saved) => {
+    ss.get().then((saved: ThemeSettings) => {
       // is saved pref is system
       if (saved.lighting === LightingPreference.SYSTEM) {
         this.selectedLighting = this.systemLighting;
       } else {
-        this.selectedColor = saved.color;
         this.selectedLighting = saved.lighting;
         this.userLightingPreference = saved.lighting;
       }
+      this.selectedColor = saved.color;
       const body = document.body;
       this.renderer.addClass(
         body,
@@ -90,7 +93,7 @@ export class ThemeService implements OnDestroy {
     );
   }
 
-  async changeColor(color: ColorPreference) {
+  changeColor(color: ColorPreference): ThemeSettings {
     const themeOld = `${this.selectedColor}-${this.selectedLighting}`;
     const themeNew = `${color}-${this.selectedLighting}`;
     const body = document.body;
@@ -100,10 +103,11 @@ export class ThemeService implements OnDestroy {
     this.selectedColor = color;
 
     console.log("Replace color", themeOld, themeNew);
-    await invoke("update_settings", { lighting: this.selectedLighting, color });
+
+    return { lighting: this.selectedLighting, color };
   }
 
-  async changeLighting(lighting: LightingPreference) {
+  changeLighting(lighting: LightingPreference): ThemeSettings {
     this.userLightingPreference = lighting;
     const body = document.body;
     const themeOld = `${this.selectedColor}-${this.selectedLighting}`;
@@ -120,8 +124,10 @@ export class ThemeService implements OnDestroy {
     this.renderer.removeClass(body, themeOld);
     this.renderer.addClass(body, themeNew);
 
-    await invoke("update_settings", { lighting, color: this.selectedColor });
-
     console.log("Replace lighting", themeOld, themeNew);
+    // await invoke("update_settings", {
+    //   settings: { lighting, color: this.selectedColor },
+    // });
+    return { lighting, color: this.selectedColor };
   }
 }
