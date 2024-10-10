@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.1.1"
+version = "0.1.2"
 description = "Clipper by AW"
 authors = ["Anuradha Wickramarachchi <anuradhawick@gmail.com>"]
 license = "AGPL 3.0"
@@ -15,7 +15,7 @@ tauri-build = { version = "2.0.1", features = [] }
 [dependencies]
 serde_json = "1.0.128"
 serde = { version = "1.0.210", features = ["derive"] }
-tauri = { version = "2.0.1", features = ["macos-private-api", "tray-icon"] }
+tauri = { version = "2.0.2", features = ["macos-private-api", "tray-icon"] }
 tauri-plugin-positioner = "2.0.1"
 arboard = "3.4.1"
 open = "5.3.0"
