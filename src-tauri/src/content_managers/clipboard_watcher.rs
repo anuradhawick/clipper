@@ -68,26 +68,18 @@ impl ClipboardWatcher {
         .await
         .expect("Unable to execute SQL!");
 
-        // try to assign last text to last clipboard saved text
-        let result = sqlx::query(
-            r#"
-            SELECT *
-            FROM clipboard
-            ORDER BY timestamp DESC
-            LIMIT 1
-            "#,
-        )
-        .fetch_one(&*pool)
-        .await;
+        // try to assign last text to last clipboard entry
+        let mut clipboard = Clipboard::new().expect("Clipboard must be accessible");
+        let value = clipboard.get_text();
 
-        if let Ok(row) = result {
-            last_text = row.get("entry");
+        if let Ok(text) = value {
+            last_text = text;
         }
 
         let state = Arc::new(Mutex::new(Self {
             running: true,
             app_handle,
-            last_text: last_text.clone(),
+            last_text,
             pool: Arc::clone(&db.pool),
         }));
 
@@ -95,47 +87,23 @@ impl ClipboardWatcher {
         let cloned_state = Arc::clone(&state);
         async_runtime::spawn(async move {
             let mut clipboard = Clipboard::new().expect("Clipboard must be accessible");
-            let mut last_text = last_text;
-            if clipboard.clear().is_err() {
-                log::error!("Unable to clear clipboard");
-            };
             log::info!("Clipboard watcher started");
 
             loop {
                 let value = clipboard.get_text();
-                // if error sleep for a while
-                let Ok(text) = value else {
-                    tokio::time::sleep(Duration::from_millis(500)).await;
-                    continue;
-                };
-
-                // if paused, update last text and sleep for a while
-                {
-                    let app_state = cloned_state.lock().await;
-                    if !app_state.running {
-                        last_text.clone_from(&text);
-                        tokio::time::sleep(Duration::from_millis(500)).await;
-                        continue;
-                    }
-                }
-                // if watching
-                {
-                    // if text is same as last text sleep for a while
-                    if text == last_text {
-                        tokio::time::sleep(Duration::from_millis(500)).await;
-                        continue;
-                    }
-                    // otherwise update last text and save
-                    last_text.clone_from(&text);
-                    let entry = ClipboardEvent {
-                        id: Uuid::new_v4().to_string(),
-                        entry: text,
-                        kind: ClipboardEventKind::Text,
-                        timestamp: Utc::now().to_rfc3339(),
-                    };
-                    log::info!("Clipboard text changed:\n{:#?}", entry);
-                    {
-                        let app_state = cloned_state.lock().await;
+                // if value received
+                if let Ok(text) = value {
+                    let mut app_state = cloned_state.lock().await;
+                    // if running and text is not same
+                    if app_state.running && text != app_state.last_text {
+                        app_state.last_text.clone_from(&text);
+                        let entry = ClipboardEvent {
+                            id: Uuid::new_v4().to_string(),
+                            entry: text,
+                            kind: ClipboardEventKind::Text,
+                            timestamp: Utc::now().to_rfc3339(),
+                        };
+                        log::info!("Clipboard text changed:\n{:#?}", entry);
                         if app_state
                             .app_handle
                             .emit("clipboard_entry_added", entry.clone())
@@ -147,7 +115,8 @@ impl ClipboardWatcher {
                             log::error!("Unable to save: clipboard_entry_added");
                         }
                     }
-                }
+                };
+                tokio::time::sleep(Duration::from_millis(500)).await;
             }
         });
 
@@ -251,10 +220,13 @@ pub async fn pause_clipboard_watcher(
 pub async fn resume_clipboard_watcher(
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
+    // reset last text to prevent reading previous clipboard entry
     let mut clipboard_watcher = state.lock().await;
     let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
     if let Ok(value) = clipboard.get_text() {
-        clipboard_watcher.last_text = value;
+        clipboard_watcher.last_text.clone_from(&value);
+    } else {
+        clipboard_watcher.last_text.clear();
     }
     clipboard_watcher.resume();
     log::info!("CMD:Clipboard watcher resumed");

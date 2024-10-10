@@ -40,8 +40,7 @@ export class NewNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // console.log("focus");
-    // this.editor().nativeElement.focus();
+    this.editor().nativeElement.focus();
   }
 
   ngOnDestroy(): void {
