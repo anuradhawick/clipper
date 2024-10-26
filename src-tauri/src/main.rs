@@ -6,6 +6,7 @@ extern crate objc;
 
 mod app_handle;
 mod content_managers;
+mod global_shortcut;
 mod tray_handlers;
 mod window_commands;
 mod window_custom;
@@ -19,6 +20,8 @@ use content_managers::notes_manager::{
     create_note, delete_note, read_notes, update_note, NotesManager,
 };
 use content_managers::settings::{read_settings, update_settings, SettingsManager};
+use global_shortcut::create_global_shortcut;
+use std::env;
 use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
@@ -50,6 +53,7 @@ pub static OVERLAYED_NORMAL_LEVEL: i32 = 8;
 
 #[cfg(target_os = "macos")]
 fn apply_macos_specifics(window: &WebviewWindow) {
+    use tauri::Manager;
     use tauri::{AppHandle, Wry};
     use tauri_nspanel::ManagerExt;
 
@@ -81,11 +85,15 @@ fn apply_macos_specifics(window: &WebviewWindow) {
 
 #[tokio::main]
 async fn main() {
-    tauri::Builder::default()
+    #[cfg(target_os = "linux")]
+    env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    // define the builder
+    let mut builder = tauri::Builder::default();
+    // update builder with common configurations
+    builder = builder
         .plugin(tauri_plugin_log::Builder::new().build())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        // .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_nspanel::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
@@ -112,33 +120,7 @@ async fn main() {
         ])
         .setup(|app| {
             // global shortcut
-            // #[cfg(desktop)]
-            // {
-            //     use tauri_plugin_global_shortcut::{
-            //         Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
-            //     };
-
-            //     let ctrl_n_shortcut = Shortcut::new(Some(Modifiers::ALT), Code::Space);
-            //     app.handle().plugin(
-            //         tauri_plugin_global_shortcut::Builder::new()
-            //             .with_handler(move |_app, shortcut, event| {
-            //                 println!("{:?}", shortcut);
-            //                 if shortcut == &ctrl_n_shortcut {
-            //                     match event.state() {
-            //                         ShortcutState::Pressed => {
-            //                             println!("Ctrl-N Pressed!");
-            //                         }
-            //                         ShortcutState::Released => {
-            //                             println!("Ctrl-N Released!");
-            //                         }
-            //                     }
-            //                 }
-            //             })
-            //             .build(),
-            //     )?;
-
-            //     app.global_shortcut().register(ctrl_n_shortcut)?;
-            // }
+            create_global_shortcut(app.handle())?;
             // reposition
             let window = app
                 .get_webview_window("main")
@@ -177,7 +159,15 @@ async fn main() {
 
             async_runtime::spawn(setup(app.handle().clone()));
             Ok(())
-        })
+        });
+
+    // update builder with macOS specific configurations
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.plugin(tauri_nspanel::init());
+    }
+
+    builder
         .plugin(tauri_plugin_positioner::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
