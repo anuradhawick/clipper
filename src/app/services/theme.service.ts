@@ -4,26 +4,48 @@ import {
   Renderer2,
   RendererFactory2,
 } from "@angular/core";
-import { invoke } from "@tauri-apps/api/core";
-import { SettingsService } from "./settings.service";
+import {
+  ColorPreference,
+  LightingPreference,
+  Settings,
+  SettingsService,
+  ThemeSettings,
+} from "./settings.service";
+import { Subscription } from "rxjs";
 
-export enum LightingPreference {
-  SYSTEM = "system",
-  LIGHT = "light",
-  DARK = "dark",
+export interface ColorDuo {
+  from: string;
+  to: string;
 }
 
-export enum ColorPreference {
-  DEFAULT = "default",
-  AZURE = "azure",
-  YELLOW = "yellow",
-  CYAN = "cyan",
+export interface Color {
+  name: ColorPreference;
+  light: ColorDuo;
+  dark: ColorDuo;
 }
 
-export interface ThemeSettings {
-  color: ColorPreference;
-  lighting: LightingPreference;
-}
+export const colors: Color[] = [
+  {
+    name: ColorPreference.DEFAULT,
+    light: { from: "from-gray-400", to: "to-gray-500" },
+    dark: { from: "from-gray-700", to: "to-gray-800" },
+  },
+  {
+    name: ColorPreference.AZURE,
+    light: { from: "from-blue-400", to: "to-blue-500" },
+    dark: { from: "from-blue-700", to: "to-blue-800" },
+  },
+  {
+    name: ColorPreference.YELLOW,
+    light: { from: "from-yellow-400", to: "to-yellow-500" },
+    dark: { from: "from-yellow-700", to: "to-yellow-800" },
+  },
+  {
+    name: ColorPreference.CYAN,
+    light: { from: "from-cyan-400", to: "to-cyan-500" },
+    dark: { from: "from-cyan-700", to: "to-cyan-800" },
+  },
+];
 
 @Injectable({
   providedIn: "root",
@@ -37,6 +59,7 @@ export class ThemeService implements OnDestroy {
   private darkThemeMediaQuery = window.matchMedia(
     "(prefers-color-scheme: dark)"
   );
+  private settingsSubscription: Subscription;
 
   constructor(rendererFactory: RendererFactory2, ss: SettingsService) {
     console.log("ThemeService created");
@@ -53,21 +76,13 @@ export class ThemeService implements OnDestroy {
       this.systemLighting = LightingPreference.LIGHT;
     }
     // get user preference and override if different
-    ss.get().then((saved: ThemeSettings) => {
-      // is saved pref is system
-      if (saved.lighting === LightingPreference.SYSTEM) {
-        this.selectedLighting = this.systemLighting;
-      } else {
-        this.selectedLighting = saved.lighting;
-        this.userLightingPreference = saved.lighting;
+    this.settingsSubscription = ss.settings$.subscribe(
+      (saved: ThemeSettings) => {
+        console.log("Theme changed", saved);
+        this.changeColor(saved.color);
+        this.changeLighting(saved.lighting);
       }
-      this.selectedColor = saved.color;
-      const body = document.body;
-      this.renderer.addClass(
-        body,
-        `${this.selectedColor}-${this.selectedLighting}`
-      );
-    });
+    );
   }
 
   private themeChangeListener(event: MediaQueryListEvent): void {
@@ -91,9 +106,10 @@ export class ThemeService implements OnDestroy {
       "change",
       this.themeChangeListener
     );
+    this.settingsSubscription.unsubscribe();
   }
 
-  changeColor(color: ColorPreference): ThemeSettings {
+  private changeColor(color: ColorPreference) {
     const themeOld = `${this.selectedColor}-${this.selectedLighting}`;
     const themeNew = `${color}-${this.selectedLighting}`;
     const body = document.body;
@@ -103,11 +119,9 @@ export class ThemeService implements OnDestroy {
     this.selectedColor = color;
 
     console.log("Replace color", themeOld, themeNew);
-
-    return { lighting: this.selectedLighting, color };
   }
 
-  changeLighting(lighting: LightingPreference): ThemeSettings {
+  private changeLighting(lighting: LightingPreference) {
     this.userLightingPreference = lighting;
     const body = document.body;
     const themeOld = `${this.selectedColor}-${this.selectedLighting}`;
@@ -125,9 +139,5 @@ export class ThemeService implements OnDestroy {
     this.renderer.addClass(body, themeNew);
 
     console.log("Replace lighting", themeOld, themeNew);
-    // await invoke("update_settings", {
-    //   settings: { lighting, color: this.selectedColor },
-    // });
-    return { lighting, color: this.selectedColor };
   }
 }

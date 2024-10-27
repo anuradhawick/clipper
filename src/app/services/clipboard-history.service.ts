@@ -1,6 +1,8 @@
 import { Injectable, OnDestroy, signal } from "@angular/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { HistorySize, SettingsService } from "./settings.service";
+import { Subscription } from "rxjs";
 
 export enum ClipperEntryKind {
   Text,
@@ -17,18 +19,29 @@ export interface ClipperEntry {
   providedIn: "root",
 })
 export class ClipboardHistoryService implements OnDestroy {
-  unlisten: UnlistenFn | undefined;
-  items = signal<ClipperEntry[]>([]);
-  running = signal(true);
+  public items = signal<ClipperEntry[]>([]);
+  public running = signal(true);
+  private unlisten: UnlistenFn | undefined;
+  private settingsSubscription: Subscription;
+  private settings: HistorySize = { historySize: 100 };
 
-  constructor() {
+  constructor(ss: SettingsService) {
     console.log("ClipboardHistoryService created");
     listen("clipboard_entry_added", (event: { payload: ClipperEntry }) => {
-      this.items.update((entries) => [event.payload, ...entries].slice(0, 10));
+      this.items.update((entries) =>
+        [event.payload, ...entries].slice(0, this.settings.historySize)
+      );
     }).then((func) => (this.unlisten = func));
 
-    invoke<ClipperEntry[]>("read_clipboard_entries", {}).then((entries) => {
-      this.items.set(entries);
+    // get user preference and override if different
+    this.settingsSubscription = ss.settings$.subscribe((saved: HistorySize) => {
+      console.log("Clipboard settings updated", saved);
+      this.settings = saved;
+      invoke<ClipperEntry[]>("read_clipboard_entries", {
+        count: saved.historySize,
+      }).then((entries) => {
+        this.items.set(entries);
+      });
     });
   }
 
@@ -37,6 +50,7 @@ export class ClipboardHistoryService implements OnDestroy {
       const unlisten = this.unlisten;
       unlisten();
     }
+    this.settingsSubscription.unsubscribe();
   }
 
   async copy(index: number) {
