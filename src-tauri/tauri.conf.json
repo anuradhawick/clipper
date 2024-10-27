@@ -1,5 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2.0.0",
+  "productName": "clipper",
+  "mainBinaryName": "clipper",
+  "version": "0.1.2",
   "build": {
     "beforeBuildCommand": "pnpm run build --configuration production",
     "beforeDevCommand": "pnpm run start",
@@ -40,9 +43,6 @@
       }
     }
   },
-  "productName": "clipper",
-  "mainBinaryName": "clipper",
-  "version": "0.1.0",
   "identifier": "com.anuradhawick.clipper",
   "plugins": {},
   "app": {
