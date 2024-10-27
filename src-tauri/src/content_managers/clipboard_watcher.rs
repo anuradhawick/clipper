@@ -94,8 +94,8 @@ impl ClipboardWatcher {
                 // if value received
                 if let Ok(text) = value {
                     let mut app_state = cloned_state.lock().await;
-                    // if running and text is not same
-                    if app_state.running && text != app_state.last_text {
+                    // if running and text is not same (we also discard empty text)
+                    if !text.trim().is_empty() && app_state.running && text != app_state.last_text {
                         app_state.last_text.clone_from(&text);
                         let entry = ClipboardEvent {
                             id: Uuid::new_v4().to_string(),
