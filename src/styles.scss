@@ -160,7 +160,7 @@ $clipper-yellow-light: mat.define-theme(
 html,
 body {
   @include mat.all-component-themes($clipper-default-light);
-  @apply overflow-hidden p-0 m-0 rounded-lg;
+  @apply overflow-hidden p-0 m-0 rounded-lg font-sans;
   @layer mat-typography;
 }
 
