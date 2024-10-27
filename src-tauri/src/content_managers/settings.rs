@@ -7,9 +7,11 @@ use tauri::State;
 use tokio::sync::Mutex;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct SettingsEntry {
     color: String,
     lighting: String,
+    history_size: u32,
 }
 
 pub struct SettingsManager {
@@ -25,7 +27,8 @@ impl SettingsManager {
             CREATE TABLE IF NOT EXISTS settings (
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 color TEXT NOT NULL,
-                lighting TEXT NOT NULL
+                lighting TEXT NOT NULL,
+                historySize INTEGER NOT NULL
             );
             "#,
         )
@@ -35,8 +38,8 @@ impl SettingsManager {
 
         sqlx::query(
             r#"
-            INSERT INTO settings (id, color, lighting)
-            SELECT 1, 'default', 'system'
+            INSERT INTO settings (id, color, lighting, historySize)
+            SELECT 1, 'default', 'system', 100
             WHERE NOT EXISTS (SELECT 1 FROM settings WHERE id = 1);
             "#,
         )
@@ -55,12 +58,13 @@ impl SettingsManager {
         sqlx::query(
             r#"
             UPDATE settings
-            SET color = ?, lighting = ?
+            SET color = ?, lighting = ?, historySize = ?
             WHERE id = 1
             "#,
         )
         .bind(settings.color)
         .bind(settings.lighting)
+        .bind(settings.history_size)
         .execute(&*pool)
         .await?;
         Ok(())
@@ -82,6 +86,7 @@ impl SettingsManager {
         Ok(SettingsEntry {
             color: result.get("color"),
             lighting: result.get("lighting"),
+            history_size: result.get("historySize"),
         })
     }
 }

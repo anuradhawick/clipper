@@ -133,15 +133,17 @@ impl ClipboardWatcher {
         log::info!("Clipboard watcher resumed");
     }
 
-    pub async fn read(&self) -> Result<Vec<ClipboardEvent>, sqlx::Error> {
-        let pool = self.pool.lock().await;
+    pub async fn read(&self, count: u32) -> Result<Vec<ClipboardEvent>, sqlx::Error> {
+        let pool: tokio::sync::MutexGuard<'_, sqlx::Pool<sqlx::Sqlite>> = self.pool.lock().await;
         let rows = sqlx::query(
             r#"
             SELECT *
             FROM clipboard
             ORDER BY timestamp DESC
+            LIMIT ?
             "#,
         )
+        .bind(count)
         .fetch_all(&*pool)
         .await?;
 
@@ -249,9 +251,15 @@ pub async fn clipboard_add_entry(
 #[tauri::command]
 pub async fn read_clipboard_entries(
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+    count: u32,
 ) -> Result<Vec<ClipboardEvent>, String> {
-    log::info!("CMD:Reading clipboard entries");
-    state.lock().await.read().await.map_err(|e| e.to_string())
+    log::info!("CMD:Reading {} clipboard entries", count);
+    state
+        .lock()
+        .await
+        .read(count)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
