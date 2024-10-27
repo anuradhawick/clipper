@@ -1,5 +1,5 @@
 <div class="wrapper p-2 flex-col">
-  <h2 class="block mb-1">Select Theme</h2>
+  <div class="block mb-1">Select Theme</div>
 
   <div class="flex flex-row justify-between w-full cursor-pointer">
     @for (color of colors; track $index) {
@@ -7,7 +7,7 @@
       matRipple
       class="w-[180px] h-[100px] rounded-lg flex flex-row overflow-hidden default"
       [class.selected]="ts.selectedColor == color.name"
-      (click)="changeColor(color)"
+      (click)="changeColor(color.name)"
     >
       <div
         class="w-1/2 h-full flex items-center bg-gradient-to-br"
@@ -32,7 +32,7 @@
   </div>
 </div>
 <div class="wrapper p-2 flex-col">
-  <h2 class="block mb-1">Select Lighting</h2>
+  <div class="block mb-1">Select Lighting</div>
   <div class="flex flex-row justify-between w-full cursor-pointer space-x-1">
     <div
       matRipple
@@ -64,5 +64,22 @@
         <mat-icon class="block mx-auto scale-150">dark_mode</mat-icon>
       </div>
     </div>
+  </div>
+</div>
+<div class="wrapper p-2 flex-col">
+  <div class="block mb-1">Advanced Settings</div>
+  <div class="flex flex-row justify-between items-center">
+    <p class="flex">Number of clipboard events</p>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>History size</mat-label>
+      <mat-select
+        (valueChange)="changeHistorySize($event)"
+        [value]="settings?.historySize"
+      >
+        @for (size of [100, 1000, 5000]; track size) {
+        <mat-option [value]="size">{{ size }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
   </div>
 </div>
