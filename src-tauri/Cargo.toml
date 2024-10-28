@@ -26,6 +26,7 @@ chrono = "0.4.38"
 tauri-plugin-shell = "2.0.2"
 log = "0.4.22"
 tauri-plugin-log = "2.0.1"
+image = "0.25.4"
 
 # macos dependencies
 [target.'cfg(target_os = "macos")'.dependencies]

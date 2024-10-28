@@ -6,25 +6,46 @@
     class="flex-1 min-h-[100px] overflow-hidden rounded-lg p-2 mb-4"
     [class.h-[100px]]="!expanded()"
   >
+    @switch (clipperEntry().kind){
+    <!-- text -->
+    @case(ClipperEntryKind.Text) {
     <div class="overflow-hidden h-full">
       <div
         class="overflow-hidden whitespace-pre-wrap font-mono mb-2"
-        [textContent]="clipperEntry().entry"
+        [textContent]="processText(clipperEntry().entry)"
       ></div>
     </div>
+    }
+    <!-- image -->
+    @case (ClipperEntryKind.Image){
+    <img
+      class="object-contain h-full w-full max-h-[250px]"
+      [src]="processImage(clipperEntry().entry)"
+      alt="Image"
+    />
+    }
+    <!-- default -->
+    @default { } }
   </div>
   <div class="flex flex-row mt-3 space-x-1 justify-end">
     <div class="flex flex-col space-y-2 w-[50px] items-center">
       <button mat-mini-fab class="w-full" (click)="toggleView()">
         <mat-icon>{{ expanded() ? "zoom_in_map" : "zoom_out_map" }}</mat-icon>
       </button>
+      @if (clipperEntry().kind == ClipperEntryKind.Text) {
       <button
         mat-mini-fab
         class="w-full"
         [routerLink]="['/notes', 'new', { entry: clipperEntry().entry }]"
+        [disabled]="clipperEntry().kind == ClipperEntryKind.Image"
       >
         <mat-icon>save</mat-icon>
       </button>
+      } @else {
+      <a mat-mini-fab class="w-full" disabled="true">
+        <mat-icon>save</mat-icon>
+      </a>
+      }
     </div>
     <div class="flex flex-col space-y-2 w-[50px]">
       <button mat-mini-fab class="w-full" (click)="copyClicked.emit()">

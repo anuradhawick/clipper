@@ -1,8 +1,17 @@
 use super::db::DbConnection;
 use arboard::Clipboard;
+use arboard::ImageData;
 use chrono::Utc;
+use image::codecs::png::{PngDecoder, PngEncoder};
+use image::ImageDecoder;
+use image::ImageEncoder;
 use sqlx::Row;
 use sqlx::SqlitePool;
+use std::hash::DefaultHasher;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::io::BufReader;
+use std::io::Cursor;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::Emitter;
@@ -10,24 +19,24 @@ use tauri::{self, async_runtime, AppHandle, State};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum ClipboardEventKind {
     Text,
-    _Image,
+    Image,
 }
 
 impl ClipboardEventKind {
     fn as_str(&self) -> &str {
         match self {
             ClipboardEventKind::Text => "text",
-            ClipboardEventKind::_Image => "image",
+            ClipboardEventKind::Image => "image",
         }
     }
 
     fn from_str(s: &str) -> Result<Self, ()> {
         match s {
             "text" => Ok(ClipboardEventKind::Text),
-            "image" => Ok(ClipboardEventKind::_Image),
+            "image" => Ok(ClipboardEventKind::Image),
             _ => Err(()),
         }
     }
@@ -36,7 +45,7 @@ impl ClipboardEventKind {
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct ClipboardEvent {
     id: String,
-    entry: String,
+    entry: Vec<u8>,
     kind: ClipboardEventKind,
     timestamp: String,
 }
@@ -45,12 +54,33 @@ pub struct ClipboardWatcher {
     running: bool,
     app_handle: AppHandle,
     last_text: String,
+    last_image: u64,
     pool: Arc<Mutex<SqlitePool>>,
+}
+
+fn buffer_hash(buffer: &[u8]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    buffer.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn image_to_png(image: ImageData) -> Vec<u8> {
+    let mut buffer: Vec<u8> = Vec::new();
+    PngEncoder::new(&mut buffer)
+        .write_image(
+            &image.bytes,
+            image.width as u32,
+            image.height as u32,
+            image::ExtendedColorType::Rgba8,
+        )
+        .expect("Unable to encode image to PNG");
+    buffer
 }
 
 impl ClipboardWatcher {
     pub async fn new(db: Arc<DbConnection>, app_handle: AppHandle) -> Arc<Mutex<Self>> {
         let mut last_text = String::from("");
+        let mut last_image = 0;
         let pool = db.pool.lock().await;
 
         // create table if not exist
@@ -58,7 +88,7 @@ impl ClipboardWatcher {
             r#"
             CREATE TABLE IF NOT EXISTS clipboard (
                 id TEXT PRIMARY KEY,
-                entry TEXT NOT NULL,
+                entry BLOB NOT NULL,
                 kind TEXT NOT NULL,
                 timestamp TEXT
             );
@@ -70,16 +100,22 @@ impl ClipboardWatcher {
 
         // try to assign last text to last clipboard entry
         let mut clipboard = Clipboard::new().expect("Clipboard must be accessible");
-        let value = clipboard.get_text();
+        let text_value = clipboard.get_text();
+        let image_value = clipboard.get_image();
 
-        if let Ok(text) = value {
+        if let Ok(text) = text_value {
             last_text = text;
+        }
+
+        if let Ok(image) = image_value {
+            last_image = buffer_hash(&image.bytes);
         }
 
         let state = Arc::new(Mutex::new(Self {
             running: true,
             app_handle,
             last_text,
+            last_image,
             pool: Arc::clone(&db.pool),
         }));
 
@@ -99,11 +135,11 @@ impl ClipboardWatcher {
                         app_state.last_text.clone_from(&text);
                         let entry = ClipboardEvent {
                             id: Uuid::new_v4().to_string(),
-                            entry: text,
+                            entry: text.as_bytes().to_vec(),
                             kind: ClipboardEventKind::Text,
                             timestamp: Utc::now().to_rfc3339(),
                         };
-                        log::info!("Clipboard text changed:\n{:#?}", entry);
+                        log::info!("Clipboard text changed: {:#?}", entry.id);
                         if app_state
                             .app_handle
                             .emit("clipboard_entry_added", entry.clone())
@@ -116,6 +152,38 @@ impl ClipboardWatcher {
                         }
                     }
                 };
+                let value = clipboard.get_image();
+                // if value received
+                if let Ok(image) = value {
+                    let mut app_state = cloned_state.lock().await;
+                    let hash = buffer_hash(&image.bytes);
+                    // if running and image is not same
+                    if app_state.running && hash != app_state.last_image {
+                        println!(
+                            "Image hash from clipboard - {:#?} {:#?}",
+                            hash, app_state.last_image
+                        );
+                        app_state.last_image = hash;
+
+                        let entry = ClipboardEvent {
+                            id: Uuid::new_v4().to_string(),
+                            entry: image_to_png(image),
+                            kind: ClipboardEventKind::Image,
+                            timestamp: Utc::now().to_rfc3339(),
+                        };
+                        log::info!("Clipboard image changed: Image hash - {:#?}", hash);
+                        if app_state
+                            .app_handle
+                            .emit("clipboard_entry_added", entry.clone())
+                            .is_err()
+                        {
+                            log::error!("Unable to emit: clipboard_entry_added");
+                        }
+                        if app_state.save(entry).await.is_err() {
+                            log::error!("Unable to save: clipboard_entry_added");
+                        }
+                    }
+                }
                 tokio::time::sleep(Duration::from_millis(500)).await;
             }
         });
@@ -237,14 +305,36 @@ pub async fn resume_clipboard_watcher(
 
 #[tauri::command]
 pub async fn clipboard_add_entry(
-    entry: &str,
+    entry: Vec<u8>,
+    kind: ClipboardEventKind,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
-    log::info!("CMD:Clipboard entry added: {:#?}", entry);
+    log::info!("CMD:Clipboard entry added: {:#?}", kind);
     let mut clipboard_watcher = state.lock().await;
     let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
-    clipboard_watcher.last_text = String::from(entry);
-    clipboard.set_text(entry).map_err(|e| e.to_string())?;
+    match kind {
+        ClipboardEventKind::Text => {
+            let text = String::from_utf8(entry).map_err(|e| e.to_string())?;
+            clipboard_watcher.last_text.clone_from(&text);
+            clipboard.set_text(text).map_err(|e| e.to_string())?;
+        }
+        ClipboardEventKind::Image => {
+            let decoder = PngDecoder::new(BufReader::new(Cursor::new(entry))).unwrap();
+            let (width, height) = decoder.dimensions();
+            let mut buffer = vec![0; (width * height * 4) as usize]; // Assuming RGBA8 format
+            decoder.read_image(&mut buffer).unwrap();
+            let hash = buffer_hash(&buffer);
+
+            clipboard
+                .set_image(arboard::ImageData {
+                    width: width as usize,
+                    height: height as usize,
+                    bytes: std::borrow::Cow::from(buffer),
+                })
+                .map_err(|e| e.to_string())?;
+            clipboard_watcher.last_image = hash;
+        }
+    }
     Ok(())
 }
 

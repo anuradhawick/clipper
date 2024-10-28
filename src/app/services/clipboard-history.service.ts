@@ -5,12 +5,13 @@ import { HistorySize, SettingsService } from "./settings.service";
 import { Subscription } from "rxjs";
 
 export enum ClipperEntryKind {
-  Text,
+  Text = "Text",
+  Image = "Image",
 }
 
 export interface ClipperEntry {
   id: string;
-  entry: string;
+  entry: Array<number>;
   kind: ClipperEntryKind;
   timestamp: string;
 }
@@ -28,6 +29,7 @@ export class ClipboardHistoryService implements OnDestroy {
   constructor(ss: SettingsService) {
     console.log("ClipboardHistoryService created");
     listen("clipboard_entry_added", (event: { payload: ClipperEntry }) => {
+      console.log(event);
       this.items.update((entries) =>
         [event.payload, ...entries].slice(0, this.settings.historySize)
       );
@@ -55,7 +57,10 @@ export class ClipboardHistoryService implements OnDestroy {
 
   async copy(index: number) {
     const entry = this.items().at(index);
-    await invoke<void>("clipboard_add_entry", { entry: entry?.entry });
+    await invoke<void>("clipboard_add_entry", {
+      entry: entry?.entry,
+      kind: entry?.kind,
+    });
   }
 
   async pause() {
