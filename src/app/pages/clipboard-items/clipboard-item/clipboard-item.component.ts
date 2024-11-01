@@ -13,6 +13,7 @@ import {
   ClipperEntryKind,
 } from "../../../services/clipboard-history.service";
 import { DatePipe } from "@angular/common";
+import { open } from "@tauri-apps/plugin-shell";
 
 @Component({
   selector: "app-clipboard-item",
@@ -27,6 +28,7 @@ export class ClipboardItemComponent {
   clipperEntry = input.required<ClipperEntry>();
   deleteClicked = output();
   copyClicked = output();
+  openClicked = output();
   expanded = signal(false);
   ClipperEntryKind = ClipperEntryKind;
 

@@ -42,8 +42,8 @@
         <mat-icon>save</mat-icon>
       </button>
       } @else {
-      <a mat-mini-fab class="w-full" disabled="true">
-        <mat-icon>save</mat-icon>
+      <a mat-mini-fab class="w-full" (click)="openClicked.emit()">
+        <mat-icon>open_in_new</mat-icon>
       </a>
       }
     </div>

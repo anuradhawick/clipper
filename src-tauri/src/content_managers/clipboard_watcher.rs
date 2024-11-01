@@ -1,6 +1,7 @@
 use super::db::DbConnection;
 use arboard::Clipboard;
 use arboard::ImageData;
+use base64::prelude::*;
 use chrono::Utc;
 use image::codecs::png::{PngDecoder, PngEncoder};
 use image::ImageDecoder;
@@ -229,6 +230,29 @@ impl ClipboardWatcher {
         Ok(events)
     }
 
+    pub async fn read_one(&self, id: String) -> Result<ClipboardEvent, sqlx::Error> {
+        log::info!("Read clipboard entry: {:#?}", id);
+        let pool = self.pool.lock().await;
+        let row = sqlx::query(
+            r#"
+            SELECT *
+            FROM clipboard
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_one(&*pool)
+        .await?;
+
+        Ok(ClipboardEvent {
+            id: row.get("id"),
+            entry: row.get("entry"),
+            kind: ClipboardEventKind::from_str(row.get("kind"))
+                .expect("Unexpected ClipboardEventKind"),
+            timestamp: row.get("timestamp"),
+        })
+    }
+
     pub async fn delete_one(&self, id: String) -> Result<(), sqlx::Error> {
         log::info!("Deleted clipboard entry: {:#?}", id);
         let pool = self.pool.lock().await;
@@ -305,21 +329,24 @@ pub async fn resume_clipboard_watcher(
 
 #[tauri::command]
 pub async fn clipboard_add_entry(
-    entry: Vec<u8>,
-    kind: ClipboardEventKind,
+    id: String,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
-    log::info!("CMD:Clipboard entry added: {:#?}", kind);
+    log::info!("CMD:Clipboard entry added: {:#?}", id);
     let mut clipboard_watcher = state.lock().await;
     let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
-    match kind {
+    let entry = clipboard_watcher
+        .read_one(id)
+        .await
+        .map_err(|e| e.to_string())?;
+    match entry.kind {
         ClipboardEventKind::Text => {
-            let text = String::from_utf8(entry).map_err(|e| e.to_string())?;
+            let text = String::from_utf8(entry.entry).map_err(|e| e.to_string())?;
             clipboard_watcher.last_text.clone_from(&text);
             clipboard.set_text(text).map_err(|e| e.to_string())?;
         }
         ClipboardEventKind::Image => {
-            let decoder = PngDecoder::new(BufReader::new(Cursor::new(entry))).unwrap();
+            let decoder = PngDecoder::new(BufReader::new(Cursor::new(entry.entry))).unwrap();
             let (width, height) = decoder.dimensions();
             let mut buffer = vec![0; (width * height * 4) as usize]; // Assuming RGBA8 format
             decoder.read_image(&mut buffer).unwrap();
@@ -340,8 +367,8 @@ pub async fn clipboard_add_entry(
 
 #[tauri::command]
 pub async fn read_clipboard_entries(
-    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
     count: u32,
+    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<Vec<ClipboardEvent>, String> {
     log::info!("CMD:Reading {} clipboard entries", count);
     state
@@ -377,4 +404,38 @@ pub async fn delete_all_clipboard_entries(
         .delete_all()
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn open_clipboard_entry(
+    id: String,
+    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+) -> Result<(), String> {
+    log::info!("CMD:Opening clipboard entry: {:#?}", id);
+    let clipboard_watcher = state.lock().await;
+    let entry = clipboard_watcher
+        .read_one(id)
+        .await
+        .map_err(|e| e.to_string())?;
+    if let ClipboardEventKind::Image = entry.kind {
+        let image = entry.entry;
+        let mime_type = "image/png";
+        let base64_string = BASE64_STANDARD.encode(&image);
+        let uri = format!("data:{};base64,{}", mime_type, base64_string);
+
+        #[cfg(target_os = "macos")]
+        if let Err(e) = open::with_command(uri, "safari").status() {
+            log::error!("Failed to open image: {}", e);
+            return Err(e.to_string());
+        }
+
+        #[cfg(target_os = "linux")]
+        if let Err(e) = open::with_command(uri, "firefox").status() {
+            log::error!("Failed to open image: {}", e);
+            return Err(e.to_string());
+        }
+
+        log::info!("Image opened successfully");
+    }
+    Ok(())
 }

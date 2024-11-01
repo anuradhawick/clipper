@@ -55,12 +55,14 @@ export class ClipboardHistoryService implements OnDestroy {
     this.settingsSubscription.unsubscribe();
   }
 
-  async copy(index: number) {
-    const entry = this.items().at(index);
+  async copy(id: string) {
     await invoke<void>("clipboard_add_entry", {
-      entry: entry?.entry,
-      kind: entry?.kind,
+      id,
     });
+  }
+
+  async open(id: string) {
+    await invoke<void>("open_clipboard_entry", { id });
   }
 
   async pause() {
