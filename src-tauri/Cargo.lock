@@ -122,7 +122,7 @@ checksum = "c042108f3ed77fd83760a5fd79b53be043192bb3b9dba91d8c574c0ada7850c8"
 
 [[package]]
 name = "app"
-version = "0.1.2"
+version = "1.0.0"
 dependencies = [
  "arboard",
  "base64 0.22.1",
