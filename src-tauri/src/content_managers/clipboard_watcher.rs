@@ -269,6 +269,7 @@ impl ClipboardWatcher {
     }
 
     pub async fn delete_all(&self) -> Result<(), sqlx::Error> {
+        log::info!("Deleted all clipboard entries");
         let pool = self.pool.lock().await;
         sqlx::query(
             r#"
@@ -278,6 +279,27 @@ impl ClipboardWatcher {
         .execute(&*pool)
         .await?;
         log::info!("Deleted all clipboard entries");
+        Ok(())
+    }
+
+    pub async fn delete_with_skip(&self, skip: u32) -> Result<(), sqlx::Error> {
+        log::info!("Deleted clipboard entries with skip: {:#?}", skip);
+        let pool = self.pool.lock().await;
+        let res = sqlx::query(
+            r#"
+            DELETE FROM clipboard
+            WHERE id in 
+                (
+                SELECT id FROM clipboard 
+                ORDER BY timestamp DESC 
+                LIMIT -1 OFFSET ?
+                )
+            "#,
+        )
+        .bind(skip)
+        .execute(&*pool)
+        .await?;
+        log::info!("Cleared number of entries: {:#?}", res.rows_affected());
         Ok(())
     }
 
@@ -381,8 +403,8 @@ pub async fn read_clipboard_entries(
 
 #[tauri::command]
 pub async fn delete_one_clipboard_entry(
-    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
     id: String,
+    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
     log::info!("CMD:Deleting clipboard entry: {:#?}", id);
     state
@@ -438,4 +460,17 @@ pub async fn open_clipboard_entry(
         log::info!("Image opened successfully");
     }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn clean_old_entries(
+    count: u32,
+    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+) -> Result<(), String> {
+    log::info!("CMD:Cleaning old clipboard entries");
+    let clipboard_watcher = state.lock().await;
+    clipboard_watcher
+        .delete_with_skip(count)
+        .await
+        .map_err(|e| e.to_string())
 }

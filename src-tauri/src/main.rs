@@ -12,9 +12,9 @@ mod window_commands;
 mod window_custom;
 
 use content_managers::clipboard_watcher::{
-    clipboard_add_entry, delete_all_clipboard_entries, delete_one_clipboard_entry,
-    open_clipboard_entry, pause_clipboard_watcher, read_clipboard_entries,
-    resume_clipboard_watcher, ClipboardWatcher,
+    clean_old_entries, clipboard_add_entry, delete_all_clipboard_entries,
+    delete_one_clipboard_entry, open_clipboard_entry, pause_clipboard_watcher,
+    read_clipboard_entries, resume_clipboard_watcher, ClipboardWatcher,
 };
 use content_managers::db::{delete_db, get_db_path, DbConnection};
 use content_managers::notes_manager::{
@@ -109,6 +109,7 @@ async fn main() {
             delete_one_clipboard_entry,
             delete_all_clipboard_entries,
             open_clipboard_entry,
+            clean_old_entries,
             // window related
             hide_window,
             // notes related
