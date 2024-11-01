@@ -66,7 +66,7 @@
     </div>
   </div>
 </div>
-<div class="wrapper p-2 flex-col">
+<div class="wrapper p-2 flex-col space-y-2">
   <div class="block mb-1">Advanced Settings</div>
   <div class="flex flex-row justify-between items-center">
     <p class="flex">Number of clipboard events</p>
@@ -81,5 +81,34 @@
         }
       </mat-select>
     </mat-form-field>
+  </div>
+  <div class="flex flex-row justify-between items-center">
+    <p class="flex">Database path: {{ database }}</p>
+    <div class="flex flex-row space-x-1">
+      @if (promptedDBDelete) {
+      <div class="flex items-center">Are you sure?</div>
+      <button
+        mat-raised-button
+        color="primary"
+        class="w-[95px]"
+        (click)="promptedDBDelete = false"
+      >
+        Cancel
+      </button>
+      <button
+        mat-raised-button
+        color="warn"
+        class="w-[95px]"
+        (click)="deleteDB()"
+      >
+        Proceed
+      </button>
+      } @else {
+      <button mat-mini-fab color="primary" (click)="promptedDBDelete = true">
+        <mat-icon>delete</mat-icon>
+      </button>
+
+      }
+    </div>
   </div>
 </div>

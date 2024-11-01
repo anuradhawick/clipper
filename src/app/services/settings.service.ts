@@ -58,4 +58,12 @@ export class SettingsService {
   async get(): Promise<Settings> {
     return await invoke<Settings>("read_settings", {});
   }
+
+  async deleteDB() {
+    await invoke("delete_db", {});
+  }
+
+  async getDBPath(): Promise<string> {
+    return invoke<string>("get_db_path", {});
+  }
 }
