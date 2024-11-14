@@ -1,22 +1,25 @@
 use super::db::DbConnection;
 use arboard::Clipboard;
 use arboard::ImageData;
-use base64::prelude::*;
 use chrono::Utc;
 use image::codecs::png::{PngDecoder, PngEncoder};
 use image::ImageDecoder;
 use image::ImageEncoder;
 use sqlx::Row;
 use sqlx::SqlitePool;
+use std::env::temp_dir;
+use std::fs::File;
 use std::hash::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::io::BufReader;
 use std::io::Cursor;
+use std::io::Write;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::Emitter;
 use tauri::{self, async_runtime, AppHandle, State};
+use tauri_plugin_shell::ShellExt;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -436,23 +439,23 @@ pub async fn open_clipboard_entry(
     log::info!("CMD:Opening clipboard entry: {:#?}", id);
     let clipboard_watcher = state.lock().await;
     let entry = clipboard_watcher
-        .read_one(id)
+        .read_one(id.clone())
         .await
         .map_err(|e| e.to_string())?;
     if let ClipboardEventKind::Image = entry.kind {
         let image = entry.entry;
-        let mime_type = "image/png";
-        let base64_string = BASE64_STANDARD.encode(&image);
-        let uri = format!("data:{};base64,{}", mime_type, base64_string);
 
-        #[cfg(target_os = "macos")]
-        if let Err(e) = open::with_command(uri, "safari").status() {
-            log::error!("Failed to open image: {}", e);
-            return Err(e.to_string());
-        }
+        let mut temp_file_path = temp_dir();
+        temp_file_path.push(format!("{}.png", id));
 
-        #[cfg(target_os = "linux")]
-        if let Err(e) = open::with_command(uri, "firefox").status() {
+        let mut temp_file = File::create(&temp_file_path).map_err(|e| e.to_string())?;
+        temp_file.write_all(&image).map_err(|e| e.to_string())?;
+        temp_file.flush().map_err(|e| e.to_string())?;
+
+        let shell = clipboard_watcher.app_handle.shell();
+        let image_path_str = temp_file_path.to_str().ok_or("Invalid path".to_string())?;
+
+        if let Err(e) = shell.open(image_path_str, None).map_err(|e| e.to_string()) {
             log::error!("Failed to open image: {}", e);
             return Err(e.to_string());
         }
