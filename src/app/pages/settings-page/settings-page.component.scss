@@ -1,36 +1,39 @@
 @use "@angular/material" as mat;
-@import "../../../styles.scss";
+@use "../../../styles.scss" as style;
 
 .default-light {
-  @include mat.icon-color($clipper-default-light, $color-variant: primary);
+  @include mat.icon-color(
+    style.$clipper-default-light,
+    $color-variant: primary
+  );
 }
 
 .default-dark {
-  @include mat.icon-color($clipper-default-dark, $color-variant: primary);
+  @include mat.icon-color(style.$clipper-default-dark, $color-variant: primary);
 }
 
 .azure-light {
-  @include mat.icon-color($clipper-azure-light, $color-variant: primary);
+  @include mat.icon-color(style.$clipper-azure-light, $color-variant: primary);
 }
 
 .azure-dark {
-  @include mat.icon-color($clipper-azure-dark, $color-variant: primary);
+  @include mat.icon-color(style.$clipper-azure-dark, $color-variant: primary);
 }
 
 .yellow-light {
-  @include mat.icon-color($clipper-yellow-light, $color-variant: primary);
+  @include mat.icon-color(style.$clipper-yellow-light, $color-variant: primary);
 }
 
 .yellow-dark {
-  @include mat.icon-color($clipper-yellow-dark, $color-variant: primary);
+  @include mat.icon-color(style.$clipper-yellow-dark, $color-variant: primary);
 }
 
 .cyan-light {
-  @include mat.icon-color($clipper-cyan-light, $color-variant: primary);
+  @include mat.icon-color(style.$clipper-cyan-light, $color-variant: primary);
 }
 
 .cyan-dark {
-  @include mat.icon-color($clipper-cyan-dark, $color-variant: primary);
+  @include mat.icon-color(style.$clipper-cyan-dark, $color-variant: primary);
 }
 
 .selected {
