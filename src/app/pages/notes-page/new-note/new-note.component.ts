@@ -15,7 +15,6 @@ import { NotesService } from "../../../services/notes.service";
 
 @Component({
   selector: "app-new-note",
-  standalone: true,
   imports: [MatIconModule, MatButtonModule, RouterLink],
   templateUrl: "./new-note.component.html",
   styleUrl: "./new-note.component.scss",

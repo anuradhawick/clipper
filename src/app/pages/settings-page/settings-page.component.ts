@@ -16,7 +16,6 @@ import { MatButtonModule } from "@angular/material/button";
 
 @Component({
   selector: "app-settings-page",
-  standalone: true,
   imports: [
     MatIconModule,
     MatButtonModule,

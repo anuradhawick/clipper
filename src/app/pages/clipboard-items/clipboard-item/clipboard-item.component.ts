@@ -16,7 +16,6 @@ import { DatePipe } from "@angular/common";
 
 @Component({
   selector: "app-clipboard-item",
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatButtonModule, MatIconModule, RouterLink, DatePipe],
   templateUrl: "./clipboard-item.component.html",

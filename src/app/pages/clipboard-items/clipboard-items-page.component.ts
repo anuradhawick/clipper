@@ -10,13 +10,7 @@ import { MatButtonModule } from "@angular/material/button";
 
 @Component({
   selector: "app-clipboard-items",
-  standalone: true,
-  imports: [
-    ClipboardItemsPageComponent,
-    ClipboardItemComponent,
-    MatButtonModule,
-    MatIconModule,
-  ],
+  imports: [ClipboardItemComponent, MatButtonModule, MatIconModule],
   templateUrl: "./clipboard-items-page.component.html",
   styleUrl: "./clipboard-items-page.component.scss",
 })

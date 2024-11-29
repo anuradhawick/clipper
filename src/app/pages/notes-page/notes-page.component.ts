@@ -8,7 +8,6 @@ import { RouterOutlet } from "@angular/router";
 
 @Component({
   selector: "app-notes-page",
-  standalone: true,
   imports: [MatButtonModule, MatIconModule, NoteItemComponent, RouterOutlet],
   templateUrl: "./notes-page.component.html",
   styleUrl: "./notes-page.component.scss",

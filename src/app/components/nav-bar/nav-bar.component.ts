@@ -7,11 +7,10 @@ import { NavigationEnd, Router, RouterLink } from "@angular/router";
 import { Subscription } from "rxjs";
 
 @Component({
-  selector: "app-nav-bar",
-  standalone: true,
-  imports: [MatButtonModule, MatIconModule, RouterLink],
-  templateUrl: "./nav-bar.component.html",
-  styleUrl: "./nav-bar.component.scss",
+    selector: "app-nav-bar",
+    imports: [MatButtonModule, MatIconModule, RouterLink],
+    templateUrl: "./nav-bar.component.html",
+    styleUrl: "./nav-bar.component.scss"
 })
 export class NavBarComponent implements OnInit, OnDestroy {
   routerSub: Subscription | null = null;

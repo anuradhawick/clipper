@@ -15,7 +15,6 @@ import { DatePipe } from "@angular/common";
 
 @Component({
   selector: "app-note-item",
-  standalone: true,
   imports: [MatButtonModule, MatIconModule, DatePipe],
   templateUrl: "./note-item.component.html",
   styleUrl: "./note-item.component.scss",
