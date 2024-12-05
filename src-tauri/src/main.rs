@@ -89,9 +89,7 @@ async fn main() {
     #[cfg(target_os = "linux")]
     env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     // define the builder
-    let mut builder = tauri::Builder::default();
-    // update builder with common configurations
-    builder = builder
+    tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
         // .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
@@ -128,11 +126,13 @@ async fn main() {
             // global shortcut
             create_global_shortcut(app.handle())?;
             // reposition
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_positioner::init())?;
             let window = app
                 .get_webview_window("main")
                 .ok_or("Unable to load window")?;
-            window.move_window(Position::TopCenter)?;
             window.set_document_title("Clipper - Main");
+            window.move_window(Position::TopCenter).unwrap();
             // mac specific settings
             #[cfg(target_os = "macos")]
             {
@@ -144,6 +144,7 @@ async fn main() {
                 window.set_visible_on_all_workspaces(true)?;
                 // mac settings
                 apply_macos_specifics(&window);
+                app.handle().plugin(tauri_nspanel::init());
             }
             // create tray
             let toggle = MenuItemBuilder::with_id("toggle", "Show/Hide").build(app)?;
@@ -165,16 +166,7 @@ async fn main() {
 
             async_runtime::spawn(setup(app.handle().clone()));
             Ok(())
-        });
-
-    // update builder with macOS specific configurations
-    #[cfg(target_os = "macos")]
-    {
-        builder = builder.plugin(tauri_nspanel::init());
-    }
-
-    builder
-        .plugin(tauri_plugin_positioner::init())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
