@@ -205,6 +205,10 @@ impl ClipboardWatcher {
         log::info!("Clipboard watcher resumed");
     }
 
+    pub fn set_last_text(&mut self, text: String) {
+        self.last_text.clone_from(&text);
+    }
+
     pub async fn read(&self, count: u32) -> Result<Vec<ClipboardEvent>, sqlx::Error> {
         let pool: tokio::sync::MutexGuard<'_, sqlx::Pool<sqlx::Sqlite>> = self.pool.lock().await;
         let rows = sqlx::query(

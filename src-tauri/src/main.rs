@@ -18,7 +18,7 @@ use content_managers::clipboard_watcher::{
 };
 use content_managers::db::{delete_db, get_db_path, DbConnection};
 use content_managers::notes_manager::{
-    create_note, delete_note, read_notes, update_note, NotesManager,
+    clipboard_add_note, create_note, delete_note, read_notes, update_note, NotesManager,
 };
 use content_managers::settings::{read_settings, update_settings, SettingsManager};
 use global_shortcut::create_global_shortcut;
@@ -115,6 +115,7 @@ async fn main() {
             delete_note,
             read_notes,
             update_note,
+            clipboard_add_note,
             // settings related
             update_settings,
             read_settings,

@@ -2,7 +2,7 @@
 @for (note of notes(); track note.id) {
 <app-note-item
   [note]="note"
-  (copyClicked)="ns.copy(note.entry)"
+  (copyClicked)="ns.copy(note.id)"
   (deleteClicked)="ns.delete(note.id)"
   (contentUpdated)="ns.update(note.id, $event)"
 />

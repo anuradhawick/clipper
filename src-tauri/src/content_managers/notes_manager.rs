@@ -1,4 +1,5 @@
-use super::db::DbConnection;
+use super::{clipboard_watcher::ClipboardWatcher, db::DbConnection};
+use arboard::Clipboard;
 use chrono::Utc;
 use serde::Serialize;
 use sqlx::{sqlite::SqlitePool, Row};
@@ -197,4 +198,22 @@ pub async fn read_notes(
 ) -> Result<Vec<NoteItem>, String> {
     log::info!("CMD:Reading notes");
     state.lock().await.read().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn clipboard_add_note(
+    id: String,
+    state_clipboard_mgr: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+    state_notes_mgr: State<'_, Arc<Mutex<NotesManager>>>,
+) -> Result<(), String> {
+    log::info!("CMD:Note added to clipboard: {:#?}", id);
+    let mut clipboard_watcher = state_clipboard_mgr.lock().await;
+    let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
+    let notes_mgr = state_notes_mgr.lock().await;
+    let entry = notes_mgr.get(&id).await.map_err(|e| e.to_string())?;
+    let text = entry.entry;
+    clipboard_watcher.set_last_text(text.clone());
+    clipboard.set_text(text).map_err(|e| e.to_string())?;
+
+    Ok(())
 }

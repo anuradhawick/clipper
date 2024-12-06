@@ -38,9 +38,9 @@ export class NotesService {
     this.notes.update((notes) => [savedItem, ...notes]);
   }
 
-  async copy(entry: string) {
-    console.log("Copying note", entry);
-    await invoke("clipboard_add_entry", { entry: entry });
+  async copy(id: string) {
+    console.log("Copying note", id);
+    await invoke("clipboard_add_note", { id });
   }
 
   async delete(id: string) {
