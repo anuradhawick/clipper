@@ -89,7 +89,8 @@ async fn main() {
     #[cfg(target_os = "linux")]
     env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     // define the builder
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+    builder = builder
         .plugin(tauri_plugin_log::Builder::new().build())
         // .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
@@ -145,7 +146,6 @@ async fn main() {
                 window.set_visible_on_all_workspaces(true)?;
                 // mac settings
                 apply_macos_specifics(&window);
-                app.handle().plugin(tauri_nspanel::init());
             }
             // create tray
             let toggle = MenuItemBuilder::with_id("toggle", "Show/Hide").build(app)?;
@@ -167,7 +167,14 @@ async fn main() {
 
             async_runtime::spawn(setup(app.handle().clone()));
             Ok(())
-        })
+        });
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.plugin(tauri_nspanel::init());
+    }
+
+    builder
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
