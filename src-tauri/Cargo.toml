@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "1.0.1"
+version = "1.0.2"
 description = "Clipper"
 authors = ["Anuradha Wickramarachchi <anuradhawick@gmail.com>"]
 license = "AGPL 3.0"
