@@ -68,5 +68,7 @@ export class SettingsPageComponent implements OnDestroy {
     await this.ss.deleteDB();
   }
 
-  ngOnDestroy(): void {}
+  ngOnDestroy(): void {
+    this.settingsSubscription.unsubscribe();
+  }
 }
