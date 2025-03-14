@@ -1,4 +1,10 @@
-import { Component, OnDestroy, OnInit, signal } from "@angular/core";
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  OnInit,
+  signal,
+} from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { ClipboardHistoryService } from "../../services/clipboard-history.service";
@@ -7,14 +13,16 @@ import { NavigationEnd, Router, RouterLink } from "@angular/router";
 import { Subscription } from "rxjs";
 
 @Component({
-    selector: "app-nav-bar",
-    imports: [MatButtonModule, MatIconModule, RouterLink],
-    templateUrl: "./nav-bar.component.html",
-    styleUrl: "./nav-bar.component.scss"
+  selector: "app-nav-bar",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [MatButtonModule, MatIconModule, RouterLink],
+  templateUrl: "./nav-bar.component.html",
+  styleUrl: "./nav-bar.component.scss",
 })
 export class NavBarComponent implements OnInit, OnDestroy {
   routerSub: Subscription | null = null;
   showClear = signal(false);
+  promptedClipboardDelete = signal(false);
 
   constructor(
     protected chs: ClipboardHistoryService,
