@@ -92,8 +92,7 @@ async fn main() {
     let mut builder = tauri::Builder::default();
     builder = builder
         .plugin(tauri_plugin_log::Builder::new().build())
-        // .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
@@ -156,7 +155,7 @@ async fn main() {
                 .build()?;
             let tray = TrayIconBuilder::new()
                 .menu(&menu)
-                .menu_on_left_click(true)
+                .show_menu_on_left_click(true)
                 .on_menu_event(handle_system_tray_menu_event)
                 .on_tray_icon_event(handle_system_tray_icon_event)
                 .icon(app.default_window_icon().unwrap().clone())

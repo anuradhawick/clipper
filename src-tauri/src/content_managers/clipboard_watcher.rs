@@ -19,7 +19,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tauri::Emitter;
 use tauri::{self, async_runtime, AppHandle, State};
-use tauri_plugin_shell::ShellExt;
+use tauri_plugin_opener::OpenerExt;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -439,6 +439,7 @@ pub async fn delete_all_clipboard_entries(
 pub async fn open_clipboard_entry(
     id: String,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+    app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     log::info!("CMD:Opening clipboard entry: {:#?}", id);
     let clipboard_watcher = state.lock().await;
@@ -456,10 +457,13 @@ pub async fn open_clipboard_entry(
         temp_file.write_all(&image).map_err(|e| e.to_string())?;
         temp_file.flush().map_err(|e| e.to_string())?;
 
-        let shell = clipboard_watcher.app_handle.shell();
         let image_path_str = temp_file_path.to_str().ok_or("Invalid path".to_string())?;
 
-        if let Err(e) = shell.open(image_path_str, None).map_err(|e| e.to_string()) {
+        if let Err(e) = app_handle
+            .opener()
+            .open_path(image_path_str, None::<&str>)
+            .map_err(|e| e.to_string())
+        {
             log::error!("Failed to open image: {}", e);
             return Err(e.to_string());
         }

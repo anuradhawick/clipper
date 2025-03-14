@@ -1,8 +1,8 @@
 use tauri::tray::{MouseButton, MouseButtonState, TrayIcon};
 use tauri::{menu::MenuEvent, tray::TrayIconEvent};
 use tauri::{AppHandle, Manager};
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_positioner::{Position, WindowExt};
-use tauri_plugin_shell::ShellExt;
 
 pub fn handle_system_tray_menu_event(app: &AppHandle, event: MenuEvent) {
     match event.id.as_ref() {
@@ -26,8 +26,10 @@ pub fn handle_system_tray_menu_event(app: &AppHandle, event: MenuEvent) {
         }
         "about" => {
             log::info!("Open author website");
-            let shell = app.shell();
-            if let Err(e) = shell.open("https://anuradhawick.com", None) {
+            if let Err(e) = app
+                .opener()
+                .open_url("https://anuradhawick.com", None::<&str>)
+            {
                 log::error!("Could not open author website {:?}", e);
             }
         }
