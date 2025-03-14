@@ -1,4 +1,9 @@
-import { APP_INITIALIZER, ApplicationConfig } from "@angular/core";
+import {
+  ApplicationConfig,
+  inject,
+  provideAppInitializer,
+  provideExperimentalZonelessChangeDetection,
+} from "@angular/core";
 import { provideAnimations } from "@angular/platform-browser/animations";
 import { provideRouter } from "@angular/router";
 
@@ -9,22 +14,13 @@ import { ThemeService } from "./services/theme.service";
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    provideExperimentalZonelessChangeDetection(),
     provideRouter(routes),
     provideHttpClient(),
     provideAnimations(),
-    ClipboardHistoryService,
-    ThemeService,
-    {
-      provide: APP_INITIALIZER,
-      deps: [ThemeService],
-      useFactory: (ts: ThemeService) => () => ts,
-      multi: true,
-    },
-    {
-      provide: APP_INITIALIZER,
-      deps: [ClipboardHistoryService],
-      useFactory: (chs: ClipboardHistoryService) => () => chs,
-      multi: true,
-    },
+    provideAppInitializer(() => {
+      inject(ClipboardHistoryService);
+      inject(ThemeService);
+    }),
   ],
 };

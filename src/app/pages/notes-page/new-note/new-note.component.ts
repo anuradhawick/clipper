@@ -32,7 +32,7 @@ export class NewNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   ) {}
 
   ngOnInit(): void {
-    this.route.paramMap.subscribe((params: ParamMap) => {
+    this.paramsSub = this.route.paramMap.subscribe((params: ParamMap) => {
       this.entry.set(params.get("entry") || "");
       this.newEntry.set(params.get("entry") || "");
     });

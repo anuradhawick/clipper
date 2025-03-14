@@ -1,8 +1,7 @@
-import { Component, computed, Signal, signal } from "@angular/core";
+import { Component, computed, Signal } from "@angular/core";
 import {
   ClipboardHistoryService,
   ClipperEntry,
-  ClipperEntryKind,
 } from "../../services/clipboard-history.service";
 import { ClipboardItemComponent } from "./clipboard-item/clipboard-item.component";
 import { MatIconModule } from "@angular/material/icon";

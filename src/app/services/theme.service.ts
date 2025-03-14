@@ -7,7 +7,6 @@ import {
 import {
   ColorPreference,
   LightingPreference,
-  Settings,
   SettingsService,
   ThemeSettings,
 } from "./settings.service";

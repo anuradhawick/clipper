@@ -74,7 +74,7 @@
       <mat-label>History size</mat-label>
       <mat-select
         (valueChange)="changeHistorySize($event)"
-        [value]="settings?.historySize"
+        [value]="settings()?.historySize"
       >
         @for (size of [100, 1000, 5000]; track size) {
         <mat-option [value]="size">{{ size }}</mat-option>
@@ -83,15 +83,15 @@
     </mat-form-field>
   </div>
   <div class="flex flex-row justify-between items-center">
-    <p class="flex">Database path: {{ database }}</p>
+    <p class="flex">Database path: {{ database() }}</p>
     <div class="flex flex-row space-x-1">
-      @if (promptedDBDelete) {
+      @if (promptedDBDelete()) {
       <div class="flex items-center">Are you sure?</div>
       <button
         mat-raised-button
         color="primary"
         class="w-[95px]"
-        (click)="promptedDBDelete = false"
+        (click)="promptedDBDelete.set(false)"
       >
         Cancel
       </button>
@@ -104,7 +104,7 @@
         Proceed
       </button>
       } @else {
-      <button mat-mini-fab color="primary" (click)="promptedDBDelete = true">
+      <button mat-mini-fab color="primary" (click)="promptedDBDelete.set(true)">
         <mat-icon>delete</mat-icon>
       </button>
       }

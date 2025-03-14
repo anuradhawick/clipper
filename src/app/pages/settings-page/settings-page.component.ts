@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from "@angular/core";
+import { Component, OnDestroy, signal, Signal } from "@angular/core";
 import { MatRippleModule } from "@angular/material/core";
 import { MatIconModule } from "@angular/material/icon";
 import { Color, colors, ThemeService } from "../../services/theme.service";
@@ -30,40 +30,40 @@ import { MatButtonModule } from "@angular/material/button";
 export class SettingsPageComponent implements OnDestroy {
   colors: Color[] = colors;
   settingsSubscription: Subscription;
-  settings?: Settings;
-  database: string = "loading...";
-  promptedDBDelete = false;
+  settings = signal<Settings | null>(null);
+  database = signal("loading...");
+  promptedDBDelete = signal(false);
 
   constructor(protected ts: ThemeService, private ss: SettingsService) {
     this.settingsSubscription = this.ss.settings$.subscribe((settings) => {
-      this.settings = settings;
+      this.settings.set(settings);
     });
     this.ss.getDBPath().then((path) => {
-      this.database = path;
+      this.database.set(path);
     });
   }
 
   async changeColor(color: ColorPreference) {
-    const settings = this.settings;
+    const settings = this.settings();
     if (!settings) return;
     this.ss.update({ ...settings, color: color });
   }
 
   async changeLighting(lighting: LightingPreference) {
-    const settings = this.settings;
+    const settings = this.settings();
     if (!settings) return;
     this.ss.update({ ...settings, lighting: lighting });
   }
 
   async changeHistorySize(size: number) {
-    const settings = this.settings;
+    const settings = this.settings();
     if (!settings) return;
     this.ss.update({ ...settings, historySize: size });
   }
 
   async deleteDB() {
-    this.database = "deleting...";
-    this.promptedDBDelete = false;
+    this.database.set("deleting...");
+    this.promptedDBDelete.set(false);
 
     await this.ss.deleteDB();
   }
