@@ -41,9 +41,9 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "postcss": "^8.4.39",
+    "postcss": "^8.5.3",
     "schematics-scss-migrate": "2.3.17",
-    "tailwindcss": "^3.4.4",
+    "tailwindcss": "^4.0.14",
     "typescript": "5.6.3"
   },
   "packageManager": "pnpm@9.5.0+sha512.140036830124618d624a2187b50d04289d5a087f326c9edfc0ccd733d76c4f52c3a313d4fc148794a2a9d81553016004e6742e8cf850670268a7387fc220c903"

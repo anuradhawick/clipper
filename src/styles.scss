@@ -2,9 +2,9 @@
 @use "material-icons/iconfont/material-icons.scss";
 @include mat.core();
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
 
 $clipper-default-light: mat.define-theme();
 
@@ -165,5 +165,5 @@ body {
 }
 
 .wrapper {
-  @apply rounded-lg border border-solid m-1 mt-0 flex bg-slate-50 bg-opacity-30 shadow-lg relative;
+  @apply rounded-lg border border-solid m-1 mt-0 flex bg-slate-50/30 shadow-lg relative;
 }
