@@ -7,25 +7,25 @@ license = "AGPL 3.0"
 repository = "https://github.com/anuradhawick/clipper"
 default-run = "app"
 edition = "2021"
-rust-version = "1.81.0"
+rust-version = "1.85.0"
 
 [build-dependencies]
-tauri-build = { version = "2.0.3", features = [] }
+tauri-build = { version = "2.0.6", features = [] }
 
 [dependencies]
-serde_json = "1.0.133"
-serde = { version = "1.0.215", features = ["derive"] }
-tauri = { version = "2.1.1", features = ["macos-private-api", "tray-icon"] }
-tauri-plugin-positioner = "2.1.0"
+serde_json = "1.0.140"
+serde = { version = "1.0.219", features = ["derive"] }
+tauri = { version = "2.3.1", features = ["macos-private-api", "tray-icon"] }
+tauri-plugin-positioner = "2.2.0"
 arboard = "3.4.1"
-tokio = { version = "1.42.0", features = ["full"] }
-uuid = { version = "1.11.0", features = ["v4"] }
-sqlx = { version = "0.8.2", features = ["sqlite", "runtime-tokio-rustls"] }
-chrono = "0.4.38"
-tauri-plugin-shell = "2.0.2"
-log = "0.4.22"
-tauri-plugin-log = "2.0.3"
+tokio = { version = "1.44.1", features = ["full"] }
+uuid = { version = "1.16.0", features = ["v4"] }
+sqlx = { version = "0.8.3", features = ["sqlite", "runtime-tokio-rustls"] }
+chrono = "0.4.40"
+log = "0.4.26"
+tauri-plugin-log = "2.3.1"
 image = "0.25.5"
+tauri-plugin-opener = "2.2.6"
 
 # macos dependencies
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -35,14 +35,14 @@ tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v2"
 system-notification = { git = "https://github.com/ahkohd/tauri-toolkit", branch = "v2" }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-global-shortcut = "2.0.1"
+tauri-plugin-global-shortcut = "2.2.0"
 
-[profile.dev]
-incremental = true # Compile your binary in smaller steps.
+# [profile.dev]
+# incremental = true # Compile your binary in smaller steps.
 
-[profile.release]
-codegen-units = 1 # Allows LLVM to perform better optimization.
-lto = true        # Enables link-time-optimizations.
-opt-level = "s"   # Prioritizes small binary size. Use `3` if you prefer speed.
-panic = "abort"   # Higher performance by disabling panic handlers.
-strip = true      # Ensures debug symbols are removed.
+# [profile.release]
+# codegen-units = 1 # Allows LLVM to perform better optimization.
+# lto = true        # Enables link-time-optimizations.
+# opt-level = "s"   # Prioritizes small binary size. Use `3` if you prefer speed.
+# panic = "abort"   # Higher performance by disabling panic handlers.
+# strip = true      # Ensures debug symbols are removed.
