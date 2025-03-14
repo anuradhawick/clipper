@@ -5,7 +5,7 @@
     @for (color of colors; track $index) {
     <div
       matRipple
-      class="w-[180px] h-[100px] rounded-lg flex flex-row overflow-hidden default"
+      class="w-[180px] h-[100px] rounded-lg flex flex-row overflow-hidden"
       [class.selected]="ts.selectedColor == color.name"
       (click)="changeColor(color.name)"
     >
@@ -33,10 +33,10 @@
 </div>
 <div class="wrapper p-2 flex-col">
   <div class="block mb-1">Select Lighting</div>
-  <div class="flex flex-row justify-between w-full cursor-pointer space-x-1">
+  <div class="flex flex-row justify-between w-full space-x-1">
     <div
       matRipple
-      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden default"
+      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden cursor-pointer clipper-bg"
       [class]="ts.userLightingPreference == 'light' ? 'selected' : ''"
       (click)="changeLighting($any('light'))"
     >
@@ -46,7 +46,7 @@
     </div>
     <div
       matRipple
-      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden default"
+      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden cursor-pointer clipper-bg"
       [class]="ts.userLightingPreference == 'system' ? 'selected' : ''"
       (click)="changeLighting($any('system'))"
     >
@@ -56,7 +56,7 @@
     </div>
     <div
       matRipple
-      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden default"
+      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden cursor-pointer clipper-bg"
       [class]="ts.userLightingPreference == 'dark' ? 'selected' : ''"
       (click)="changeLighting($any('dark'))"
     >
