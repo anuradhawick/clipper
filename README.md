@@ -20,6 +20,7 @@ The app itself is secure, however, your clipboard might see your passwords if yo
 * 👉 Support images in the clipboard view and copying
 * 👉 Open images in system image viewer
 * 👉 Maintain quick text notes in notes manager
+* 👉 Multi monitor support
 
 ## Installation Instructions
 

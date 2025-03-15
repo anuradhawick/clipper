@@ -1,4 +1,5 @@
 use crate::utils::monitor_utils::move_to_active_monitor;
+use mouse_position::mouse_position::Mouse;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIcon};
 use tauri::{menu::MenuEvent, tray::TrayIconEvent};
 use tauri::{AppHandle, Manager, PhysicalPosition};
@@ -14,16 +15,26 @@ pub fn handle_system_tray_menu_event(app: &AppHandle, event: MenuEvent) {
                 {
                     window.hide().expect("Window cannot be hidden");
                 } else {
-                    let primary_monitor = app
-                        .primary_monitor()
-                        .expect("There must be a monitor")
-                        .expect("There must be a monitor");
-                    move_to_active_monitor(
-                        app,
-                        &window,
-                        primary_monitor.position().x.into(),
-                        primary_monitor.position().y.into(),
-                    );
+                    let position = Mouse::get_mouse_position();
+                    match position {
+                        Mouse::Position { x, y } => {
+                            move_to_active_monitor(app, &window, x.into(), y.into(), true);
+                        }
+                        Mouse::Error => {
+                            log::error!("Error getting mouse position. Moving to primary monitor");
+                            let primary_monitor = app
+                                .primary_monitor()
+                                .expect("There must be a monitor")
+                                .expect("There must be a monitor");
+                            move_to_active_monitor(
+                                app,
+                                &window,
+                                primary_monitor.position().x.into(),
+                                primary_monitor.position().y.into(),
+                                false,
+                            );
+                        }
+                    }
                     window.show().expect("Window cannot be displayed");
                 }
             }
@@ -63,7 +74,7 @@ pub fn handle_system_tray_icon_event(tray: &TrayIcon, event: TrayIconEvent) {
             window.hide().expect("Unable to hide");
             log::info!("window made invisible");
         } else {
-            move_to_active_monitor(app, &window, x, y);
+            move_to_active_monitor(app, &window, x, y, false);
             window.show().expect("Unable to show");
             // window.set_focus().expect("Unable to focus");
             log::info!("window made visible");

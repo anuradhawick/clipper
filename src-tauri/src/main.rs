@@ -4,9 +4,7 @@
 #[cfg(target_os = "macos")]
 extern crate objc;
 
-mod app_handle;
 mod content_managers;
-mod global_shortcut;
 mod tray_handlers;
 mod utils;
 
@@ -20,13 +18,13 @@ use content_managers::notes_manager::{
     clipboard_add_note, create_note, delete_note, read_notes, update_note, NotesManager,
 };
 use content_managers::settings::{read_settings, update_settings, SettingsManager};
-use global_shortcut::create_global_shortcut;
 use std::env;
 use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::{async_runtime, AppHandle, Manager};
 use tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
+use utils::global_shortcut::create_global_shortcut;
 use utils::monitor_utils::move_to_active_monitor;
 use utils::window_commands::hide_window;
 use utils::window_custom::WebviewWindowExt;
@@ -35,7 +33,7 @@ use utils::window_custom::WebviewWindowExt;
 use utils::window_custom::macos::WebviewWindowExtMacos;
 
 #[cfg(target_os = "macos")]
-use app_handle::AppHandleExt;
+use utils::app_handle::AppHandleExt;
 
 #[cfg(target_os = "macos")]
 use tauri::WebviewWindow;
@@ -139,6 +137,7 @@ async fn main() {
                 &window,
                 primary_monitor.position().x.into(),
                 primary_monitor.position().y.into(),
+                false,
             );
             // mac specific settings
             #[cfg(target_os = "macos")]

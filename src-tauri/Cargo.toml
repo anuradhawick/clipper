@@ -25,6 +25,7 @@ log = "0.4.26"
 tauri-plugin-log = "2.3.1"
 image = "0.25.5"
 tauri-plugin-opener = "2.2.6"
+mouse_position = "0.1.4"
 
 # macos dependencies
 [target.'cfg(target_os = "macos")'.dependencies]
