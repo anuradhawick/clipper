@@ -8,8 +8,7 @@ mod app_handle;
 mod content_managers;
 mod global_shortcut;
 mod tray_handlers;
-mod window_commands;
-mod window_custom;
+mod utils;
 
 use content_managers::clipboard_watcher::{
     clean_old_entries, clipboard_add_entry, delete_all_clipboard_entries,
@@ -27,13 +26,13 @@ use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::{async_runtime, AppHandle, Manager};
-use tauri_plugin_positioner::{Position, WindowExt};
 use tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
-use window_commands::hide_window;
-use window_custom::WebviewWindowExt;
+use utils::monitor_utils::move_to_active_monitor;
+use utils::window_commands::hide_window;
+use utils::window_custom::WebviewWindowExt;
 
 #[cfg(target_os = "macos")]
-use window_custom::macos::WebviewWindowExtMacos;
+use utils::window_custom::macos::WebviewWindowExtMacos;
 
 #[cfg(target_os = "macos")]
 use app_handle::AppHandleExt;
@@ -126,14 +125,21 @@ async fn main() {
         .setup(|app| {
             // global shortcut
             create_global_shortcut(app.handle())?;
-            // reposition
-            #[cfg(desktop)]
-            app.handle().plugin(tauri_plugin_positioner::init())?;
             let window = app
                 .get_webview_window("main")
                 .ok_or("Unable to load window")?;
             window.set_document_title("Clipper - Main");
-            window.move_window(Position::TopCenter).unwrap();
+            // reposition
+            let primary_monitor = app
+                .primary_monitor()
+                .expect("There must be a monitor")
+                .expect("There must be a monitor");
+            move_to_active_monitor(
+                app.app_handle(),
+                &window,
+                primary_monitor.position().x.into(),
+                primary_monitor.position().y.into(),
+            );
             // mac specific settings
             #[cfg(target_os = "macos")]
             {

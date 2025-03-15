@@ -1,8 +1,8 @@
+use crate::utils::monitor_utils::move_to_active_monitor;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIcon};
 use tauri::{menu::MenuEvent, tray::TrayIconEvent};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, PhysicalPosition};
 use tauri_plugin_opener::OpenerExt;
-use tauri_plugin_positioner::{Position, WindowExt};
 
 pub fn handle_system_tray_menu_event(app: &AppHandle, event: MenuEvent) {
     match event.id.as_ref() {
@@ -14,9 +14,16 @@ pub fn handle_system_tray_menu_event(app: &AppHandle, event: MenuEvent) {
                 {
                     window.hide().expect("Window cannot be hidden");
                 } else {
-                    window
-                        .move_window(Position::TopCenter)
-                        .expect("Unable to move window");
+                    let primary_monitor = app
+                        .primary_monitor()
+                        .expect("There must be a monitor")
+                        .expect("There must be a monitor");
+                    move_to_active_monitor(
+                        app,
+                        &window,
+                        primary_monitor.position().x.into(),
+                        primary_monitor.position().y.into(),
+                    );
                     window.show().expect("Window cannot be displayed");
                 }
             }
@@ -41,6 +48,7 @@ pub fn handle_system_tray_icon_event(tray: &TrayIcon, event: TrayIconEvent) {
     if let TrayIconEvent::Click {
         button: MouseButton::Left,
         button_state: MouseButtonState::Up,
+        position: PhysicalPosition { x, y },
         ..
     } = event
     {
@@ -55,9 +63,7 @@ pub fn handle_system_tray_icon_event(tray: &TrayIcon, event: TrayIconEvent) {
             window.hide().expect("Unable to hide");
             log::info!("window made invisible");
         } else {
-            window
-                .move_window(Position::TopCenter)
-                .expect("Unable to move window");
+            move_to_active_monitor(app, &window, x, y);
             window.show().expect("Unable to show");
             // window.set_focus().expect("Unable to focus");
             log::info!("window made visible");
