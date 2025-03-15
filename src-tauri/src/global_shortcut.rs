@@ -1,6 +1,6 @@
+use crate::utils::monitor_utils::move_to_active_monitor;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
-use tauri_plugin_positioner::{Position, WindowExt};
 
 pub fn create_global_shortcut(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(target_os = "linux")]
@@ -24,9 +24,16 @@ pub fn create_global_shortcut(app: &AppHandle) -> Result<(), Box<dyn std::error:
                                 {
                                     window.hide().expect("Window cannot be hidden");
                                 } else {
-                                    window
-                                        .move_window(Position::TopCenter)
-                                        .expect("Unable to move window");
+                                    let primary_monitor = app
+                                        .primary_monitor()
+                                        .expect("There must be a monitor")
+                                        .expect("There must be a monitor");
+                                    move_to_active_monitor(
+                                        app,
+                                        &window,
+                                        primary_monitor.position().x.into(),
+                                        primary_monitor.position().y.into(),
+                                    );
                                     window.show().expect("Window cannot be displayed");
                                 }
                             }
