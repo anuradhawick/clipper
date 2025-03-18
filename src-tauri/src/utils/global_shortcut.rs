@@ -52,6 +52,7 @@ pub fn create_global_shortcut(app: &AppHandle) -> Result<(), Box<dyn std::error:
                                         },
                                    }
                                     window.show().expect("Window cannot be displayed");
+                                    window.set_focus().expect("Window cannot be focused");
                                 }
                             }
                         }

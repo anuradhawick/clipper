@@ -88,7 +88,6 @@ async fn main() {
     // define the builder
     let mut builder = tauri::Builder::default();
     builder = builder
-        .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(
             tauri_plugin_log::Builder::new()

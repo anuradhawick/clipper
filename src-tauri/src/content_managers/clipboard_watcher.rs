@@ -163,10 +163,6 @@ impl ClipboardWatcher {
                     let hash = buffer_hash(&image.bytes);
                     // if running and image is not same
                     if app_state.running && hash != app_state.last_image {
-                        println!(
-                            "Image hash from clipboard - {:#?} {:#?}",
-                            hash, app_state.last_image
-                        );
                         app_state.last_image = hash;
 
                         let entry = ClipboardEvent {
