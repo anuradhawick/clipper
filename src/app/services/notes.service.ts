@@ -51,7 +51,7 @@ export class NotesService {
 
   async update(id: string, entry: string) {
     console.log("Updating note", id, entry);
-    // delete is only spaces
+    // delete if only spaces
     if (entry.trim().length === 0) {
       await this.delete(id);
       return;

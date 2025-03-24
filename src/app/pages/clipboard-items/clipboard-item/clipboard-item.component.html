@@ -10,10 +10,19 @@
     <!-- text -->
     @case(ClipperEntryKind.Text) {
     <div class="overflow-hidden h-full">
-      <div
-        class="overflow-hidden whitespace-pre-wrap font-mono mb-2"
-        [textContent]="processText(clipperEntry().entry)"
-      ></div>
+      <div class="overflow-hidden whitespace-pre-wrap font-mono mb-2">
+        @for(part of processBytes(clipperEntry().entry); track $index ) {
+        <!-- plain text -->
+        @if (part.type == 'text') { <span>{{ part.content }}</span> }
+        <!-- https url -->
+        @else {
+        <span
+          class="underline cursor-pointer italic"
+          (click)="openUrl(part.content)"
+          >{{ part.content }}</span
+        >
+        } }
+      </div>
     </div>
     }
     <!-- image -->
@@ -39,7 +48,7 @@
         [routerLink]="[
           '/notes',
           'new',
-          { entry: processText(clipperEntry().entry) }
+          { entry: asPlainText(clipperEntry().entry) }
         ]"
         [disabled]="clipperEntry().kind == ClipperEntryKind.Image"
       >

@@ -1,5 +1,4 @@
 import {
-  AfterViewInit,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -12,6 +11,8 @@ import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { NoteItem } from "../../../services/notes.service";
 import { DatePipe } from "@angular/common";
+import { asPlainText, processText } from "../../../utils/text";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 @Component({
   selector: "app-note-item",
@@ -27,8 +28,11 @@ export class NoteItemComponent {
   contentUpdated = output<string>();
   expanded = signal(false);
   editable = signal(false);
-  editor = viewChild.required<ElementRef>("editor");
+  editor = viewChild<ElementRef>("editor");
   dateFmt: any;
+  processText = processText;
+  asPlainText = asPlainText;
+  openUrl = openUrl;
 
   constructor(private cd: ChangeDetectorRef) {}
 
@@ -49,7 +53,16 @@ export class NoteItemComponent {
     if (this.editable()) {
       this.expanded.set(true);
       this.cd.detectChanges();
-      this.editor().nativeElement.focus();
+      this.editor()!.nativeElement.focus();
     }
+  }
+
+  updateNote() {
+    const note = this.editor()!.nativeElement.innerText || "";
+    this.editor()!.nativeElement.innerHTML = "";
+    this.editor()!.nativeElement.innerText = "";
+    this.uneditable();
+    this.collapse();
+    this.contentUpdated.emit(note);
   }
 }

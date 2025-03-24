@@ -13,6 +13,8 @@ import {
   ClipperEntryKind,
 } from "../../../services/clipboard-history.service";
 import { DatePipe } from "@angular/common";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { asPlainText, processBytes } from "../../../utils/text";
 
 @Component({
   selector: "app-clipboard-item",
@@ -29,6 +31,9 @@ export class ClipboardItemComponent {
   openClicked = output();
   expanded = signal(false);
   ClipperEntryKind = ClipperEntryKind;
+  processBytes = processBytes;
+  asPlainText = asPlainText;
+  openUrl = openUrl;
 
   toggleView() {
     this.expanded.update((x) => !x);
@@ -44,9 +49,5 @@ export class ClipboardItemComponent {
     const url = URL.createObjectURL(blob);
 
     return url;
-  }
-
-  processText(text: Array<number>): string {
-    return new TextDecoder().decode(Uint8Array.from(text));
   }
 }

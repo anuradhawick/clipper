@@ -12,15 +12,30 @@
     class="flex-1 min-h-[100px] overflow-hidden rounded-lg p-2 mb-4"
     [class.h-[100px]]="!expanded()"
   >
+    @if (editable()){
     <div class="overflow-hidden h-full">
       <div
         #editor
         [contentEditable]="editable()"
-        class="overflow-hidden whitespace-pre-wrap font-mono mb-2"
-        [textContent]="note().entry"
-        [class.min-h-[100px]]="editable()"
+        class="overflow-hidden whitespace-pre-wrap font-mono mb-2 min-h-[100px]"
+        [innerText]="note().entry"
       ></div>
     </div>
+    } @else {
+    <div class="overflow-hidden whitespace-pre-wrap font-mono mb-2">
+      @for(part of processText(note().entry); track $index ) {
+      <!-- plain text -->
+      @if (part.type == 'text') { <span>{{ part.content }}</span> }
+      <!-- https url -->
+      @else {
+      <span
+        class="underline cursor-pointer italic"
+        (click)="openUrl(part.content)"
+        >{{ part.content }}</span
+      >
+      } }
+    </div>
+    }
   </div>
   <!-- buttons -->
   <div class="flex flex-row mt-3 space-x-1 justify-end">
@@ -29,13 +44,7 @@
         <mat-icon>{{ expanded() ? "zoom_in_map" : "zoom_out_map" }}</mat-icon>
       </button>
       @if(editable()) {
-      <button
-        mat-mini-fab
-        class="w-full"
-        (click)="
-          contentUpdated.emit(editor.innerText || ''); uneditable(); collapse()
-        "
-      >
+      <button mat-mini-fab class="w-full" (click)="updateNote()">
         <mat-icon>save</mat-icon>
       </button>
       } @else {
