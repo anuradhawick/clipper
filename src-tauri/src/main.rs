@@ -5,7 +5,6 @@
 extern crate objc;
 
 mod content_managers;
-mod tray_handlers;
 mod utils;
 
 use content_managers::clipboard_watcher::{
@@ -23,9 +22,9 @@ use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::{async_runtime, AppHandle, Manager};
-use tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
 use utils::global_shortcut::create_global_shortcut;
 use utils::monitor_utils::move_to_active_monitor;
+use utils::tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
 use utils::window_commands::hide_window;
 use utils::window_custom::WebviewWindowExt;
 

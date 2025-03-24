@@ -58,7 +58,8 @@
         "visible": false,
         "transparent": true,
         "resizable": false,
-        "visibleOnAllWorkspaces": true
+        "visibleOnAllWorkspaces": true,
+        "dragDropEnabled": true
       }
     ],
     "security": {
