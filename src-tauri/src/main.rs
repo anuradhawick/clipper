@@ -149,6 +149,8 @@ async fn main() {
                 window.set_visible_on_all_workspaces(true)?;
                 // mac settings
                 apply_macos_specifics(&window);
+                //
+                window.set_resizable(false)?;
             }
             // create tray
             let toggle = MenuItemBuilder::with_id("toggle", "Show/Hide").build(app)?;
