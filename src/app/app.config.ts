@@ -11,6 +11,7 @@ import { routes } from "./app.routes";
 import { provideHttpClient } from "@angular/common/http";
 import { ClipboardHistoryService } from "./services/clipboard-history.service";
 import { ThemeService } from "./services/theme.service";
+import { DropperService } from "./services/dropper.service";
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -21,6 +22,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       inject(ClipboardHistoryService);
       inject(ThemeService);
+      inject(DropperService);
     }),
   ],
 };

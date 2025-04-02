@@ -3,7 +3,6 @@ import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { NoteItem, NotesService } from "../../services/notes.service";
 import { NoteItemComponent } from "./note-item/note-item.component";
-import { ClipboardHistoryService } from "../../services/clipboard-history.service";
 import { RouterOutlet } from "@angular/router";
 
 @Component({

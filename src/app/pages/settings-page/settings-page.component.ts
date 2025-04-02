@@ -32,7 +32,9 @@ export class SettingsPageComponent implements OnDestroy {
   settingsSubscription: Subscription;
   settings = signal<Settings | null>(null);
   database = signal("loading...");
+  filesPath = signal("loading...");
   promptedDBDelete = signal(false);
+  promptedFilesDelete = signal(false);
 
   constructor(protected ts: ThemeService, private ss: SettingsService) {
     this.settingsSubscription = this.ss.settings$.subscribe((settings) => {
@@ -40,6 +42,9 @@ export class SettingsPageComponent implements OnDestroy {
     });
     this.ss.getDBPath().then((path) => {
       this.database.set(path);
+    });
+    this.ss.getFilesPath().then((path) => {
+      this.filesPath.set(path);
     });
   }
 
@@ -66,6 +71,12 @@ export class SettingsPageComponent implements OnDestroy {
     this.promptedDBDelete.set(false);
 
     await this.ss.deleteDB();
+  }
+
+  async deleteFiles() {
+    this.promptedFilesDelete.set(false);
+
+    await this.ss.deleteFiles();
   }
 
   ngOnDestroy(): void {

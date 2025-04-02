@@ -1,0 +1,53 @@
+<div
+  style="visibility: hidden; position: fixed"
+  [style.left]="contextMenuPosition.x"
+  [style.top]="contextMenuPosition.y"
+  [matMenuTriggerFor]="fileMenu"
+></div>
+<div
+  class="rounded-lg border border-solid flex flex-col bg-slate-50/30 shadow-lg items-center justify-center aspect-square cursor-pointer"
+  matRipple
+  (dblclick)="openPath(item().clipperPath)"
+  (contextmenu)="onRightClick($event)"
+>
+  <div class="flex h-[80px] items-center justify-center">
+    @if (item().fileType == FileType.File) {
+      <!-- zip -->
+      @switch (getFileFormat(item().file)) {
+        @case (FileFormat.Zip) {
+          <mat-icon class="block text-lg mat-icon-mod">folder_zip</mat-icon>
+        }
+        @case (FileFormat.Image) {
+          <mat-icon class="block text-lg mat-icon-mod">image</mat-icon>
+        }
+        @default {
+          <mat-icon class="block text-lg mat-icon-mod">
+            insert_drive_file
+          </mat-icon>
+        }
+      }
+    } @else {
+      <mat-icon class="block text-lg mat-icon-mod">folder</mat-icon>
+    }
+  </div>
+  <div
+    class="text-center truncate w-[90%] overflow-hidden whitespace-nowrap mx-auto select-none"
+  >
+    {{ item().file }}
+  </div>
+</div>
+
+<mat-menu #fileMenu="matMenu">
+  <button mat-menu-item (click)="openPath(item().clipperPath)">
+    <mat-icon>open_in_new</mat-icon>
+    <span>Open</span>
+  </button>
+  <!-- <button mat-menu-item>
+    <mat-icon>content_copy</mat-icon>
+    <span>Copy</span>
+  </button> -->
+  <button mat-menu-item (click)="deleteFile()">
+    <mat-icon>delete</mat-icon>
+    <span>Delete</span>
+  </button>
+</mat-menu>

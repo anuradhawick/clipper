@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "pretty": "prettier --write src/**/*.{ts,html,scss}",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "tauri": "tauri"
@@ -43,6 +44,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "postcss": "^8.5.3",
+    "prettier": "3.5.3",
     "schematics-scss-migrate": "2.3.17",
     "tailwindcss": "^4.0.14",
     "typescript": "5.6.3"

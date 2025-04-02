@@ -63,7 +63,15 @@ export class SettingsService {
     await invoke("delete_db", {});
   }
 
+  async deleteFiles() {
+    await invoke("delete_files_path", {});
+  }
+
   async getDBPath(): Promise<string> {
     return invoke<string>("get_db_path", {});
+  }
+
+  async getFilesPath(): Promise<string> {
+    return invoke<string>("get_files_path", {});
   }
 }

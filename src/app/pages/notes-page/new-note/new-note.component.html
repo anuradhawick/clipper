@@ -14,9 +14,9 @@
     <br />
     <div class="flex flex-row space-x-1">
       @if (newEntry().trim()) {
-      <button mat-mini-fab color="primary" (click)="save()">
-        <mat-icon>save</mat-icon>
-      </button>
+        <button mat-mini-fab color="primary" (click)="save()">
+          <mat-icon>save</mat-icon>
+        </button>
       }
       <button mat-mini-fab color="primary" [routerLink]="['/notes']">
         <mat-icon>delete</mat-icon>

@@ -1,40 +1,44 @@
 <div class="wrapper">
   <div class="absolute bottom-0 text-xs text-slate-700 px-3">
-    Added: {{ clipperEntry().timestamp | date : "yyyy-MM-dd HH:mm" }}
+    Added: {{ clipperEntry().timestamp | date: "yyyy-MM-dd HH:mm" }}
   </div>
   <div
     class="flex-1 min-h-[100px] overflow-hidden rounded-lg p-2 mb-4"
     [class.h-[100px]]="!expanded()"
   >
-    @switch (clipperEntry().kind){
-    <!-- text -->
-    @case(ClipperEntryKind.Text) {
-    <div class="overflow-hidden h-full">
-      <div class="overflow-hidden whitespace-pre-wrap font-mono mb-2">
-        @for(part of processBytes(clipperEntry().entry); track $index ) {
-        <!-- plain text -->
-        @if (part.type == 'text') { <span>{{ part.content }}</span> }
-        <!-- https url -->
-        @else {
-        <span
-          class="underline cursor-pointer italic"
-          (click)="openUrl(part.content)"
-          >{{ part.content }}</span
-        >
-        } }
-      </div>
-    </div>
+    @switch (clipperEntry().kind) {
+      <!-- text -->
+      @case (ClipperEntryKind.Text) {
+        <div class="overflow-hidden h-full">
+          <div class="overflow-hidden whitespace-pre-wrap font-mono mb-2">
+            @for (part of processBytes(clipperEntry().entry); track $index) {
+              <!-- plain text -->
+              @if (part.type == "text") {
+                <span>{{ part.content }}</span>
+              }
+              <!-- https url -->
+              @else {
+                <span
+                  class="underline cursor-pointer italic"
+                  (click)="openUrl(part.content)"
+                  >{{ part.content }}</span
+                >
+              }
+            }
+          </div>
+        </div>
+      }
+      <!-- image -->
+      @case (ClipperEntryKind.Image) {
+        <img
+          class="object-contain h-full w-full max-h-[250px]"
+          [src]="processImage(clipperEntry().entry)"
+          alt="Image"
+        />
+      }
+      <!-- default -->
+      @default {}
     }
-    <!-- image -->
-    @case (ClipperEntryKind.Image){
-    <img
-      class="object-contain h-full w-full max-h-[250px]"
-      [src]="processImage(clipperEntry().entry)"
-      alt="Image"
-    />
-    }
-    <!-- default -->
-    @default { } }
   </div>
   <div class="flex flex-row mt-3 space-x-1 justify-end">
     <div class="flex flex-col space-y-2 w-[50px] items-center">
@@ -42,22 +46,22 @@
         <mat-icon>{{ expanded() ? "zoom_in_map" : "zoom_out_map" }}</mat-icon>
       </button>
       @if (clipperEntry().kind == ClipperEntryKind.Text) {
-      <button
-        mat-mini-fab
-        class="w-full"
-        [routerLink]="[
-          '/notes',
-          'new',
-          { entry: asPlainText(clipperEntry().entry) }
-        ]"
-        [disabled]="clipperEntry().kind == ClipperEntryKind.Image"
-      >
-        <mat-icon>save</mat-icon>
-      </button>
+        <button
+          mat-mini-fab
+          class="w-full"
+          [routerLink]="[
+            '/notes',
+            'new',
+            { entry: asPlainText(clipperEntry().entry) },
+          ]"
+          [disabled]="clipperEntry().kind == ClipperEntryKind.Image"
+        >
+          <mat-icon>save</mat-icon>
+        </button>
       } @else {
-      <a mat-mini-fab class="w-full" (click)="openClicked.emit()">
-        <mat-icon>open_in_new</mat-icon>
-      </a>
+        <a mat-mini-fab class="w-full" (click)="openClicked.emit()">
+          <mat-icon>open_in_new</mat-icon>
+        </a>
       }
     </div>
     <div class="flex flex-col space-y-2 w-[50px]">

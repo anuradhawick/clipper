@@ -3,6 +3,7 @@ import { ClipboardItemsPageComponent } from "./pages/clipboard-items/clipboard-i
 import { SettingsPageComponent } from "./pages/settings-page/settings-page.component";
 import { NotesPageComponent } from "./pages/notes-page/notes-page.component";
 import { NewNoteComponent } from "./pages/notes-page/new-note/new-note.component";
+import { FilesPageComponent } from "./pages/files-page/files-page.component";
 
 export const routes: Routes = [
   {
@@ -22,5 +23,9 @@ export const routes: Routes = [
         component: NewNoteComponent,
       },
     ],
+  },
+  {
+    path: "files",
+    component: FilesPageComponent,
   },
 ];

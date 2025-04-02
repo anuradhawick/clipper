@@ -3,31 +3,33 @@
 
   <div class="flex flex-row justify-between w-full cursor-pointer">
     @for (color of colors; track $index) {
-    <div
-      matRipple
-      class="w-[180px] h-[100px] rounded-lg flex flex-row overflow-hidden"
-      [class.selected]="ts.selectedColor == color.name"
-      (click)="changeColor(color.name)"
-    >
       <div
-        class="w-1/2 h-full flex items-center bg-gradient-to-br"
-        [class]="[color.light.from, color.light.to]"
+        matRipple
+        class="w-[180px] h-[100px] rounded-lg flex flex-row overflow-hidden"
+        [class.selected]="ts.selectedColor == color.name"
+        (click)="changeColor(color.name)"
       >
-        <mat-icon
-          class="block mx-auto scale-150"
-          [class]="color.name + '-light'"
-          >light_mode</mat-icon
+        <div
+          class="w-1/2 h-full flex items-center bg-gradient-to-br"
+          [class]="[color.light.from, color.light.to]"
         >
-      </div>
-      <div
-        class="w-1/2 h-full flex items-center bg-gradient-to-br"
-        [class]="[color.dark.from, color.dark.to]"
-      >
-        <mat-icon class="block mx-auto scale-150" [class]="color.name + '-dark'"
-          >dark_mode</mat-icon
+          <mat-icon
+            class="block mx-auto scale-150"
+            [class]="color.name + '-light'"
+            >light_mode</mat-icon
+          >
+        </div>
+        <div
+          class="w-1/2 h-full flex items-center bg-gradient-to-br"
+          [class]="[color.dark.from, color.dark.to]"
         >
+          <mat-icon
+            class="block mx-auto scale-150"
+            [class]="color.name + '-dark'"
+            >dark_mode</mat-icon
+          >
+        </div>
       </div>
-    </div>
     }
   </div>
 </div>
@@ -77,36 +79,75 @@
         [value]="settings()?.historySize"
       >
         @for (size of [100, 1000, 5000]; track size) {
-        <mat-option [value]="size">{{ size }}</mat-option>
+          <mat-option [value]="size">{{ size }}</mat-option>
         }
       </mat-select>
     </mat-form-field>
   </div>
+</div>
+<div class="wrapper p-2 flex-col space-y-2">
+  <div class="block mb-1">Danger Zone</div>
   <div class="flex flex-row justify-between items-center">
     <p class="flex">Database path: {{ database() }}</p>
     <div class="flex flex-row space-x-1">
       @if (promptedDBDelete()) {
-      <div class="flex items-center">Are you sure?</div>
-      <button
-        mat-raised-button
-        color="primary"
-        class="w-[95px]"
-        (click)="promptedDBDelete.set(false)"
-      >
-        Cancel
-      </button>
-      <button
-        mat-raised-button
-        color="warn"
-        class="w-[95px]"
-        (click)="deleteDB()"
-      >
-        Proceed
-      </button>
+        <div class="flex items-center">Are you sure?</div>
+        <button
+          mat-raised-button
+          color="primary"
+          class="w-[95px]"
+          (click)="promptedDBDelete.set(false)"
+        >
+          Cancel
+        </button>
+        <button
+          mat-raised-button
+          color="warn"
+          class="w-[95px]"
+          (click)="deleteDB()"
+        >
+          Proceed
+        </button>
       } @else {
-      <button mat-mini-fab color="primary" (click)="promptedDBDelete.set(true)">
-        <mat-icon>delete</mat-icon>
-      </button>
+        <button
+          mat-mini-fab
+          color="primary"
+          (click)="promptedDBDelete.set(true)"
+        >
+          <mat-icon>delete</mat-icon>
+        </button>
+      }
+    </div>
+  </div>
+  <div class="flex flex-row justify-between items-center">
+    <p class="flex">Clipper files path: {{ filesPath() }}</p>
+    <div class="flex flex-row space-x-1">
+      @if (promptedFilesDelete()) {
+        <div class="flex items-center">Are you sure?</div>
+        <button
+          mat-raised-button
+          color="primary"
+          class="w-[95px]"
+          (click)="promptedFilesDelete.set(false)"
+        >
+          Cancel
+        </button>
+        <button
+          mat-raised-button
+          color="warn"
+          class="w-[95px]"
+          (click)="deleteFiles()"
+        >
+          Proceed
+        </button>
+      } @else {
+        <button
+          mat-mini-fab
+          color="primary"
+          (click)="promptedFilesDelete.set(true)"
+        >
+          <mat-icon>delete</mat-icon>
+        </button>
       }
     </div>
   </div>

@@ -13,6 +13,9 @@ use content_managers::clipboard_watcher::{
     read_clipboard_entries, resume_clipboard_watcher, ClipboardWatcher,
 };
 use content_managers::db::{delete_db, get_db_path, DbConnection};
+use content_managers::files_manager::{
+    delete_file, delete_files_path, get_files, get_files_path, FilesManager,
+};
 use content_managers::notes_manager::{
     clipboard_add_note, create_note, delete_note, read_notes, update_note, NotesManager,
 };
@@ -27,6 +30,7 @@ use utils::monitor_utils::move_to_active_monitor;
 use utils::tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
 use utils::window_commands::hide_window;
 use utils::window_custom::WebviewWindowExt;
+use utils::window_handlers::handle_window_event;
 
 #[cfg(target_os = "macos")]
 use utils::window_custom::macos::WebviewWindowExtMacos;
@@ -82,6 +86,9 @@ fn apply_macos_specifics(window: &WebviewWindow) {
 
 #[tokio::main]
 async fn main() {
+    // share the current runtime with Tauri
+    tauri::async_runtime::set(tokio::runtime::Handle::current());
+
     #[cfg(target_os = "linux")]
     env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     // define the builder
@@ -114,10 +121,16 @@ async fn main() {
             // settings related
             update_settings,
             read_settings,
+            // files related
+            get_files_path,
+            delete_files_path,
+            get_files,
+            delete_file,
             // db related
             delete_db,
             get_db_path,
         ])
+        .on_window_event(handle_window_event)
         .setup(|app| {
             // global shortcut
             create_global_shortcut(app.handle())?;
@@ -194,5 +207,12 @@ async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
     // register settings service
     let settings_manager = SettingsManager::new(Arc::clone(&db)).await;
     app.manage(settings_manager);
+    // register file service
+    let files_manager = FilesManager::new(
+        // Arc::clone(&db),
+        app.clone(),
+    )
+    .await;
+    app.manage(files_manager);
     Ok(())
 }
