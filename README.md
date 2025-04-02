@@ -22,6 +22,7 @@ The app itself is secure, however, your clipboard might see your passwords if yo
 * 👉 Maintain quick text notes in notes manager
 * 👉 Multi monitor support
 * 👉 URL detection
+* 👉 File and Folder drop area
 
 ## Installation Instructions
 
