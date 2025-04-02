@@ -58,6 +58,13 @@ export class FileIconComponent {
     this.menu().openMenu();
   }
 
+  openContainingFolder(): void {
+    const path = this.dropperService.filesPath();
+    if (path) {
+      openPath(path);
+    }
+  }
+
   getFileFormat(file: string): FileFormat {
     const ext = file.split(".").pop()?.toLowerCase();
     switch (ext) {

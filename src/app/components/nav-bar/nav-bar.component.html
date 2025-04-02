@@ -6,12 +6,12 @@
       <button mat-mini-fab [routerLink]="''">
         <mat-icon>home</mat-icon>
       </button>
-      @if (chs.running()) {
-        <button mat-mini-fab (click)="chs.pause()">
+      @if (clipboardHistoryService.running()) {
+        <button mat-mini-fab (click)="clipboardHistoryService.pause()">
           <mat-icon>pause</mat-icon>
         </button>
       } @else {
-        <button mat-mini-fab (click)="chs.resume()">
+        <button mat-mini-fab (click)="clipboardHistoryService.resume()">
           <mat-icon>play_arrow</mat-icon>
         </button>
       }
@@ -29,7 +29,7 @@
       </button>
     </div>
     <div class="flex space-x-1">
-      <button mat-mini-fab (click)="was.hideWindow()">
+      <button mat-mini-fab (click)="windowActionsService.hideWindow()">
         <mat-icon>visibility_off</mat-icon>
       </button>
       @if (showClear() && promptedClipboardDelete()) {
@@ -46,7 +46,9 @@
           mat-raised-button
           color="warn"
           class="w-[95px]"
-          (click)="chs.clear(); promptedClipboardDelete.set(false)"
+          (click)="
+            clipboardHistoryService.clear(); promptedClipboardDelete.set(false)
+          "
         >
           Proceed
         </button>

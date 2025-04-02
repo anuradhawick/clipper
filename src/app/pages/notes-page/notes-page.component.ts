@@ -1,4 +1,4 @@
-import { Component, computed, Signal } from "@angular/core";
+import { Component, computed, inject, Signal } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { NoteItem, NotesService } from "../../services/notes.service";
@@ -12,10 +12,9 @@ import { RouterOutlet } from "@angular/router";
   styleUrl: "./notes-page.component.scss",
 })
 export class NotesPageComponent {
-  notes: Signal<NoteItem[]>;
+  readonly notesService = inject(NotesService);
 
-  constructor(protected ns: NotesService) {
-    this.notes = computed(() => ns.notes());
+  constructor() {
     // this.notes = computed(() => [
     //   { id: "1", entry: "This is a note. This is an inline test" },
     //   {

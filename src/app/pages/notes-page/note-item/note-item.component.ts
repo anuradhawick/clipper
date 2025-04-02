@@ -2,6 +2,7 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  inject,
   input,
   output,
   signal,
@@ -33,8 +34,7 @@ export class NoteItemComponent {
   processText = processText;
   asPlainText = asPlainText;
   openUrl = openUrl;
-
-  constructor(private cd: ChangeDetectorRef) {}
+  readonly changeDetectorRef = inject(ChangeDetectorRef);
 
   toggleView() {
     this.expanded.update((x) => !x);
@@ -52,7 +52,7 @@ export class NoteItemComponent {
     this.editable.update((x) => !x);
     if (this.editable()) {
       this.expanded.set(true);
-      this.cd.detectChanges();
+      this.changeDetectorRef.detectChanges();
       this.editor()!.nativeElement.focus();
     }
   }

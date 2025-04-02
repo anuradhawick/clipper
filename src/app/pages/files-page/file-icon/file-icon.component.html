@@ -38,14 +38,21 @@
 </div>
 
 <mat-menu #fileMenu="matMenu">
-  <button mat-menu-item (click)="openPath(item().clipperPath)">
-    <mat-icon>open_in_new</mat-icon>
-    <span>Open</span>
+  @if (item().fileType === FileType.File) {
+    <button mat-menu-item (click)="openPath(item().clipperPath)">
+      <mat-icon>file_open</mat-icon>
+      <span>Open file</span>
+    </button>
+  } @else {
+    <button mat-menu-item (click)="openPath(item().clipperPath)">
+      <mat-icon>folder_open</mat-icon>
+      <span>Open folder</span>
+    </button>
+  }
+  <button mat-menu-item (click)="openContainingFolder()">
+    <mat-icon>folder_open</mat-icon>
+    <span>Open directory</span>
   </button>
-  <!-- <button mat-menu-item>
-    <mat-icon>content_copy</mat-icon>
-    <span>Copy</span>
-  </button> -->
   <button mat-menu-item (click)="deleteFile()">
     <mat-icon>delete</mat-icon>
     <span>Delete</span>

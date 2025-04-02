@@ -1,4 +1,4 @@
-import { Component, effect } from "@angular/core";
+import { Component, inject } from "@angular/core";
 import { DropperService } from "../../services/dropper.service";
 import { FileIconComponent } from "./file-icon/file-icon.component";
 
@@ -9,9 +9,5 @@ import { FileIconComponent } from "./file-icon/file-icon.component";
   styleUrl: "./files-page.component.scss",
 })
 export class FilesPageComponent {
-  constructor(protected ds: DropperService) {
-    effect(() => {
-      console.log("Files: ", this.ds.files());
-    });
-  }
+  readonly dropperService = inject(DropperService);
 }

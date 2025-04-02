@@ -1,10 +1,10 @@
 <router-outlet />
-@for (note of notes(); track note.id) {
+@for (note of notesService.notes(); track note.id) {
   <app-note-item
     [note]="note"
-    (copyClicked)="ns.copy(note.id)"
-    (deleteClicked)="ns.delete(note.id)"
-    (contentUpdated)="ns.update(note.id, $event)"
+    (copyClicked)="notesService.copy(note.id)"
+    (deleteClicked)="notesService.delete(note.id)"
+    (contentUpdated)="notesService.update(note.id, $event)"
   />
 } @empty {
   <div class="text-white m-1">Your notes will appear here! 📖</div>

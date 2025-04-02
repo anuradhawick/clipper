@@ -31,7 +31,6 @@ export class ClipboardHistoryService implements OnDestroy {
   constructor(ss: SettingsService) {
     console.log("ClipboardHistoryService created");
     listen("clipboard_entry_added", (event: { payload: ClipperEntry }) => {
-      console.log(event);
       this.items.update((entries) =>
         [event.payload, ...entries].slice(0, this.settings.historySize)
       );

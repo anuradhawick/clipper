@@ -1,9 +1,9 @@
 <div class="grid grid-cols-6 gap-1 px-1">
-  @for (item of ds.files(); track $index) {
+  @for (item of dropperService.files(); track $index) {
     <app-file-icon [item]="item" />
   }
 </div>
 
-@if (ds.files().length == 0) {
+@if (dropperService.files().length == 0) {
   <div class="text-white m-1">Your files will appear here! 📁</div>
 }

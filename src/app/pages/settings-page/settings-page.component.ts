@@ -1,4 +1,11 @@
-import { Component, OnDestroy, signal, Signal } from "@angular/core";
+import {
+  Component,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  Signal,
+} from "@angular/core";
 import { MatRippleModule } from "@angular/material/core";
 import { MatIconModule } from "@angular/material/icon";
 import { Color, colors, ThemeService } from "../../services/theme.service";
@@ -27,23 +34,27 @@ import { MatButtonModule } from "@angular/material/button";
   templateUrl: "./settings-page.component.html",
   styleUrl: "./settings-page.component.scss",
 })
-export class SettingsPageComponent implements OnDestroy {
+export class SettingsPageComponent implements OnInit, OnDestroy {
   colors: Color[] = colors;
-  settingsSubscription: Subscription;
+  settingsSubscription: Subscription | undefined;
   settings = signal<Settings | null>(null);
   database = signal("loading...");
   filesPath = signal("loading...");
   promptedDBDelete = signal(false);
   promptedFilesDelete = signal(false);
+  readonly themeService = inject(ThemeService);
+  readonly settingsService = inject(SettingsService);
 
-  constructor(protected ts: ThemeService, private ss: SettingsService) {
-    this.settingsSubscription = this.ss.settings$.subscribe((settings) => {
-      this.settings.set(settings);
-    });
-    this.ss.getDBPath().then((path) => {
+  ngOnInit() {
+    this.settingsSubscription = this.settingsService.settings$.subscribe(
+      (settings) => {
+        this.settings.set(settings);
+      }
+    );
+    this.settingsService.getDBPath().then((path) => {
       this.database.set(path);
     });
-    this.ss.getFilesPath().then((path) => {
+    this.settingsService.getFilesPath().then((path) => {
       this.filesPath.set(path);
     });
   }
@@ -51,35 +62,37 @@ export class SettingsPageComponent implements OnDestroy {
   async changeColor(color: ColorPreference) {
     const settings = this.settings();
     if (!settings) return;
-    this.ss.update({ ...settings, color: color });
+    this.settingsService.update({ ...settings, color: color });
   }
 
   async changeLighting(lighting: LightingPreference) {
     const settings = this.settings();
     if (!settings) return;
-    this.ss.update({ ...settings, lighting: lighting });
+    this.settingsService.update({ ...settings, lighting: lighting });
   }
 
   async changeHistorySize(size: number) {
     const settings = this.settings();
     if (!settings) return;
-    this.ss.update({ ...settings, historySize: size });
+    this.settingsService.update({ ...settings, historySize: size });
   }
 
   async deleteDB() {
     this.database.set("deleting...");
     this.promptedDBDelete.set(false);
 
-    await this.ss.deleteDB();
+    await this.settingsService.deleteDB();
   }
 
   async deleteFiles() {
     this.promptedFilesDelete.set(false);
 
-    await this.ss.deleteFiles();
+    await this.settingsService.deleteFiles();
   }
 
   ngOnDestroy(): void {
-    this.settingsSubscription.unsubscribe();
+    if (this.settingsSubscription) {
+      this.settingsSubscription.unsubscribe();
+    }
   }
 }

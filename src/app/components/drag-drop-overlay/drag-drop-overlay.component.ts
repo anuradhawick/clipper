@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import { Component, inject } from "@angular/core";
 import {
   trigger,
   state,
@@ -25,5 +25,5 @@ import { DropperService } from "../../services/dropper.service";
   ],
 })
 export class DragDropOverlayComponent {
-  constructor(protected ds: DropperService) {}
+  readonly dropperService = inject(DropperService);
 }

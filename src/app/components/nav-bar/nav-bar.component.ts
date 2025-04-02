@@ -1,7 +1,9 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  inject,
   OnDestroy,
+  OnInit,
   signal,
 } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
@@ -18,16 +20,15 @@ import { Subscription } from "rxjs";
   templateUrl: "./nav-bar.component.html",
   styleUrl: "./nav-bar.component.scss",
 })
-export class NavBarComponent implements OnDestroy {
-  routerSub: Subscription;
+export class NavBarComponent implements OnInit, OnDestroy {
+  routerSub: Subscription | undefined;
   showClear = signal(false);
   promptedClipboardDelete = signal(false);
+  readonly clipboardHistoryService = inject(ClipboardHistoryService);
+  readonly windowActionsService = inject(WindowActionsService);
+  readonly router = inject(Router);
 
-  constructor(
-    protected chs: ClipboardHistoryService,
-    protected was: WindowActionsService,
-    protected router: Router
-  ) {
+  ngOnInit(): void {
     this.routerSub = this.router.events.subscribe((event: any) => {
       if (event instanceof NavigationEnd) {
         this.showClear.set(event.url === "/");
@@ -36,6 +37,8 @@ export class NavBarComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.routerSub.unsubscribe();
+    if (this.routerSub) {
+      this.routerSub.unsubscribe();
+    }
   }
 }

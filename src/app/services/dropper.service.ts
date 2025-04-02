@@ -1,6 +1,7 @@
-import { Injectable, OnDestroy, signal } from "@angular/core";
+import { inject, Injectable, OnDestroy, signal } from "@angular/core";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { SettingsService } from "./settings.service";
 
 export enum DragEventType {
   Started = "Started",
@@ -32,6 +33,8 @@ export class DropperService implements OnDestroy {
   private unlistenFiles: any;
   public inProgess = signal(false);
   public files = signal<FileEntry[]>([]);
+  public filesPath = signal<string | null>(null);
+  readonly settingsService = inject(SettingsService);
 
   constructor() {
     console.log("DropperService created");
@@ -63,10 +66,13 @@ export class DropperService implements OnDestroy {
     invoke<FileEntry[]>("get_files").then((files) => {
       this.files.set(files);
     });
+
+    this.settingsService.getFilesPath().then((path) => {
+      this.filesPath.set(path);
+    });
   }
 
   ngOnDestroy() {
-    console.log("DropperService destroyed");
     this.unlistenDragDrop();
     this.unlistenFiles();
   }

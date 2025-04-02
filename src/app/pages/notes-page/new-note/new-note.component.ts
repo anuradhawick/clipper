@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  inject,
   OnDestroy,
   OnInit,
   signal,
@@ -24,12 +25,9 @@ export class NewNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   entry = signal("");
   newEntry = signal("");
   editor = viewChild.required<ElementRef>("editor");
-
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private ns: NotesService
-  ) {}
+  readonly route = inject(ActivatedRoute);
+  readonly router = inject(Router);
+  readonly notesService = inject(NotesService);
 
   ngOnInit(): void {
     this.paramsSub = this.route.paramMap.subscribe((params: ParamMap) => {
@@ -54,7 +52,7 @@ export class NewNoteComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     // create note and redirect
-    await this.ns.create(this.newEntry());
+    await this.notesService.create(this.newEntry());
     this.router.navigate(["/notes"]);
   }
 
