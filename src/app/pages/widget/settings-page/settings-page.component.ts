@@ -8,18 +8,19 @@ import {
 } from "@angular/core";
 import { MatRippleModule } from "@angular/material/core";
 import { MatIconModule } from "@angular/material/icon";
-import { Color, colors, ThemeService } from "../../services/theme.service";
+import { Color, colors, ThemeService } from "../../../services/theme.service";
 import { MatSelectModule } from "@angular/material/select";
 import {
   ColorPreference,
   LightingPreference,
   Settings,
   SettingsService,
-} from "../../services/settings.service";
+} from "../../../services/settings.service";
 import { MatFormFieldModule } from "@angular/material/form-field";
 import { FormsModule } from "@angular/forms";
 import { Subscription } from "rxjs";
 import { MatButtonModule } from "@angular/material/button";
+import { DropperService } from "../../../services/dropper.service";
 
 @Component({
   selector: "app-settings-page",
@@ -44,6 +45,7 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
   promptedFilesDelete = signal(false);
   readonly themeService = inject(ThemeService);
   readonly settingsService = inject(SettingsService);
+  readonly dropperService = inject(DropperService);
 
   ngOnInit() {
     this.settingsSubscription = this.settingsService.settings$.subscribe(
@@ -87,7 +89,7 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
   async deleteFiles() {
     this.promptedFilesDelete.set(false);
 
-    await this.settingsService.deleteFiles();
+    await this.dropperService.deleteAllFiles();
   }
 
   ngOnDestroy(): void {

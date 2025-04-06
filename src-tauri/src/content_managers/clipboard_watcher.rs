@@ -327,16 +327,21 @@ impl ClipboardWatcher {
 
 #[tauri::command]
 pub async fn pause_clipboard_watcher(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
     let mut clipboard_watcher = state.lock().await;
     clipboard_watcher.pause();
     log::info!("CMD:Clipboard watcher paused");
+    app_handle
+        .emit("clipboard_status_changed", false)
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn resume_clipboard_watcher(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
     // reset last text to prevent reading previous clipboard entry
@@ -349,6 +354,9 @@ pub async fn resume_clipboard_watcher(
     }
     clipboard_watcher.resume();
     log::info!("CMD:Clipboard watcher resumed");
+    app_handle
+        .emit("clipboard_status_changed", true)
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -480,4 +488,13 @@ pub async fn clean_old_entries(
         .delete_with_skip(count)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn read_clipboard_status(
+    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+) -> Result<bool, String> {
+    log::info!("CMD:Reading clipboard status");
+    let clipboard_watcher = state.lock().await;
+    Ok(clipboard_watcher.running)
 }

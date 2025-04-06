@@ -84,4 +84,9 @@ export class DropperService implements OnDestroy {
       });
     });
   }
+
+  async deleteAllFiles() {
+    await invoke("delete_files_path", {});
+    this.files.update(() => []);
+  }
 }

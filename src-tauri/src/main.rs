@@ -10,14 +10,15 @@ mod utils;
 use content_managers::clipboard_watcher::{
     clean_old_entries, clipboard_add_entry, delete_all_clipboard_entries,
     delete_one_clipboard_entry, open_clipboard_entry, pause_clipboard_watcher,
-    read_clipboard_entries, resume_clipboard_watcher, ClipboardWatcher,
+    read_clipboard_entries, read_clipboard_status, resume_clipboard_watcher, ClipboardWatcher,
 };
 use content_managers::db::{delete_db, get_db_path, DbConnection};
 use content_managers::files_manager::{
     delete_file, delete_files_path, get_files, get_files_path, FilesManager,
 };
 use content_managers::notes_manager::{
-    clipboard_add_note, create_note, delete_note, read_notes, update_note, NotesManager,
+    clipboard_add_note, create_note, delete_all_notes, delete_note, read_notes, update_note,
+    NotesManager,
 };
 use content_managers::settings::{read_settings, update_settings, SettingsManager};
 use std::env;
@@ -110,6 +111,7 @@ async fn main() {
             delete_all_clipboard_entries,
             open_clipboard_entry,
             clean_old_entries,
+            read_clipboard_status,
             // window related
             hide_window,
             // notes related
@@ -118,6 +120,7 @@ async fn main() {
             read_notes,
             update_note,
             clipboard_add_note,
+            delete_all_notes,
             // settings related
             update_settings,
             read_settings,

@@ -6,7 +6,7 @@ import {
   animate,
   transition,
 } from "@angular/animations";
-import { DropperService } from "../../services/dropper.service";
+import { DropperService } from "../../../../services/dropper.service";
 
 @Component({
   selector: "app-drag-drop-overlay",

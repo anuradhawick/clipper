@@ -10,9 +10,9 @@ import {
 } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
-import { NoteItem } from "../../../services/notes.service";
+import { NoteItem } from "../../../../services/notes.service";
 import { DatePipe } from "@angular/common";
-import { asPlainText, processText } from "../../../utils/text";
+import { asPlainText, processText } from "../../../../utils/text";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 @Component({

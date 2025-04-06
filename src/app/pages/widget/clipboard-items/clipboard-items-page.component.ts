@@ -2,7 +2,7 @@ import { Component, computed, Signal } from "@angular/core";
 import {
   ClipboardHistoryService,
   ClipperEntry,
-} from "../../services/clipboard-history.service";
+} from "../../../services/clipboard-history.service";
 import { ClipboardItemComponent } from "./clipboard-item/clipboard-item.component";
 import { MatIconModule } from "@angular/material/icon";
 import { MatButtonModule } from "@angular/material/button";

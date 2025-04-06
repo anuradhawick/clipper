@@ -11,10 +11,10 @@ import { RouterLink } from "@angular/router";
 import {
   ClipperEntry,
   ClipperEntryKind,
-} from "../../../services/clipboard-history.service";
+} from "../../../../services/clipboard-history.service";
 import { DatePipe } from "@angular/common";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { asPlainText, processBytes } from "../../../utils/text";
+import { asPlainText, processBytes } from "../../../../utils/text";
 
 @Component({
   selector: "app-clipboard-item",

@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, signal } from "@angular/core";
+import { inject, Injectable, OnDestroy, signal } from "@angular/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { HistorySize, SettingsService } from "./settings.service";
@@ -22,29 +22,41 @@ export interface ClipperEntry {
 })
 export class ClipboardHistoryService implements OnDestroy {
   public items = signal<ClipperEntry[]>([]);
-  public running = signal(true);
-  private unlisten: UnlistenFn | undefined;
-  private settingsSubscription: Subscription;
-  private historyManagementSubscription: Subscription;
+  public running = signal(false);
+  private unlistenClipboardEntry: UnlistenFn | undefined;
+  private unlistenClipboardEvent: UnlistenFn | undefined;
+  private settingsSubscription: Subscription | undefined;
+  private historyManagementSubscription: Subscription | undefined;
   private settings: HistorySize = { historySize: 100 };
+  private readonly settingsService = inject(SettingsService);
 
-  constructor(ss: SettingsService) {
+  constructor() {
     console.log("ClipboardHistoryService created");
     listen("clipboard_entry_added", (event: { payload: ClipperEntry }) => {
       this.items.update((entries) =>
         [event.payload, ...entries].slice(0, this.settings.historySize)
       );
-    }).then((func) => (this.unlisten = func));
+    }).then((func) => (this.unlistenClipboardEntry = func));
+
+    listen("clipboard_status_changed", (event: { payload: boolean }) => {
+      this.running.set(event.payload);
+    }).then((func) => (this.unlistenClipboardEntry = func));
 
     // get user preference and override if different
-    this.settingsSubscription = ss.settings$.subscribe((saved: HistorySize) => {
-      console.log("Clipboard settings updated", saved);
-      this.settings = saved;
-      invoke<ClipperEntry[]>("read_clipboard_entries", {
-        count: saved.historySize,
-      }).then((entries) => {
-        this.items.set(entries);
-      });
+    this.settingsSubscription = this.settingsService.settings$.subscribe(
+      (saved: HistorySize) => {
+        console.log("Clipboard settings updated", saved);
+        this.settings = saved;
+        invoke<ClipperEntry[]>("read_clipboard_entries", {
+          count: saved.historySize,
+        }).then((entries) => {
+          this.items.set(entries);
+        });
+      }
+    );
+
+    invoke<boolean>("read_clipboard_status", {}).then((running) => {
+      this.running.set(running);
     });
 
     // clear old entries every 60 seconds, starts with a delay of 10 seconds
@@ -61,12 +73,17 @@ export class ClipboardHistoryService implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.unlisten) {
-      const unlisten = this.unlisten;
+    if (this.unlistenClipboardEntry) {
+      const unlisten = this.unlistenClipboardEntry;
       unlisten();
     }
-    this.settingsSubscription.unsubscribe();
-    this.historyManagementSubscription.unsubscribe();
+    if (this.unlistenClipboardEvent) {
+      const unlisten = this.unlistenClipboardEvent;
+      unlisten();
+    }
+    this.settingsSubscription && this.settingsSubscription.unsubscribe();
+    this.historyManagementSubscription &&
+      this.historyManagementSubscription.unsubscribe();
   }
 
   async copy(id: string) {

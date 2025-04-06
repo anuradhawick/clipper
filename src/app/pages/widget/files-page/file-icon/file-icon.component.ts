@@ -3,13 +3,13 @@ import {
   DropperService,
   FileEntry,
   FileType,
-} from "../../../services/dropper.service";
+} from "../../../../services/dropper.service";
 import { MatIconModule } from "@angular/material/icon";
 import { MatRippleModule } from "@angular/material/core";
 import { MatMenuModule, MatMenuTrigger } from "@angular/material/menu";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { MatDialog } from "@angular/material/dialog";
-import { ActionConfirmationDialogComponent } from "../../../components/action-confirmation-dialog/action-confirmation-dialog.component";
+import { ActionConfirmationDialogComponent } from "../../../../components/action-confirmation-dialog/action-confirmation-dialog.component";
 
 export enum FileFormat {
   Zip = "Zip",

@@ -49,6 +49,12 @@ export class NotesService {
     this.notes.update((notes) => notes.filter((item) => item.id !== id));
   }
 
+  async deleteAll() {
+    console.log("Deleting all notes");
+    await invoke("delete_all_notes", {});
+    this.notes.set([]);
+  }
+
   async update(id: string, entry: string) {
     console.log("Updating note", id, entry);
     // delete if only spaces

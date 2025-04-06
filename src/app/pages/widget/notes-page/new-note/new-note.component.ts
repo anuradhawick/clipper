@@ -12,7 +12,7 @@ import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { ActivatedRoute, ParamMap, Router, RouterLink } from "@angular/router";
 import { Subscription } from "rxjs";
-import { NotesService } from "../../../services/notes.service";
+import { NotesService } from "../../../../services/notes.service";
 
 @Component({
   selector: "app-new-note",
@@ -53,7 +53,7 @@ export class NewNoteComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     // create note and redirect
     await this.notesService.create(this.newEntry());
-    this.router.navigate(["/notes"]);
+    this.router.navigate(["/clipper", "notes"]);
   }
 
   change(event: Event) {

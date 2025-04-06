@@ -1,5 +1,5 @@
 @use "@angular/material" as mat;
-@use "../../../styles.scss" as style;
+@use "../../../../styles.scss" as style;
 
 .default-light {
   @include mat.icon-color(

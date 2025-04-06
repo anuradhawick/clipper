@@ -1,5 +1,5 @@
 import { Component, inject } from "@angular/core";
-import { DropperService } from "../../services/dropper.service";
+import { DropperService } from "../../../services/dropper.service";
 import { FileIconComponent } from "./file-icon/file-icon.component";
 
 @Component({

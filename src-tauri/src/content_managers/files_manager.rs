@@ -56,6 +56,11 @@ pub struct FilesManager {
 
 impl FilesManager {
     pub async fn new(app_handle: AppHandle) -> Self {
+        let app_dir = app_handle.path().home_dir().expect("Home path failed");
+        let clipper_path = app_dir.join("clipper/");
+        fs::create_dir_all(&clipper_path)
+            .await
+            .expect("Clipper path creation failed");
         log::info!("files manager initialized");
         Self { app_handle }
     }
@@ -116,6 +121,9 @@ impl FilesManager {
             .map_err(|e| e.to_string())?;
         let clipper_path = app_dir.join("clipper/");
         fs::remove_dir_all(&clipper_path)
+            .await
+            .map_err(|e| e.to_string())?;
+        fs::create_dir_all(&clipper_path)
             .await
             .map_err(|e| e.to_string())?;
         Ok(())

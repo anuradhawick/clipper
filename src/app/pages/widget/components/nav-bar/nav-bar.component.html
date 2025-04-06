@@ -1,0 +1,82 @@
+<div
+  style="visibility: hidden; position: fixed"
+  [style.left]="contextMenuPosition.x"
+  [style.top]="contextMenuPosition.y"
+  [matMenuTriggerFor]="activeMenu()"
+></div>
+<div
+  class="flex bg-slate-50/30 m-1 border border-solid rounded-lg p-1 shadow-lg"
+>
+  <div class="flex justify-between w-full">
+    <div class="flex space-x-1">
+      <button
+        mat-mini-fab
+        [routerLink]="''"
+        (contextmenu)="onRightClick($event, clipboardMenu)"
+        matBadge="-"
+        matBadgeSize="small"
+        [matBadgeHidden]="clipboardHistoryService.running()"
+      >
+        <mat-icon>attach_file</mat-icon>
+      </button>
+      <button
+        mat-mini-fab
+        [routerLink]="['notes']"
+        (contextmenu)="onRightClick($event, notesMenu)"
+      >
+        <mat-icon>notes</mat-icon>
+      </button>
+      <button
+        mat-mini-fab
+        [routerLink]="['files']"
+        (contextmenu)="onRightClick($event, fileMenu)"
+      >
+        <mat-icon>folder_copy</mat-icon>
+      </button>
+      <button mat-mini-fab [routerLink]="['settings']">
+        <mat-icon>settings</mat-icon>
+      </button>
+    </div>
+    <div class="flex space-x-1">
+      <button mat-mini-fab (click)="windowActionsService.hideWindow()">
+        <mat-icon>visibility_off</mat-icon>
+      </button>
+    </div>
+  </div>
+</div>
+
+<mat-menu #clipboardMenu="matMenu">
+  @if (clipboardHistoryService.running()) {
+    <button mat-menu-item (click)="clipboardHistoryService.pause()">
+      <mat-icon>pause</mat-icon>
+      <span>Pause watcher</span>
+    </button>
+  } @else {
+    <button mat-menu-item (click)="clipboardHistoryService.resume()">
+      <mat-icon>play_arrow</mat-icon>
+      <span>Resume watcher</span>
+    </button>
+  }
+  <button mat-menu-item (click)="clearClipboard()">
+    <mat-icon>clear_all</mat-icon>
+    <span>Clear clipboard history</span>
+  </button>
+</mat-menu>
+
+<mat-menu #notesMenu="matMenu">
+  <button mat-menu-item [routerLink]="['notes', 'new']">
+    <mat-icon>edit_note</mat-icon>
+    <span>New note</span>
+  </button>
+  <button mat-menu-item>
+    <mat-icon>clear_all</mat-icon>
+    <span>Delete all notes</span>
+  </button>
+</mat-menu>
+
+<mat-menu #fileMenu="matMenu">
+  <button mat-menu-item (click)="deleteAllFiles()">
+    <mat-icon>clear_all</mat-icon>
+    <span>Delete all files</span>
+  </button>
+</mat-menu>

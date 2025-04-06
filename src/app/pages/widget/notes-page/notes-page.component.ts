@@ -1,7 +1,7 @@
 import { Component, computed, inject, Signal } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
-import { NoteItem, NotesService } from "../../services/notes.service";
+import { NoteItem, NotesService } from "../../../services/notes.service";
 import { NoteItemComponent } from "./note-item/note-item.component";
 import { RouterOutlet } from "@angular/router";
 

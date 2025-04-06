@@ -140,6 +140,13 @@ impl NotesManager {
             updated_time: item.get("updated_time"),
         })
     }
+
+    pub async fn delete_all_notes(&self) -> Result<(), sqlx::Error> {
+        log::info!("Deleting all notes");
+        let pool = self.pool.lock().await;
+        sqlx::query("DELETE FROM notes").execute(&*pool).await?;
+        Ok(())
+    }
 }
 
 #[tauri::command]
@@ -188,6 +195,19 @@ pub async fn delete_note(
         .lock()
         .await
         .delete(&id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_all_notes(
+    state_notes_mgr: State<'_, Arc<Mutex<NotesManager>>>,
+) -> Result<(), String> {
+    log::info!("CMD:Deleting all notes");
+    state_notes_mgr
+        .lock()
+        .await
+        .delete_all_notes()
         .await
         .map_err(|e| e.to_string())
 }
