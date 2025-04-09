@@ -21,7 +21,7 @@ The app itself is secure, however, your clipboard might see your passwords if yo
 * 👉 Open images in system image viewer
 * 👉 Maintain quick text notes in notes manager
 * 👉 Multi monitor support
-* 👉 URL detection
+* 👉 URL detection and view in QR form
 * 👉 File and Folder drop area
 
 ## Installation Instructions
