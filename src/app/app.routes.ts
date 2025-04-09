@@ -5,6 +5,8 @@ import { NotesPageComponent } from "./pages/widget/notes-page/notes-page.compone
 import { NewNoteComponent } from "./pages/widget/notes-page/new-note/new-note.component";
 import { FilesPageComponent } from "./pages/widget/files-page/files-page.component";
 import { WidgetComponent } from "./pages/widget/widget.component";
+import { ManagerComponent } from "./pages/manager/manager.component";
+import { QrviewerComponent } from "./pages/qrviewer/qrviewer.component";
 
 export const routes: Routes = [
   {
@@ -39,5 +41,13 @@ export const routes: Routes = [
         component: FilesPageComponent,
       },
     ],
+  },
+  {
+    path: "manager",
+    component: ManagerComponent,
+  },
+  {
+    path: "qrviewer",
+    component: QrviewerComponent,
   },
 ];

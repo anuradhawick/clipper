@@ -42,7 +42,14 @@ pub fn move_to_active_monitor(
     logical: bool,
 ) {
     if let Some(monitor) = get_monitor_for_point(window, x, y, logical) {
-        let window_width = app.config().app.windows[0].width;
+        let window_width = app
+            .config()
+            .app
+            .windows
+            .iter()
+            .find(|w| w.label.eq("main"))
+            .unwrap()
+            .width;
         let screen_width = monitor.size().width as f64 / monitor.scale_factor();
         let new_x = monitor.position().x as f64 / monitor.scale_factor() + screen_width / 2.0
             - window_width / 2.0;

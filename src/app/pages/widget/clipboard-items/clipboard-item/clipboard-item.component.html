@@ -1,3 +1,9 @@
+<div
+  style="visibility: hidden; position: fixed"
+  [style.left]="contextMenuPosition.x"
+  [style.top]="contextMenuPosition.y"
+  [matMenuTriggerFor]="linkMenu"
+></div>
 <div class="wrapper">
   <div class="absolute bottom-0 text-xs text-slate-700 px-3">
     Added: {{ clipperEntry().timestamp | date: "yyyy-MM-dd HH:mm" }}
@@ -21,6 +27,7 @@
                 <span
                   class="underline cursor-pointer italic"
                   (click)="openUrl(part.content)"
+                  (contextmenu)="onLinkRightClick($event, part.content)"
                   >{{ part.content }}</span
                 >
               }
@@ -50,7 +57,8 @@
           mat-mini-fab
           class="w-full"
           [routerLink]="[
-            '/notes',
+            '/clipper',
+            'notes',
             'new',
             { entry: asPlainText(clipperEntry().entry) },
           ]"
@@ -74,3 +82,14 @@
     </div>
   </div>
 </div>
+
+<mat-menu #linkMenu="matMenu">
+  <button mat-menu-item (click)="openUrl(clickedUrl())">
+    <mat-icon>open_in_new</mat-icon>
+    <span>Open in browser</span>
+  </button>
+  <button mat-menu-item (click)="showQRCode()">
+    <mat-icon>qr_code_2</mat-icon>
+    <span>Show QR code</span>
+  </button>
+</mat-menu>

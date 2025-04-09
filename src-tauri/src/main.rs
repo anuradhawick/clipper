@@ -29,7 +29,7 @@ use tauri::{async_runtime, AppHandle, Manager};
 use utils::global_shortcut::create_global_shortcut;
 use utils::monitor_utils::move_to_active_monitor;
 use utils::tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
-use utils::window_commands::hide_window;
+use utils::window_commands::{window_hide, window_show_qrviewer};
 use utils::window_custom::WebviewWindowExt;
 use utils::window_handlers::handle_window_event;
 
@@ -113,7 +113,8 @@ async fn main() {
             clean_old_entries,
             read_clipboard_status,
             // window related
-            hide_window,
+            window_hide,
+            window_show_qrviewer,
             // notes related
             create_note,
             delete_note,

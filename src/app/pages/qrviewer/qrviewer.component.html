@@ -1,0 +1,15 @@
+<div class="clipper-bg h-screen flex flex-col items-center justify-center">
+  <qrcode
+    [qrdata]="qrCodeValue()"
+    [width]="400"
+    [errorCorrectionLevel]="'M'"
+  ></qrcode>
+  <div class="max-w-full overflow-x-auto p-2 box-border">
+    <span
+      class="underline cursor-pointer italic"
+      (click)="openUrl(qrCodeValue())"
+    >
+      {{ qrCodeValue() }}
+    </span>
+  </div>
+</div>

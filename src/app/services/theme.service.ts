@@ -11,6 +11,8 @@ import {
   ThemeSettings,
 } from "./settings.service";
 import { Subscription } from "rxjs";
+import { Event, EventType, Router } from "@angular/router";
+import { Location } from "@angular/common";
 
 export interface ColorDuo {
   from: string;
@@ -60,7 +62,12 @@ export class ThemeService implements OnDestroy {
   );
   private settingsSubscription: Subscription;
 
-  constructor(rendererFactory: RendererFactory2, ss: SettingsService) {
+  constructor(
+    rendererFactory: RendererFactory2,
+    location: Location,
+    ss: SettingsService,
+    router: Router
+  ) {
     console.log("ThemeService created");
     this.renderer = rendererFactory.createRenderer(null, null);
     this.darkThemeMediaQuery.addEventListener(
@@ -82,6 +89,23 @@ export class ThemeService implements OnDestroy {
         this.changeLighting(saved.lighting);
       }
     );
+
+    router.events.subscribe((event: Event) => {
+      switch (event.type) {
+        case EventType.NavigationEnd:
+          const body = document.body;
+          const url = location.path();
+
+          if (url.startsWith("/clipper")) {
+            !body.classList.contains("rounded-lg") &&
+              this.renderer.addClass(body, "rounded-lg");
+          } else {
+            body.classList.contains("rounded-lg") &&
+              this.renderer.removeClass(body, "rounded-lg");
+          }
+          break;
+      }
+    });
   }
 
   private themeChangeListener(event: MediaQueryListEvent): void {

@@ -10,6 +10,10 @@ export class WindowActionsService {
   }
 
   hideWindow() {
-    invoke("hide_window", {});
+    invoke("window_hide", {});
+  }
+
+  openQrViewer(url: string) {
+    invoke("window_show_qrviewer", { url });
   }
 }
