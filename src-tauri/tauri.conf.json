@@ -69,7 +69,7 @@
         "height": 768,
         "alwaysOnTop": true,
         "acceptFirstMouse": false,
-        "visible": true,
+        "visible": false,
         "transparent": false,
         "resizable": true,
         "visibleOnAllWorkspaces": true,
