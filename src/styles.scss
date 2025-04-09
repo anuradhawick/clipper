@@ -75,20 +75,12 @@ $clipper-yellow-light: mat.define-theme(
   .clipper-bg {
     @apply bg-gradient-to-br from-blue-700 to-blue-800;
   }
-
-  div {
-    @apply text-blue-100;
-  }
 }
 
 .azure-light {
   @include mat.all-component-colors($clipper-azure-light);
   .clipper-bg {
     @apply bg-gradient-to-br from-blue-400 to-blue-500;
-  }
-
-  div {
-    @apply text-blue-950;
   }
 }
 
@@ -97,20 +89,12 @@ $clipper-yellow-light: mat.define-theme(
   .clipper-bg {
     @apply bg-gradient-to-br from-cyan-700 to-cyan-800;
   }
-
-  div {
-    @apply text-cyan-300;
-  }
 }
 
 .cyan-light {
   @include mat.all-component-colors($clipper-cyan-light);
   .clipper-bg {
     @apply bg-gradient-to-br from-cyan-300 to-cyan-400;
-  }
-
-  div {
-    @apply text-cyan-700;
   }
 }
 
@@ -119,20 +103,12 @@ $clipper-yellow-light: mat.define-theme(
   .clipper-bg {
     @apply bg-gradient-to-br from-yellow-500 to-yellow-600;
   }
-
-  div {
-    @apply text-yellow-700;
-  }
 }
 
 .yellow-light {
   @include mat.all-component-colors($clipper-yellow-light);
   .clipper-bg {
     @apply bg-gradient-to-br from-yellow-300 to-yellow-400;
-  }
-
-  div {
-    @apply text-yellow-700;
   }
 }
 
@@ -141,19 +117,11 @@ $clipper-yellow-light: mat.define-theme(
   .clipper-bg {
     @apply bg-gradient-to-br from-gray-700 to-gray-800;
   }
-
-  div {
-    @apply text-purple-100;
-  }
 }
 
 .default-light {
   .clipper-bg {
     @apply bg-gradient-to-br from-gray-400 to-gray-500;
-  }
-
-  div {
-    @apply text-violet-700;
   }
 }
 

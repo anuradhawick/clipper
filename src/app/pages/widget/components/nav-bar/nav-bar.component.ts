@@ -19,6 +19,7 @@ import { ActionConfirmationDialogComponent } from "../../../../components/action
 import { MatBadgeModule } from "@angular/material/badge";
 import { DropperService } from "../../../../services/dropper.service";
 import { Location, TitleCasePipe } from "@angular/common";
+import { MatTooltipModule } from "@angular/material/tooltip";
 
 @Component({
   selector: "app-nav-bar",
@@ -30,6 +31,7 @@ import { Location, TitleCasePipe } from "@angular/common";
     MatMenuModule,
     MatBadgeModule,
     TitleCasePipe,
+    MatTooltipModule,
   ],
   templateUrl: "./nav-bar.component.html",
   styleUrl: "./nav-bar.component.scss",

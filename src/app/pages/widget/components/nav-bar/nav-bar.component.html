@@ -16,6 +16,8 @@
         matBadge="-"
         matBadgeSize="small"
         [matBadgeHidden]="clipboardHistoryService.running()"
+        matTooltip="Clipboard history"
+        matTooltipShowDelay="1000"
       >
         <mat-icon>attach_file</mat-icon>
       </button>
@@ -23,6 +25,8 @@
         mat-mini-fab
         [routerLink]="['notes']"
         (contextmenu)="onRightClick($event, notesMenu)"
+        matTooltip="Notes"
+        matTooltipShowDelay="1000"
       >
         <mat-icon>notes</mat-icon>
       </button>
@@ -30,10 +34,17 @@
         mat-mini-fab
         [routerLink]="['files']"
         (contextmenu)="onRightClick($event, fileMenu)"
+        matTooltip="Files"
+        matTooltipShowDelay="1000"
       >
         <mat-icon>folder_copy</mat-icon>
       </button>
-      <button mat-mini-fab [routerLink]="['settings']">
+      <button
+        mat-mini-fab
+        [routerLink]="['settings']"
+        matTooltip="Settings"
+        matTooltipShowDelay="1000"
+      >
         <mat-icon>settings</mat-icon>
       </button>
     </div>
