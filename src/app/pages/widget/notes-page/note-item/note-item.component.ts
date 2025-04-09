@@ -75,9 +75,8 @@ export class NoteItemComponent {
   onLinkRightClick(event: MouseEvent, url: string) {
     this.contextMenuPosition.x = event.clientX + "px";
     this.contextMenuPosition.y = event.clientY + "px";
-    event.preventDefault();
-    this.menu().openMenu();
     this.clickedUrl.set(url);
+    this.menu().openMenu();
   }
 
   showQRCode() {

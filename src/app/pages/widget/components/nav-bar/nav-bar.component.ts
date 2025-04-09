@@ -3,6 +3,7 @@ import {
   ChangeDetectorRef,
   Component,
   inject,
+  OnDestroy,
   signal,
   viewChild,
 } from "@angular/core";
@@ -10,13 +11,14 @@ import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { ClipboardHistoryService } from "../../../../services/clipboard-history.service";
 import { WindowActionsService } from "../../../../services/window-actions.service";
-import { Router, RouterLink } from "@angular/router";
+import { Event, EventType, Router, RouterLink } from "@angular/router";
 import { Subscription } from "rxjs";
 import { MatMenu, MatMenuModule, MatMenuTrigger } from "@angular/material/menu";
 import { MatDialog } from "@angular/material/dialog";
 import { ActionConfirmationDialogComponent } from "../../../../components/action-confirmation-dialog/action-confirmation-dialog.component";
 import { MatBadgeModule } from "@angular/material/badge";
 import { DropperService } from "../../../../services/dropper.service";
+import { Location, TitleCasePipe } from "@angular/common";
 
 @Component({
   selector: "app-nav-bar",
@@ -27,29 +29,43 @@ import { DropperService } from "../../../../services/dropper.service";
     RouterLink,
     MatMenuModule,
     MatBadgeModule,
+    TitleCasePipe,
   ],
   templateUrl: "./nav-bar.component.html",
   styleUrl: "./nav-bar.component.scss",
 })
-export class NavBarComponent {
-  routerSub: Subscription | undefined;
+export class NavBarComponent implements OnDestroy {
+  routerSubscription: Subscription;
   contextMenuPosition = { x: "0px", y: "0px" };
   menu = viewChild.required<MatMenuTrigger>(MatMenuTrigger);
   activeMenu = signal<MatMenu | null>(null);
   readonly clipboardHistoryService = inject(ClipboardHistoryService);
   readonly windowActionsService = inject(WindowActionsService);
-  readonly router = inject(Router);
   readonly changeDetectorRef = inject(ChangeDetectorRef);
   readonly dialog = inject(MatDialog);
   readonly dropperService = inject(DropperService);
+  pageTitle = signal<string>("");
+
+  constructor(router: Router, location: Location) {
+    this.routerSubscription = router.events.subscribe((event: Event) => {
+      switch (event.type) {
+        case EventType.NavigationEnd:
+          const url = location.path();
+          const title = url.split("/")[2];
+          this.pageTitle.set(title);
+          break;
+      }
+    });
+  }
 
   onRightClick(event: MouseEvent, menu: MatMenu): void {
     this.contextMenuPosition.x = event.clientX + "px";
     this.contextMenuPosition.y = event.clientY + "px";
-    event.preventDefault();
     this.activeMenu.set(menu);
-    this.changeDetectorRef.detectChanges();
-    this.menu().openMenu();
+    this.changeDetectorRef.markForCheck();
+    setTimeout(() => {
+      this.menu().openMenu();
+    });
   }
 
   clearClipboard(): void {
@@ -79,4 +95,6 @@ export class NavBarComponent {
       }
     });
   }
+
+  ngOnDestroy(): void {}
 }

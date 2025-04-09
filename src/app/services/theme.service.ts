@@ -61,6 +61,7 @@ export class ThemeService implements OnDestroy {
     "(prefers-color-scheme: dark)"
   );
   private settingsSubscription: Subscription;
+  private routerSubscription: Subscription;
 
   constructor(
     rendererFactory: RendererFactory2,
@@ -90,7 +91,7 @@ export class ThemeService implements OnDestroy {
       }
     );
 
-    router.events.subscribe((event: Event) => {
+    this.routerSubscription = router.events.subscribe((event: Event) => {
       switch (event.type) {
         case EventType.NavigationEnd:
           const body = document.body;
@@ -130,6 +131,7 @@ export class ThemeService implements OnDestroy {
       this.themeChangeListener
     );
     this.settingsSubscription.unsubscribe();
+    this.routerSubscription.unsubscribe();
   }
 
   private changeColor(color: ColorPreference) {

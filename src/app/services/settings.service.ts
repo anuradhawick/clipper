@@ -1,4 +1,4 @@
-import { Injectable, OnInit } from "@angular/core";
+import { Injectable } from "@angular/core";
 import { invoke } from "@tauri-apps/api/core";
 import { BehaviorSubject, Observable } from "rxjs";
 

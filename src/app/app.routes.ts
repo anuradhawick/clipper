@@ -11,7 +11,7 @@ import { QrviewerComponent } from "./pages/qrviewer/qrviewer.component";
 export const routes: Routes = [
   {
     path: "",
-    redirectTo: "clipper",
+    redirectTo: "clipper/clipboard",
     pathMatch: "full",
   },
   {
@@ -19,7 +19,7 @@ export const routes: Routes = [
     component: WidgetComponent,
     children: [
       {
-        path: "",
+        path: "clipboard",
         component: ClipboardItemsPageComponent,
       },
       {
