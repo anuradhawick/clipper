@@ -35,9 +35,6 @@ use utils::window_custom::WebviewWindowExt;
 use utils::window_handlers::handle_window_event;
 
 #[cfg(target_os = "macos")]
-use utils::app_handle::AppHandleExt as MacAppHandleExt;
-
-#[cfg(target_os = "macos")]
 use utils::window_custom::macos::WebviewWindowExtMacos;
 
 #[cfg(target_os = "macos")]
