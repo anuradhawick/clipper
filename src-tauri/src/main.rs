@@ -56,7 +56,6 @@ pub static OVERLAYED_NORMAL_LEVEL: i32 = 8;
 #[cfg(target_os = "macos")]
 fn apply_macos_specifics(window: &WebviewWindow) {
     use tauri::Manager;
-    use tauri::{AppHandle, Wry};
     use tauri_nspanel::ManagerExt;
 
     window.remove_shadow();
@@ -68,19 +67,8 @@ fn apply_macos_specifics(window: &WebviewWindow) {
     app_handle.listen_workspace(
         "NSWorkspaceDidActivateApplicationNotification",
         |app_handle| {
-            let bundle_id = AppHandle::<Wry>::frontmost_application_bundle_id();
-
-            if let Some(bundle_id) = bundle_id {
-                let is_league_of_legends = bundle_id == "com.riotgames.LeagueofLegends.GameClient";
-
-                let panel = app_handle.get_webview_panel("main").unwrap();
-
-                panel.set_level(if is_league_of_legends {
-                    HIGHER_LEVEL_THAN_LEAGUE
-                } else {
-                    OVERLAYED_NORMAL_LEVEL
-                });
-            }
+            let panel = app_handle.get_webview_panel("main").unwrap();
+            panel.set_level(OVERLAYED_NORMAL_LEVEL);
         },
     );
 }

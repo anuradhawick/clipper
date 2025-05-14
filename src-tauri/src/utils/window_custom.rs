@@ -1,4 +1,3 @@
-// from https://github.com/overlayeddev/overlayed/blob/2b1e7da70ae2f514fe067c11e954403288dd5f32/apps/desktop/src-tauri/src/window_custom.rs
 #[cfg(target_os = "macos")]
 pub mod macos {
     use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
