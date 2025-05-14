@@ -28,7 +28,7 @@ pub fn handle_window_event(window: &Window, event: &WindowEvent) {
             }
             app_handle
                 .emit(
-                    "dragdrop",
+                    "window_dragdrop",
                     DragEvent {
                         event_type: DragEventType::Started,
                         paths: None,
@@ -53,7 +53,7 @@ pub fn handle_window_event(window: &Window, event: &WindowEvent) {
 
             app_handle
                 .emit(
-                    "dragdrop",
+                    "window_dragdrop",
                     DragEvent {
                         event_type: DragEventType::Dropped,
                         paths: Some(
@@ -70,7 +70,7 @@ pub fn handle_window_event(window: &Window, event: &WindowEvent) {
         WindowEvent::DragDrop(DragDropEvent::Leave) => {
             app_handle
                 .emit(
-                    "dragdrop",
+                    "window_dragdrop",
                     DragEvent {
                         event_type: DragEventType::Ended,
                         paths: None,

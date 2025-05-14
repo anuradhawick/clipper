@@ -49,25 +49,25 @@ export class SettingsService {
   }
 
   async update(settings: Settings) {
-    await invoke("update_settings", {
+    await invoke("settings_update", {
       settings: settings,
     });
     this.settingsSubject.next(settings);
   }
 
   async get(): Promise<Settings> {
-    return await invoke<Settings>("read_settings", {});
+    return await invoke<Settings>("settings_read", {});
   }
 
   async deleteDB() {
-    await invoke("delete_db", {});
+    await invoke("db_delete_dbfile", {});
   }
 
   async getDBPath(): Promise<string> {
-    return invoke<string>("get_db_path", {});
+    return invoke<string>("db_get_dbfile_path", {});
   }
 
   async getFilesPath(): Promise<string> {
-    return invoke<string>("get_files_path", {});
+    return invoke<string>("files_get_storage_path", {});
   }
 }

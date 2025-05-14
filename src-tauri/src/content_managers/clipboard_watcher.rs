@@ -326,13 +326,13 @@ impl ClipboardWatcher {
 }
 
 #[tauri::command]
-pub async fn pause_clipboard_watcher(
+pub async fn clipboard_pause_watcher(
     app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
     let mut clipboard_watcher = state.lock().await;
     clipboard_watcher.pause();
-    log::info!("CMD:Clipboard watcher paused");
+    log::info!("CMD:clipboard_pause_watcher");
     app_handle
         .emit("clipboard_status_changed", false)
         .map_err(|e| e.to_string())?;
@@ -340,7 +340,7 @@ pub async fn pause_clipboard_watcher(
 }
 
 #[tauri::command]
-pub async fn resume_clipboard_watcher(
+pub async fn clipboard_resume_watcher(
     app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
@@ -353,7 +353,7 @@ pub async fn resume_clipboard_watcher(
         clipboard_watcher.last_text.clear();
     }
     clipboard_watcher.resume();
-    log::info!("CMD:Clipboard watcher resumed");
+    log::info!("CMD:clipboard_resume_watcher");
     app_handle
         .emit("clipboard_status_changed", true)
         .map_err(|e| e.to_string())?;
@@ -365,7 +365,7 @@ pub async fn clipboard_add_entry(
     id: String,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
-    log::info!("CMD:Clipboard entry added: {:#?}", id);
+    log::info!("CMD:clipboard_add_entry: {:#?}", id);
     let mut clipboard_watcher = state.lock().await;
     let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
     let entry = clipboard_watcher
@@ -399,11 +399,11 @@ pub async fn clipboard_add_entry(
 }
 
 #[tauri::command]
-pub async fn read_clipboard_entries(
+pub async fn clipboard_read_entries(
     count: u32,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<Vec<ClipboardEvent>, String> {
-    log::info!("CMD:Reading {} clipboard entries", count);
+    log::info!("CMD:clipboard_read_entries: {}", count);
     state
         .lock()
         .await
@@ -413,11 +413,11 @@ pub async fn read_clipboard_entries(
 }
 
 #[tauri::command]
-pub async fn delete_one_clipboard_entry(
+pub async fn clipboard_delete_one_entry(
     id: String,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
-    log::info!("CMD:Deleting clipboard entry: {:#?}", id);
+    log::info!("CMD:clipboard_delete_one_entry: {:#?}", id);
     state
         .lock()
         .await
@@ -427,10 +427,10 @@ pub async fn delete_one_clipboard_entry(
 }
 
 #[tauri::command]
-pub async fn delete_all_clipboard_entries(
+pub async fn clipboard_delete_all_entries(
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
-    log::info!("CMD:Deleting all clipboard entries");
+    log::info!("CMD:clipboard_delete_all_entries");
     state
         .lock()
         .await
@@ -440,12 +440,12 @@ pub async fn delete_all_clipboard_entries(
 }
 
 #[tauri::command]
-pub async fn open_clipboard_entry(
+pub async fn clipboard_open_entry(
     id: String,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    log::info!("CMD:Opening clipboard entry: {:#?}", id);
+    log::info!("CMD:clipboard_open_entry: {:#?}", id);
     let clipboard_watcher = state.lock().await;
     let entry = clipboard_watcher
         .read_one(id.clone())
@@ -478,11 +478,11 @@ pub async fn open_clipboard_entry(
 }
 
 #[tauri::command]
-pub async fn clean_old_entries(
+pub async fn clipboard_clean_old_entries(
     count: u32,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<(), String> {
-    log::info!("CMD:Cleaning old clipboard entries");
+    log::info!("CMD:clipboard_clean_old_entries: {}", count);
     let clipboard_watcher = state.lock().await;
     clipboard_watcher
         .delete_with_skip(count)
@@ -491,10 +491,10 @@ pub async fn clean_old_entries(
 }
 
 #[tauri::command]
-pub async fn read_clipboard_status(
+pub async fn clipboard_read_status(
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
 ) -> Result<bool, String> {
-    log::info!("CMD:Reading clipboard status");
+    log::info!("CMD:clipboard_read_status");
     let clipboard_watcher = state.lock().await;
     Ok(clipboard_watcher.running)
 }

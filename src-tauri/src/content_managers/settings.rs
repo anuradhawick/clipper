@@ -92,7 +92,7 @@ impl SettingsManager {
 }
 
 #[tauri::command]
-pub async fn update_settings(
+pub async fn settings_update(
     state: State<'_, Arc<Mutex<SettingsManager>>>,
     settings: Value,
 ) -> Result<(), String> {
@@ -103,7 +103,7 @@ pub async fn update_settings(
 }
 
 #[tauri::command]
-pub async fn read_settings(
+pub async fn settings_read(
     state: State<'_, Arc<Mutex<SettingsManager>>>,
 ) -> Result<SettingsEntry, String> {
     let settings = state.lock().await.read().await.map_err(|e| e.to_string())?;

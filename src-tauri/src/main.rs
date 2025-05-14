@@ -8,19 +8,20 @@ mod content_managers;
 mod utils;
 
 use content_managers::clipboard_watcher::{
-    clean_old_entries, clipboard_add_entry, delete_all_clipboard_entries,
-    delete_one_clipboard_entry, open_clipboard_entry, pause_clipboard_watcher,
-    read_clipboard_entries, read_clipboard_status, resume_clipboard_watcher, ClipboardWatcher,
+    clipboard_add_entry, clipboard_clean_old_entries, clipboard_delete_all_entries,
+    clipboard_delete_one_entry, clipboard_open_entry, clipboard_pause_watcher,
+    clipboard_read_entries, clipboard_read_status, clipboard_resume_watcher, ClipboardWatcher,
 };
-use content_managers::db::{delete_db, get_db_path, DbConnection};
+use content_managers::db::{db_delete_dbfile, db_get_dbfile_path, DbConnection};
 use content_managers::files_manager::{
-    delete_file, delete_files_path, get_files, get_files_path, FilesManager,
+    files_delete_one_file, files_delete_storage_path, files_get_entries, files_get_storage_path,
+    FilesManager,
 };
 use content_managers::notes_manager::{
     clipboard_add_note, create_note, delete_all_notes, delete_note, read_notes, update_note,
     NotesManager,
 };
-use content_managers::settings::{read_settings, update_settings, SettingsManager};
+use content_managers::settings::{settings_read, settings_update, SettingsManager};
 use std::env;
 use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
@@ -34,10 +35,10 @@ use utils::window_custom::WebviewWindowExt;
 use utils::window_handlers::handle_window_event;
 
 #[cfg(target_os = "macos")]
-use utils::window_custom::macos::WebviewWindowExtMacos;
+use utils::app_handle::AppHandleExt as MacAppHandleExt;
 
 #[cfg(target_os = "macos")]
-use utils::app_handle::AppHandleExt;
+use utils::window_custom::macos::WebviewWindowExtMacos;
 
 #[cfg(target_os = "macos")]
 use tauri::WebviewWindow;
@@ -91,15 +92,15 @@ async fn main() {
         )
         .invoke_handler(tauri::generate_handler![
             // clipboard related
-            pause_clipboard_watcher,
-            resume_clipboard_watcher,
+            clipboard_pause_watcher,
+            clipboard_resume_watcher,
             clipboard_add_entry,
-            read_clipboard_entries,
-            delete_one_clipboard_entry,
-            delete_all_clipboard_entries,
-            open_clipboard_entry,
-            clean_old_entries,
-            read_clipboard_status,
+            clipboard_read_entries,
+            clipboard_delete_one_entry,
+            clipboard_delete_all_entries,
+            clipboard_open_entry,
+            clipboard_clean_old_entries,
+            clipboard_read_status,
             // window related
             window_hide,
             window_show_qrviewer,
@@ -111,16 +112,16 @@ async fn main() {
             clipboard_add_note,
             delete_all_notes,
             // settings related
-            update_settings,
-            read_settings,
+            settings_read,
+            settings_update,
             // files related
-            get_files_path,
-            delete_files_path,
-            get_files,
-            delete_file,
+            files_get_entries,
+            files_get_storage_path,
+            files_delete_storage_path,
+            files_delete_one_file,
             // db related
-            delete_db,
-            get_db_path,
+            db_delete_dbfile,
+            db_get_dbfile_path,
         ])
         .on_window_event(handle_window_event)
         .setup(|app| {

@@ -190,7 +190,7 @@ impl FilesManager {
         }
 
         self.app_handle
-            .emit("files_added", added_paths)
+            .emit("files_added_paths", added_paths)
             .map_err(|e| e.to_string())?;
 
         Ok(())
@@ -198,22 +198,28 @@ impl FilesManager {
 }
 
 #[tauri::command]
-pub async fn get_files(files_manager: State<'_, FilesManager>) -> Result<Vec<FileEntry>, String> {
+pub async fn files_get_entries(
+    files_manager: State<'_, FilesManager>,
+) -> Result<Vec<FileEntry>, String> {
     files_manager.get_files().await
 }
 
 #[tauri::command]
-pub async fn get_files_path(files_manager: State<'_, FilesManager>) -> Result<String, String> {
+pub async fn files_get_storage_path(
+    files_manager: State<'_, FilesManager>,
+) -> Result<String, String> {
     files_manager.get_files_path()
 }
 
 #[tauri::command]
-pub async fn delete_files_path(files_manager: State<'_, FilesManager>) -> Result<(), String> {
+pub async fn files_delete_storage_path(
+    files_manager: State<'_, FilesManager>,
+) -> Result<(), String> {
     files_manager.delete_all_files().await
 }
 
 #[tauri::command]
-pub async fn delete_file(
+pub async fn files_delete_one_file(
     files_manager: State<'_, FilesManager>,
     file: String,
 ) -> Result<(), String> {

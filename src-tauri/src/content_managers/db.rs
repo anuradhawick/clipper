@@ -35,7 +35,8 @@ impl DbConnection {
 }
 
 #[tauri::command]
-pub async fn delete_db(app_handle: tauri::AppHandle) {
+pub async fn db_delete_dbfile(app_handle: tauri::AppHandle) {
+    log::info!("CMD:db_delete_dbfile");
     let app_dir = app_handle
         .path()
         .home_dir()
@@ -48,7 +49,8 @@ pub async fn delete_db(app_handle: tauri::AppHandle) {
 }
 
 #[tauri::command]
-pub async fn get_db_path(app_handle: tauri::AppHandle) -> String {
+pub async fn db_get_dbfile_path(app_handle: tauri::AppHandle) -> String {
+    log::info!("CMD:db_get_dbfile_path");
     let app_dir = app_handle
         .path()
         .home_dir()

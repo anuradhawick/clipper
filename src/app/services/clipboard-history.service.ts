@@ -47,7 +47,7 @@ export class ClipboardHistoryService implements OnDestroy {
       (saved: HistorySize) => {
         console.log("Clipboard settings updated", saved);
         this.settings = saved;
-        invoke<ClipperEntry[]>("read_clipboard_entries", {
+        invoke<ClipperEntry[]>("clipboard_read_entries", {
           count: saved.historySize,
         }).then((entries) => {
           this.items.set(entries);
@@ -55,7 +55,7 @@ export class ClipboardHistoryService implements OnDestroy {
       }
     );
 
-    invoke<boolean>("read_clipboard_status", {}).then((running) => {
+    invoke<boolean>("clipboard_read_status", {}).then((running) => {
       this.running.set(running);
     });
 
@@ -64,7 +64,7 @@ export class ClipboardHistoryService implements OnDestroy {
       .pipe(
         delay(10000),
         concatMap(async () => {
-          await invoke<void>("clean_old_entries", {
+          await invoke<void>("clipboard_clean_old_entries", {
             count: this.settings.historySize,
           });
         })
@@ -93,26 +93,26 @@ export class ClipboardHistoryService implements OnDestroy {
   }
 
   async open(id: string) {
-    await invoke<void>("open_clipboard_entry", { id });
+    await invoke<void>("clipboard_open_entry", { id });
   }
 
   async pause() {
     this.running.set(false);
-    await invoke<void>("pause_clipboard_watcher", {});
+    await invoke<void>("clipboard_pause_watcher", {});
   }
 
   async resume() {
     this.running.set(true);
-    await invoke<void>("resume_clipboard_watcher", {});
+    await invoke<void>("clipboard_resume_watcher", {});
   }
 
   async clear() {
     this.items.set([]);
-    await invoke<void>("delete_all_clipboard_entries", {});
+    await invoke<void>("clipboard_delete_all_entries", {});
   }
 
   async delete(id: string) {
     this.items.update((entries) => entries.filter((e) => e.id != id));
-    await invoke<void>("delete_one_clipboard_entry", { id });
+    await invoke<void>("clipboard_delete_one_entry", { id });
   }
 }

@@ -39,7 +39,7 @@ export class DropperService implements OnDestroy {
   constructor() {
     console.log("DropperService created");
 
-    listen("dragdrop", (event: { payload: DragEvent }) => {
+    listen("window_dragdrop", (event: { payload: DragEvent }) => {
       switch (event.payload.eventType) {
         case DragEventType.Started:
           this.inProgess.set(true);
@@ -53,7 +53,7 @@ export class DropperService implements OnDestroy {
       }
     }).then((func) => (this.unlistenDragDrop = func));
 
-    listen("files_added", (event: { payload: FileEntry[] }) => {
+    listen("files_added_paths", (event: { payload: FileEntry[] }) => {
       this.files.update((files) => {
         const newFiles = event.payload;
         const existingFilesWithoutNewFiles = files.filter(
@@ -63,7 +63,7 @@ export class DropperService implements OnDestroy {
       });
     }).then((func) => (this.unlistenFiles = func));
 
-    invoke<FileEntry[]>("get_files").then((files) => {
+    invoke<FileEntry[]>("files_get_entries").then((files) => {
       this.files.set(files);
     });
 
@@ -78,7 +78,7 @@ export class DropperService implements OnDestroy {
   }
 
   deleteFile(file: string): void {
-    invoke("delete_file", { file }).then(() => {
+    invoke("files_delete_one_file", { file }).then(() => {
       this.files.update((files) => {
         return files.filter((f) => f.file !== file);
       });
@@ -86,7 +86,7 @@ export class DropperService implements OnDestroy {
   }
 
   async deleteAllFiles() {
-    await invoke("delete_files_path", {});
+    await invoke("files_delete_storage_path", {});
     this.files.update(() => []);
   }
 }
