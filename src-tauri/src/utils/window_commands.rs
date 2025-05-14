@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use url::form_urlencoded;
 
 #[tauri::command]
@@ -13,7 +13,7 @@ pub fn window_show_qrviewer(app_handle: AppHandle, url: String) {
         .finish();
 
     if app_handle.get_webview_window("qrviewer").is_none() {
-        let _ = WebviewWindowBuilder::new(
+        let webview_window = WebviewWindowBuilder::new(
             &app_handle,
             "qrviewer",
             WebviewUrl::App(format!("/qrviewer?{}", encoded).into()),
@@ -26,5 +26,22 @@ pub fn window_show_qrviewer(app_handle: AppHandle, url: String) {
         .visible_on_all_workspaces(true)
         .center()
         .build();
+
+        if let Ok(window) = webview_window {
+            window.on_window_event(move |event| match event {
+                WindowEvent::Focused(true) => {
+                    log::info!("QR Viewer window focused");
+                }
+                WindowEvent::CloseRequested { api: _, .. } => {
+                    log::info!("QR Viewer window close requested");
+                    app_handle
+                        .get_webview_window("main")
+                        .expect("Main window not found")
+                        .show()
+                        .expect("Failed to show main window");
+                }
+                _ => {}
+            });
+        }
     }
 }

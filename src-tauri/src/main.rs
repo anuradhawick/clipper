@@ -43,10 +43,6 @@ use tauri::WebviewWindow;
 #[cfg(target_os = "macos")]
 use system_notification::WorkspaceListener;
 
-/// window levels
-// NOTE: league sets it's window to 1000 so we go one higher
-#[cfg(target_os = "macos")]
-pub static HIGHER_LEVEL_THAN_LEAGUE: i32 = 1001;
 /// Float panel window level
 #[cfg(target_os = "macos")]
 pub static OVERLAYED_NORMAL_LEVEL: i32 = 8;
@@ -143,16 +139,11 @@ async fn main() {
             // mac specific settings
             #[cfg(target_os = "macos")]
             {
-                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-                window.set_float_panel(HIGHER_LEVEL_THAN_LEAGUE);
-                // the window should always be on top
-                window.set_always_on_top(true)?;
-                // this helps bringing window on top
-                window.set_visible_on_all_workspaces(true)?;
-                // mac settings
                 apply_macos_specifics(&window);
-                //
-                window.set_resizable(false)?;
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                window.set_always_on_top(true);
             }
             // create tray
             let toggle = MenuItemBuilder::with_id("toggle", "Show/Hide").build(app)?;
