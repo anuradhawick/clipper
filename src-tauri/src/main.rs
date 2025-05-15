@@ -27,6 +27,7 @@ use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::{async_runtime, AppHandle, Manager};
+use tauri_plugin_autostart::MacosLauncher;
 use utils::global_shortcut::create_global_shortcut;
 use utils::monitor_utils::move_to_active_monitor;
 use utils::tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
@@ -83,6 +84,10 @@ async fn main() {
                 .level(log::LevelFilter::Info)
                 .build(),
         )
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        ))
         .invoke_handler(tauri::generate_handler![
             // clipboard related
             clipboard_pause_watcher,
@@ -186,7 +191,7 @@ async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
     let clipboard_watcher = ClipboardWatcher::new(Arc::clone(&db), app.clone()).await;
     app.manage(clipboard_watcher);
     // register settings service
-    let settings_manager = SettingsManager::new(Arc::clone(&db)).await;
+    let settings_manager = SettingsManager::new(Arc::clone(&db), app.clone()).await;
     app.manage(settings_manager);
     // register file service
     let files_manager = FilesManager::new(

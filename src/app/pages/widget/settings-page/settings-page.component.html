@@ -1,3 +1,4 @@
+<!-- theme selector -->
 <div class="wrapper p-2 flex-col">
   <div class="block mb-1">Select Theme</div>
 
@@ -33,6 +34,7 @@
     }
   </div>
 </div>
+<!-- lighting selector -->
 <div class="wrapper p-2 flex-col">
   <div class="block mb-1">Select Lighting</div>
   <div class="flex flex-row justify-between w-full space-x-1">
@@ -70,11 +72,17 @@
     </div>
   </div>
 </div>
+<!-- general settings -->
 <div class="wrapper p-2 flex-col space-y-2">
   <div class="block mb-1">Advanced Settings</div>
+  <!-- clipboard events -->
   <div class="flex flex-row justify-between items-center">
     <p class="flex">Number of clipboard events</p>
-    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-form-field
+      appearance="outline"
+      subscriptSizing="dynamic"
+      class="w-[220px]"
+    >
       <mat-label>History size</mat-label>
       <mat-select
         (valueChange)="changeHistorySize($event)"
@@ -86,7 +94,47 @@
       </mat-select>
     </mat-form-field>
   </div>
+  <!-- auto-launch -->
+  <div class="flex flex-row justify-between items-center">
+    <p class="flex">Run on startup</p>
+    <mat-checkbox
+      [checked]="settings()?.autolaunch"
+      (change)="changeAutoLaunch($event)"
+      labelPosition="before"
+    >
+      Run on startup
+    </mat-checkbox>
+  </div>
+  <!-- global shortcut -->
+  <!-- <div class="flex flex-row justify-between items-center">
+    <p class="flex">Setup a global shortcut</p>
+    <mat-form-field
+      appearance="outline"
+      subscriptSizing="dynamic"
+      class="w-[220px]"
+    >
+      <input
+        matInput
+        type="text"
+        class="caret-invisible"
+        readonly
+        (keydown)="onKeydown($event)"
+        (keyup)="onKeyup($event)"
+        (focus)="recordingStarted.set(true)"
+        (blur)="recordingStarted.set(false)"
+      />
+      <button
+        matSuffix
+        mat-icon-button
+        aria-label="Clear"
+        (click)="clearPressedKeys()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    </mat-form-field>
+  </div> -->
 </div>
+<!-- danger zone -->
 <div class="wrapper p-2 flex-col space-y-2">
   <div class="block mb-1">Danger Zone</div>
   <div class="flex flex-row justify-between items-center">

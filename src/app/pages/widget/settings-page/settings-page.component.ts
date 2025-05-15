@@ -14,6 +14,11 @@ import { FormsModule } from "@angular/forms";
 import { Subscription } from "rxjs";
 import { MatButtonModule } from "@angular/material/button";
 import { DropperService } from "../../../services/dropper.service";
+import {
+  MatCheckboxChange,
+  MatCheckboxModule,
+} from "@angular/material/checkbox";
+import { MatInputModule } from "@angular/material/input";
 
 @Component({
   selector: "app-settings-page",
@@ -23,7 +28,9 @@ import { DropperService } from "../../../services/dropper.service";
     MatRippleModule,
     MatSelectModule,
     MatFormFieldModule,
+    MatCheckboxModule,
     FormsModule,
+    MatInputModule,
   ],
   templateUrl: "./settings-page.component.html",
   styleUrl: "./settings-page.component.scss",
@@ -36,6 +43,8 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
   filesPath = signal("loading...");
   promptedDBDelete = signal(false);
   promptedFilesDelete = signal(false);
+  pressedKeys = signal<Set<string>>(new Set());
+  recordingStarted = signal(false);
   readonly themeService = inject(ThemeService);
   readonly settingsService = inject(SettingsService);
   readonly dropperService = inject(DropperService);
@@ -52,6 +61,26 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
     this.settingsService.getFilesPath().then((path) => {
       this.filesPath.set(path);
     });
+  }
+
+  clearPressedKeys() {
+    this.pressedKeys.set(new Set());
+  }
+
+  onKeydown(event: KeyboardEvent) {
+    if (this.recordingStarted()) {
+      console.log("down", event.key);
+    }
+  }
+
+  onKeyup(event: KeyboardEvent) {
+    if (this.recordingStarted()) {
+      console.log("up", event.key);
+      // this.pressedKeys.update((keys) => {
+      //   keys.add(event.key);
+      //   return keys;
+      // });
+    }
   }
 
   async changeColor(color: ColorPreference) {
@@ -83,6 +112,12 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
     this.promptedFilesDelete.set(false);
 
     await this.dropperService.deleteAllFiles();
+  }
+
+  changeAutoLaunch(event: MatCheckboxChange) {
+    const settings = this.settings();
+    if (!settings) return;
+    this.settingsService.update({ ...settings, autolaunch: event.checked });
   }
 
   ngOnDestroy(): void {

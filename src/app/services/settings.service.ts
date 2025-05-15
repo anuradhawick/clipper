@@ -24,7 +24,11 @@ export interface HistorySize {
   historySize: number;
 }
 
-export interface Settings extends ThemeSettings, HistorySize {}
+export interface GeneralSettings {
+  autolaunch: boolean;
+}
+
+export interface Settings extends ThemeSettings, HistorySize, GeneralSettings {}
 
 @Injectable({
   providedIn: "root",
@@ -38,6 +42,7 @@ export class SettingsService {
       color: ColorPreference.DEFAULT,
       lighting: LightingPreference.SYSTEM,
       historySize: 100,
+      autolaunch: false,
     });
     this.settings$ = this.settingsSubject.asObservable();
     this.loadInitialSettings();

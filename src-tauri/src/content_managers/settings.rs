@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{sqlite::SqlitePool, Row};
 use std::sync::Arc;
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -12,14 +13,16 @@ pub struct SettingsEntry {
     color: String,
     lighting: String,
     history_size: u32,
+    autolaunch: bool,
 }
 
 pub struct SettingsManager {
+    app_handle: AppHandle,
     pool: Arc<Mutex<SqlitePool>>,
 }
 
 impl SettingsManager {
-    pub async fn new(db: Arc<DbConnection>) -> Arc<Mutex<Self>> {
+    pub async fn new(db: Arc<DbConnection>, app_handle: AppHandle) -> Arc<Mutex<Self>> {
         let pool = db.pool.lock().await;
 
         sqlx::query(
@@ -49,10 +52,11 @@ impl SettingsManager {
         log::info!("Settings manager initialized");
         Arc::new(Mutex::new(Self {
             pool: Arc::clone(&db.pool),
+            app_handle,
         }))
     }
 
-    pub async fn update(&self, settings: SettingsEntry) -> Result<(), sqlx::Error> {
+    pub async fn update(&self, settings: SettingsEntry) -> Result<(), String> {
         log::info!("Updating settings: {:#?}", settings);
         let pool = self.pool.lock().await;
         sqlx::query(
@@ -66,7 +70,20 @@ impl SettingsManager {
         .bind(settings.lighting)
         .bind(settings.history_size)
         .execute(&*pool)
-        .await?;
+        .await
+        .map_err(|e| e.to_string())?;
+
+        if settings.autolaunch {
+            self.app_handle
+                .autolaunch()
+                .enable()
+                .map_err(|e| e.to_string())?;
+        } else {
+            self.app_handle
+                .autolaunch()
+                .disable()
+                .map_err(|e| e.to_string())?;
+        }
         Ok(())
     }
 
@@ -87,6 +104,7 @@ impl SettingsManager {
             color: result.get("color"),
             lighting: result.get("lighting"),
             history_size: result.get("historySize"),
+            autolaunch: self.app_handle.autolaunch().is_enabled().unwrap(),
         })
     }
 }
@@ -99,7 +117,7 @@ pub async fn settings_update(
     let settings: SettingsEntry = serde_json::from_value(settings).map_err(|e| e.to_string())?;
     log::info!("CMD:Updating settings: {:#?}", settings);
     let mgr = state.lock().await;
-    mgr.update(settings).await.map_err(|e| e.to_string())
+    mgr.update(settings).await
 }
 
 #[tauri::command]
