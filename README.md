@@ -78,7 +78,7 @@ Compiling in Mac is very easy and can be tricky on Linux. Please follow the guid
 * [https://v2.tauri.app/start/prerequisites/](https://v2.tauri.app/start/prerequisites/)
 * [https://v2.tauri.app/distribute/](https://v2.tauri.app/distribute/)
 
-In rare cases, updates could change database schema needing to reset the database. While I implement migrations for future releases, please delete db file using the settings view. You will loose all you clipboard entries from Clipper.
+In rare cases, updates could change database schema needing to reset the database. While I implement migrations for future releases, please delete db file using the settings view. You will loose all you clipboard entries from Clipper. If this does not work, please delete `clipper.db` file located in your home folder and restart the app.
 
 <p align="center" >
   <img src="./assets/settings.png" alt="settings view" width="800">
