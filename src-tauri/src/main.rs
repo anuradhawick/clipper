@@ -58,6 +58,7 @@ fn apply_macos_specifics(window: &WebviewWindow) {
     window.set_float_panel(OVERLAYED_NORMAL_LEVEL);
 
     let app_handle = window.app_handle();
+    let _ = app_handle.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
     app_handle.listen_workspace(
         "NSWorkspaceDidActivateApplicationNotification",
