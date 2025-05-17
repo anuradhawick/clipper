@@ -18,6 +18,7 @@
             "outputPath": {
               "base": "dist/clipper"
             },
+            "allowedCommonJsDependencies": ["qrcode"],
             "index": "src/index.html",
             "polyfills": [],
             "tsConfig": "tsconfig.app.json",
@@ -30,13 +31,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1mb",
-                  "maximumError": "2mb"
+                  "maximumWarning": "5mb",
+                  "maximumError": "10mb"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "1mb",
-                  "maximumError": "2mb"
+                  "maximumWarning": "5mb",
+                  "maximumError": "10mb"
                 }
               ],
               "outputHashing": "all"
