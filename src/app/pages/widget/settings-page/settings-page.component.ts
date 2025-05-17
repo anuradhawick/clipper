@@ -19,6 +19,14 @@ import {
   MatCheckboxModule,
 } from "@angular/material/checkbox";
 import { MatInputModule } from "@angular/material/input";
+import { platform } from "@tauri-apps/plugin-os";
+import {
+  tauriHotkeyToBrowserHotkey,
+  browserHotkeyToMacSymbols,
+  browserHotkeyToLinuxString,
+  isValidHotkey,
+  browserKeyCodesToTauriHotkey,
+} from "./key-map";
 
 @Component({
   selector: "app-settings-page",
@@ -43,11 +51,12 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
   filesPath = signal("loading...");
   promptedDBDelete = signal(false);
   promptedFilesDelete = signal(false);
-  pressedKeys = signal<Set<string>>(new Set());
   recordingStarted = signal(false);
   readonly themeService = inject(ThemeService);
   readonly settingsService = inject(SettingsService);
   readonly dropperService = inject(DropperService);
+  // this is no needed in signal form
+  pressedKeys = new Set<string>();
 
   ngOnInit() {
     this.settingsSubscription = this.settingsService.settings$.subscribe(
@@ -64,22 +73,31 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
   }
 
   clearPressedKeys() {
-    this.pressedKeys.set(new Set());
+    const settings = this.settings();
+    if (!settings) return;
+    this.settingsService.update({ ...settings, globalShortcut: null });
   }
 
   onKeydown(event: KeyboardEvent) {
     if (this.recordingStarted()) {
-      console.log("down", event.key);
+      this.pressedKeys.add(event.code);
+
+      if (isValidHotkey(this.pressedKeys)) {
+        const settings = this.settings();
+        if (!settings) return;
+        this.settingsService.update({
+          ...settings,
+          globalShortcut: browserKeyCodesToTauriHotkey(this.pressedKeys),
+        });
+        (event.target as HTMLElement).blur();
+        this.pressedKeys.clear();
+      }
     }
   }
 
   onKeyup(event: KeyboardEvent) {
     if (this.recordingStarted()) {
-      console.log("up", event.key);
-      // this.pressedKeys.update((keys) => {
-      //   keys.add(event.key);
-      //   return keys;
-      // });
+      this.pressedKeys.delete(event.code);
     }
   }
 
@@ -124,5 +142,13 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
     if (this.settingsSubscription) {
       this.settingsSubscription.unsubscribe();
     }
+  }
+
+  parseGlobalShortcut(globalShortcut: string) {
+    const webKeys = tauriHotkeyToBrowserHotkey(globalShortcut);
+
+    return platform() === "macos"
+      ? browserHotkeyToMacSymbols(webKeys)
+      : browserHotkeyToLinuxString(webKeys);
   }
 }

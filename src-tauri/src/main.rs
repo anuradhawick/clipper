@@ -28,7 +28,6 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::{async_runtime, AppHandle, Manager};
 use tauri_plugin_autostart::MacosLauncher;
-use utils::global_shortcut::create_global_shortcut;
 use utils::monitor_utils::move_to_active_monitor;
 use utils::tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
 use utils::window_commands::{window_hide, window_show_qrviewer};
@@ -77,8 +76,9 @@ async fn main() {
     #[cfg(target_os = "linux")]
     env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     // define the builder
-    let mut builder = tauri::Builder::default();
+    let mut builder = tauri::Builder::default().plugin(tauri_plugin_os::init());
     builder = builder
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -124,8 +124,6 @@ async fn main() {
         ])
         .on_window_event(handle_window_event)
         .setup(|app| {
-            // global shortcut
-            create_global_shortcut(app.handle())?;
             let window = app
                 .get_webview_window("main")
                 .ok_or("Unable to load window")?;

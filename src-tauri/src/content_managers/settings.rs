@@ -1,10 +1,13 @@
 use super::db::DbConnection;
+use super::global_shortcut::{register_global_shortcut, unregister_global_shortcut};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{sqlite::SqlitePool, Row};
+use std::str::FromStr;
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 use tokio::sync::Mutex;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -14,6 +17,7 @@ pub struct SettingsEntry {
     lighting: String,
     history_size: u32,
     autolaunch: bool,
+    global_shortcut: Option<String>,
 }
 
 pub struct SettingsManager {
@@ -31,7 +35,8 @@ impl SettingsManager {
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 color TEXT NOT NULL,
                 lighting TEXT NOT NULL,
-                historySize INTEGER NOT NULL
+                historySize INTEGER NOT NULL,
+                globalShortcut TEXT
             );
             "#,
         )
@@ -39,17 +44,59 @@ impl SettingsManager {
         .await
         .unwrap();
 
-        sqlx::query(
+        #[cfg(target_os = "linux")]
+        let global_shortcut_keys =
+            Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyC);
+        #[cfg(target_os = "macos")]
+        let global_shortcut_keys =
+            Shortcut::new(Some(Modifiers::SUPER | Modifiers::ALT), Code::KeyC);
+
+        let initial_settings = sqlx::query(
             r#"
-            INSERT INTO settings (id, color, lighting, historySize)
-            SELECT 1, 'default', 'system', 100
+            INSERT INTO settings (id, color, lighting, historySize, globalShortcut)
+            SELECT 1, 'default', 'system', 100, ?
             WHERE NOT EXISTS (SELECT 1 FROM settings WHERE id = 1);
             "#,
         )
+        .bind(global_shortcut_keys.to_string())
         .execute(&*pool)
         .await
         .unwrap();
         log::info!("Settings manager initialized");
+
+        if initial_settings.rows_affected() > 0 {
+            log::info!("Settings initialized");
+            log::info!("Creating global shortcut: {:#?}", global_shortcut_keys);
+
+            if let Err(e) = register_global_shortcut(&app_handle, global_shortcut_keys) {
+                log::error!("Error registering global shortcut: {}", e);
+            }
+        } else {
+            log::info!("Settings already exist");
+            let settings = sqlx::query(
+                r#"
+                SELECT globalShortcut
+                FROM settings
+                WHERE id = 1
+                "#,
+            )
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
+            let global_shortcut_keys = settings.get::<Option<String>, _>("globalShortcut");
+
+            if let Some(global_shortcut_keys) = global_shortcut_keys {
+                let global_shortcut_keys =
+                    Shortcut::from_str(global_shortcut_keys.as_str()).unwrap();
+
+                log::info!("Creating global shortcut: {:#?}", global_shortcut_keys);
+
+                if let Err(e) = register_global_shortcut(&app_handle, global_shortcut_keys) {
+                    log::error!("Error registering global shortcut: {}", e);
+                }
+            }
+        }
+
         Arc::new(Mutex::new(Self {
             pool: Arc::clone(&db.pool),
             app_handle,
@@ -62,13 +109,14 @@ impl SettingsManager {
         sqlx::query(
             r#"
             UPDATE settings
-            SET color = ?, lighting = ?, historySize = ?
+            SET color = ?, lighting = ?, historySize = ?, globalShortcut = ?
             WHERE id = 1
             "#,
         )
         .bind(settings.color)
         .bind(settings.lighting)
         .bind(settings.history_size)
+        .bind(settings.global_shortcut.clone())
         .execute(&*pool)
         .await
         .map_err(|e| e.to_string())?;
@@ -84,6 +132,26 @@ impl SettingsManager {
                 .disable()
                 .map_err(|e| e.to_string())?;
         }
+
+        match settings.global_shortcut {
+            Some(global_shortcut) => {
+                let global_shortcut_keys = Shortcut::from_str(global_shortcut.as_str()).unwrap();
+                log::info!("Creating global shortcut: {:#?}", global_shortcut_keys);
+
+                register_global_shortcut(&self.app_handle, global_shortcut_keys).map_err(|e| {
+                    log::error!("Error registering global shortcut: {}", e);
+                    e.to_string()
+                })?;
+            }
+            None => {
+                log::info!("Unregistering global shortcut");
+                unregister_global_shortcut(&self.app_handle).map_err(|e| {
+                    log::error!("Error unregistering global shortcut: {}", e);
+                    e.to_string()
+                })?;
+            }
+        }
+
         Ok(())
     }
 
@@ -105,6 +173,7 @@ impl SettingsManager {
             lighting: result.get("lighting"),
             history_size: result.get("historySize"),
             autolaunch: self.app_handle.autolaunch().is_enabled().unwrap(),
+            global_shortcut: result.get("globalShortcut"),
         })
     }
 }

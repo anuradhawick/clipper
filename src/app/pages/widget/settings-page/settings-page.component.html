@@ -105,7 +105,7 @@
     </mat-checkbox>
   </div>
   <!-- global shortcut -->
-  <!-- <div class="flex flex-row justify-between items-center">
+  <div class="flex flex-row justify-between items-center">
     <p class="flex">Setup a global shortcut</p>
     <mat-form-field
       appearance="outline"
@@ -115,23 +115,26 @@
       <input
         matInput
         type="text"
-        class="caret-invisible"
+        class="caret-invisible text-center"
         readonly
+        [value]="parseGlobalShortcut(settings()?.globalShortcut || '')"
         (keydown)="onKeydown($event)"
         (keyup)="onKeyup($event)"
         (focus)="recordingStarted.set(true)"
         (blur)="recordingStarted.set(false)"
       />
-      <button
-        matSuffix
-        mat-icon-button
-        aria-label="Clear"
-        (click)="clearPressedKeys()"
-      >
-        <mat-icon>close</mat-icon>
-      </button>
+      @if (settings()?.globalShortcut) {
+        <button
+          matSuffix
+          mat-icon-button
+          aria-label="Clear"
+          (click)="clearPressedKeys()"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      }
     </mat-form-field>
-  </div> -->
+  </div>
 </div>
 <!-- danger zone -->
 <div class="wrapper p-2 flex-col space-y-2">

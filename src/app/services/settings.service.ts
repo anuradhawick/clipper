@@ -26,6 +26,7 @@ export interface HistorySize {
 
 export interface GeneralSettings {
   autolaunch: boolean;
+  globalShortcut: string | null;
 }
 
 export interface Settings extends ThemeSettings, HistorySize, GeneralSettings {}
@@ -43,6 +44,7 @@ export class SettingsService {
       lighting: LightingPreference.SYSTEM,
       historySize: 100,
       autolaunch: false,
+      globalShortcut: null,
     });
     this.settings$ = this.settingsSubject.asObservable();
     this.loadInitialSettings();
