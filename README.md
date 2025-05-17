@@ -16,13 +16,17 @@ The app itself is secure, however, your clipboard might see your passwords if yo
   <img src="./assets/home.png" alt="Home page" width="800">
 </p>
 
-* 👉 Global Shortcut 🍎 CMD + OPT + C and 🐧 CTRL + ALT + C
+* 👉 Configurable Global Shortcut 
+  - 🍎 CMD + OPT + C 
+  - 🐧 CTRL + ALT + C
 * 👉 Support images in the clipboard view and copying
 * 👉 Open images in system image viewer
 * 👉 Maintain quick text notes in notes manager
 * 👉 Multi monitor support
 * 👉 URL detection and view in QR form
 * 👉 File and Folder drop area
+* 👉 Start on system startup option
+* 👉 Right click menus
 
 ## Installation Instructions
 
