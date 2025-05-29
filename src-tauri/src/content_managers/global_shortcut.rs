@@ -7,9 +7,13 @@ pub fn register_global_shortcut(
     app: &AppHandle,
     global_shortcut_keys: Shortcut,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    // check if the global shortcut is already registered, avoid duplicate registration - which fails understandably
     if app.global_shortcut().is_registered(global_shortcut_keys) {
         return Ok(());
     }
+    // we unregister all shortcuts first to avoid conflicts
+    app.global_shortcut().unregister_all()?;
+    // register the global shortcut
     app.global_shortcut()
         .on_shortcut(global_shortcut_keys, move |app, shortcut, event| {
             if shortcut == &global_shortcut_keys {
