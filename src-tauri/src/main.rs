@@ -147,7 +147,7 @@ async fn main() {
             }
             #[cfg(not(target_os = "macos"))]
             {
-                window.set_always_on_top(true);
+                window.set_always_on_top(true)?;
             }
             // create tray
             let toggle = MenuItemBuilder::with_id("toggle", "Show/Hide").build(app)?;
