@@ -1,8 +1,8 @@
-import { TestBed } from "@angular/core/testing";
+import { TestBed } from '@angular/core/testing';
 
-import { WindowActionsService } from "./window-actions.service";
+import { WindowActionsService } from './window-actions.service';
 
-describe("WindowActionsService", () => {
+describe('WindowActionsService', () => {
   let service: WindowActionsService;
 
   beforeEach(() => {
@@ -10,7 +10,7 @@ describe("WindowActionsService", () => {
     service = TestBed.inject(WindowActionsService);
   });
 
-  it("should be created", () => {
+  it('should be created', () => {
     expect(service).toBeTruthy();
   });
 });
