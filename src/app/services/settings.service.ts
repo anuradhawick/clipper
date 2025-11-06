@@ -76,7 +76,8 @@ export class SettingsService implements OnDestroy {
     await invoke("settings_update", {
       settings: settings,
     });
-    this.settingsSubject.next(settings);
+    // Note: Settings will be updated via the settings_changed event listener
+    // This avoids duplicate updates and ensures all windows update consistently
   }
 
   async get(): Promise<Settings> {

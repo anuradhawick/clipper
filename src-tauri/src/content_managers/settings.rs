@@ -191,12 +191,11 @@ pub async fn settings_update(
     // Emit settings_changed event globally to all windows (main, manager, qrviewer)
     // This ensures that theme changes and other settings updates are immediately
     // reflected across all windows, regardless of which window initiated the change
-    mgr.app_handle
-        .emit("settings_changed", settings)
-        .map_err(|e| {
-            log::error!("Error emitting settings_changed event: {}", e);
-            e.to_string()
-        })?;
+    // If emission fails, we log the error but don't fail the operation since
+    // the settings have already been successfully persisted
+    if let Err(e) = mgr.app_handle.emit("settings_changed", settings) {
+        log::error!("Error emitting settings_changed event: {}", e);
+    }
 
     Ok(())
 }
