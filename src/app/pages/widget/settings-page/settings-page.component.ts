@@ -62,7 +62,7 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
     this.settingsSubscription = this.settingsService.settings$.subscribe(
       (settings) => {
         this.settings.set(settings);
-      }
+      },
     );
     this.settingsService.getDBPath().then((path) => {
       this.database.set(path);

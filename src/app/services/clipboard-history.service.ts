@@ -34,7 +34,7 @@ export class ClipboardHistoryService implements OnDestroy {
     console.log("ClipboardHistoryService created");
     listen("clipboard_entry_added", (event: { payload: ClipperEntry }) => {
       this.items.update((entries) =>
-        [event.payload, ...entries].slice(0, this.settings.historySize)
+        [event.payload, ...entries].slice(0, this.settings.historySize),
       );
     }).then((func) => (this.unlistenClipboardEntry = func));
 
@@ -52,7 +52,7 @@ export class ClipboardHistoryService implements OnDestroy {
         }).then((entries) => {
           this.items.set(entries);
         });
-      }
+      },
     );
 
     invoke<boolean>("clipboard_read_status", {}).then((running) => {
@@ -67,7 +67,7 @@ export class ClipboardHistoryService implements OnDestroy {
           await invoke<void>("clipboard_clean_old_entries", {
             count: this.settings.historySize,
           });
-        })
+        }),
       )
       .subscribe();
   }

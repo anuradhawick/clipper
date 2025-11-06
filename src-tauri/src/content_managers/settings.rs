@@ -187,15 +187,17 @@ pub async fn settings_update(
     log::info!("CMD:Updating settings: {:#?}", settings);
     let mgr = state.lock().await;
     mgr.update(settings.clone()).await?;
-    
-    // Emit settings_changed event to all windows globally
+
+    // Emit settings_changed event globally to all windows (main, manager, qrviewer)
+    // This ensures that theme changes and other settings updates are immediately
+    // reflected across all windows, regardless of which window initiated the change
     mgr.app_handle
         .emit("settings_changed", settings)
         .map_err(|e| {
             log::error!("Error emitting settings_changed event: {}", e);
             e.to_string()
         })?;
-    
+
     Ok(())
 }
 

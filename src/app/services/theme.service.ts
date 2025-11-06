@@ -58,7 +58,7 @@ export class ThemeService implements OnDestroy {
   private systemLighting!: LightingPreference;
   private renderer: Renderer2;
   private darkThemeMediaQuery = window.matchMedia(
-    "(prefers-color-scheme: dark)"
+    "(prefers-color-scheme: dark)",
   );
   private settingsSubscription: Subscription;
   private routerSubscription: Subscription;
@@ -67,13 +67,13 @@ export class ThemeService implements OnDestroy {
     rendererFactory: RendererFactory2,
     location: Location,
     ss: SettingsService,
-    router: Router
+    router: Router,
   ) {
     console.log("ThemeService created");
     this.renderer = rendererFactory.createRenderer(null, null);
     this.darkThemeMediaQuery.addEventListener(
       "change",
-      this.themeChangeListener.bind(this)
+      this.themeChangeListener.bind(this),
     );
     if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
       console.log("System theme is dark");
@@ -88,7 +88,7 @@ export class ThemeService implements OnDestroy {
         console.log("Theme changed", saved);
         this.changeColor(saved.color);
         this.changeLighting(saved.lighting);
-      }
+      },
     );
 
     this.routerSubscription = router.events.subscribe((event: Event) => {
@@ -128,7 +128,7 @@ export class ThemeService implements OnDestroy {
   ngOnDestroy(): void {
     this.darkThemeMediaQuery.removeEventListener(
       "change",
-      this.themeChangeListener
+      this.themeChangeListener,
     );
     this.settingsSubscription.unsubscribe();
     this.routerSubscription.unsubscribe();
