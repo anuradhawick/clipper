@@ -1,5 +1,6 @@
-import { Injectable } from "@angular/core";
+import { Injectable, OnDestroy } from "@angular/core";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { BehaviorSubject, Observable } from "rxjs";
 
 export enum LightingPreference {
@@ -34,9 +35,10 @@ export interface Settings extends ThemeSettings, HistorySize, GeneralSettings {}
 @Injectable({
   providedIn: "root",
 })
-export class SettingsService {
+export class SettingsService implements OnDestroy {
   private settingsSubject: BehaviorSubject<Settings>;
   public settings$: Observable<Settings>;
+  private unlistenSettingsChanged: UnlistenFn | undefined;
 
   constructor() {
     this.settingsSubject = new BehaviorSubject<Settings>({
@@ -48,11 +50,26 @@ export class SettingsService {
     });
     this.settings$ = this.settingsSubject.asObservable();
     this.loadInitialSettings();
+    this.listenForSettingsChanges();
   }
 
   private async loadInitialSettings() {
     const settings = await this.get();
     this.settingsSubject.next(settings);
+  }
+
+  private async listenForSettingsChanges() {
+    // Listen for settings_changed events from other windows
+    listen("settings_changed", (event: { payload: Settings }) => {
+      console.log("Settings changed event received:", event.payload);
+      this.settingsSubject.next(event.payload);
+    }).then((func) => (this.unlistenSettingsChanged = func));
+  }
+
+  ngOnDestroy(): void {
+    if (this.unlistenSettingsChanged) {
+      this.unlistenSettingsChanged();
+    }
   }
 
   async update(settings: Settings) {

@@ -5,7 +5,7 @@ use serde_json::Value;
 use sqlx::{sqlite::SqlitePool, Row};
 use std::str::FromStr;
 use std::sync::Arc;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 use tokio::sync::Mutex;
@@ -186,7 +186,17 @@ pub async fn settings_update(
     let settings: SettingsEntry = serde_json::from_value(settings).map_err(|e| e.to_string())?;
     log::info!("CMD:Updating settings: {:#?}", settings);
     let mgr = state.lock().await;
-    mgr.update(settings).await
+    mgr.update(settings.clone()).await?;
+    
+    // Emit settings_changed event to all windows globally
+    mgr.app_handle
+        .emit("settings_changed", settings)
+        .map_err(|e| {
+            log::error!("Error emitting settings_changed event: {}", e);
+            e.to_string()
+        })?;
+    
+    Ok(())
 }
 
 #[tauri::command]
