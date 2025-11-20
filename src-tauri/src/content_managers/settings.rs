@@ -5,7 +5,7 @@ use serde_json::Value;
 use sqlx::{sqlite::SqlitePool, Row};
 use std::str::FromStr;
 use std::sync::Arc;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 use tokio::sync::Mutex;
@@ -186,7 +186,18 @@ pub async fn settings_update(
     let settings: SettingsEntry = serde_json::from_value(settings).map_err(|e| e.to_string())?;
     log::info!("CMD:Updating settings: {:#?}", settings);
     let mgr = state.lock().await;
-    mgr.update(settings).await
+    mgr.update(settings.clone()).await?;
+
+    // Emit settings_changed event globally to all windows (main, manager, qrviewer)
+    // This ensures that theme changes and other settings updates are immediately
+    // reflected across all windows, regardless of which window initiated the change
+    // If emission fails, we log the error but don't fail the operation since
+    // the settings have already been successfully persisted
+    if let Err(e) = mgr.app_handle.emit("settings_changed", settings) {
+        log::error!("Error emitting settings_changed event: {}", e);
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
