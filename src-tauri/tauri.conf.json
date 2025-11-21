@@ -61,23 +61,6 @@
         "resizable": false,
         "visibleOnAllWorkspaces": true,
         "dragDropEnabled": true
-      },
-      {
-        "title": "Clipper Manager",
-        "label": "manager",
-        "width": 1024,
-        "height": 768,
-        "alwaysOnTop": true,
-        "acceptFirstMouse": false,
-        "visible": true,
-        "transparent": false,
-        "resizable": true,
-        "visibleOnAllWorkspaces": true,
-        "dragDropEnabled": false,
-        "minWidth": 1024,
-        "minHeight": 768,
-        "center": true,
-        "url": "/manager"
       }
     ],
     "security": {

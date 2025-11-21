@@ -1,0 +1,12 @@
+@for (bookmarkEntry of bookmarkEntries(); track bookmarkEntry.id) {
+  <app-bookmark-item
+    [bookmarkEntry]="bookmarkEntry"
+    (copyClicked)="bs.copy(bookmarkEntry.id)"
+    (deleteClicked)="bs.delete(bookmarkEntry.id)"
+    (openClicked)="bs.open(bookmarkEntry.id)"
+  />
+} @empty {
+  <div class="dark:text-white m-1">
+    Your bookmark entries will appear here! 📖
+  </div>
+}

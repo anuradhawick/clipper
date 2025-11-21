@@ -9,6 +9,7 @@ import { ManagerComponent } from "./pages/manager/manager.component";
 import { QrviewerComponent } from "./pages/qrviewer/qrviewer.component";
 import { ClipboardPageComponent } from "./pages/manager/clipboard-page/clipboard-page.component";
 import { NotesPageComponent as ManagerNotesPageComponent } from "./pages/manager/notes-page/notes-page.component";
+import { BookmarksPageComponent } from "./pages/manager/bookmarks-page/bookmarks-page.component";
 
 export const routes: Routes = [
   {
@@ -60,6 +61,10 @@ export const routes: Routes = [
       {
         path: "clipboard",
         component: ClipboardPageComponent,
+      },
+      {
+        path: "bookmarks",
+        component: BookmarksPageComponent,
       },
     ],
   },

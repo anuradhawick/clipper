@@ -1,4 +1,6 @@
 use super::db::DbConnection;
+use crate::content_managers::message_bus::AppMessage;
+use crate::content_managers::message_bus::MessageBus;
 use arboard::Clipboard;
 use arboard::ImageData;
 use chrono::Utc;
@@ -82,12 +84,16 @@ fn image_to_png(image: ImageData) -> Vec<u8> {
 }
 
 impl ClipboardWatcher {
-    pub async fn new(db: Arc<DbConnection>, app_handle: AppHandle) -> Arc<Mutex<Self>> {
+    pub async fn new(
+        db: Arc<DbConnection>,
+        bus: MessageBus,
+        app_handle: AppHandle,
+    ) -> Arc<Mutex<Self>> {
         let mut last_text = String::from("");
         let mut last_image = 0;
         let pool = db.pool.lock().await;
 
-        // create table if not exist
+        // create table if not exist for clipboard entries
         sqlx::query(
             r#"
             CREATE TABLE IF NOT EXISTS clipboard (
@@ -153,6 +159,12 @@ impl ClipboardWatcher {
                         }
                         if app_state.save(entry).await.is_err() {
                             log::error!("Unable to save: clipboard_entry_added");
+                        }
+                        if bus
+                            .send(AppMessage::AddedToClipboard(text.clone()))
+                            .is_err()
+                        {
+                            log::error!("Unable to send message: AddedToClipboard");
                         }
                     }
                 };

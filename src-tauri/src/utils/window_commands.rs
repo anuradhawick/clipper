@@ -13,11 +13,12 @@ pub fn window_show_manager(app_handle: AppHandle) {
             WebviewWindowBuilder::new(&app_handle, "manager", WebviewUrl::App("/manager".into()))
                 .title("Clipper Manager")
                 .inner_size(1024.0, 768.0)
+                .min_inner_size(1024.0, 768.0)
                 .resizable(true)
                 .always_on_top(false)
                 .focused(true)
                 .visible(true)
-                .visible_on_all_workspaces(true)
+                .visible_on_all_workspaces(false)
                 .center()
                 .build();
 
@@ -25,12 +26,6 @@ pub fn window_show_manager(app_handle: AppHandle) {
             window.show().unwrap();
             window.set_focus().unwrap();
         }
-    } else {
-        let window = app_handle
-            .get_webview_window("manager")
-            .expect("Manager window not found");
-        window.show().unwrap();
-        window.set_focus().unwrap();
     }
 }
 
