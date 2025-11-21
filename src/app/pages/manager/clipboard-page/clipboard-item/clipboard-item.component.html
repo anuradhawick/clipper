@@ -1,0 +1,95 @@
+<div
+  style="visibility: hidden; position: fixed"
+  [style.left]="contextMenuPosition.x"
+  [style.top]="contextMenuPosition.y"
+  [matMenuTriggerFor]="linkMenu"
+></div>
+<div class="wrapper">
+  <div class="absolute bottom-0 text-xs text-slate-700 px-3">
+    Added: {{ clipperEntry().timestamp | date: "yyyy-MM-dd HH:mm" }}
+  </div>
+  <div
+    class="flex-1 min-h-[100px] overflow-hidden rounded-lg p-2 mb-4"
+    [class.h-[100px]]="!expanded()"
+  >
+    @switch (clipperEntry().kind) {
+      <!-- text -->
+      @case (ClipperEntryKind.Text) {
+        <div class="overflow-hidden h-full">
+          <div class="overflow-hidden whitespace-pre-wrap font-mono mb-2">
+            @for (part of processBytes(clipperEntry().entry); track $index) {
+              <!-- plain text -->
+              @if (part.type == "text") {
+                <span>{{ part.content }}</span>
+              }
+              <!-- https url -->
+              @else {
+                <span
+                  class="underline cursor-pointer italic"
+                  (click)="openUrl(part.content)"
+                  (contextmenu)="onLinkRightClick($event, part.content)"
+                  >{{ part.content }}</span
+                >
+              }
+            }
+          </div>
+        </div>
+      }
+      <!-- image -->
+      @case (ClipperEntryKind.Image) {
+        <img
+          class="object-contain h-full w-full max-h-[250px]"
+          [src]="processImage(clipperEntry().entry)"
+          alt="Image"
+        />
+      }
+      <!-- default -->
+      @default {}
+    }
+  </div>
+  <div class="flex flex-row mt-3 space-x-1 justify-end">
+    <div class="flex flex-col space-y-2 w-[50px] items-center">
+      <button mat-mini-fab class="w-full" (click)="toggleView()">
+        <mat-icon>{{ expanded() ? "zoom_in_map" : "zoom_out_map" }}</mat-icon>
+      </button>
+      @if (clipperEntry().kind == ClipperEntryKind.Text) {
+        <button
+          mat-mini-fab
+          class="w-full"
+          [routerLink]="[
+            '/clipper',
+            'notes',
+            'new',
+            { entry: asPlainText(clipperEntry().entry) },
+          ]"
+          [disabled]="clipperEntry().kind == ClipperEntryKind.Image"
+        >
+          <mat-icon>save</mat-icon>
+        </button>
+      } @else {
+        <a mat-mini-fab class="w-full" (click)="openClicked.emit()">
+          <mat-icon>open_in_new</mat-icon>
+        </a>
+      }
+    </div>
+    <div class="flex flex-col space-y-2 w-[50px]">
+      <button mat-mini-fab class="w-full" (click)="copyClicked.emit()">
+        <mat-icon>content_copy</mat-icon>
+      </button>
+      <button mat-mini-fab class="w-full" (click)="deleteClicked.emit()">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
+  </div>
+</div>
+
+<mat-menu #linkMenu="matMenu">
+  <button mat-menu-item (click)="openUrl(clickedUrl())">
+    <mat-icon>open_in_new</mat-icon>
+    <span>Open in browser</span>
+  </button>
+  <button mat-menu-item (click)="showQRCode()">
+    <mat-icon>qr_code_2</mat-icon>
+    <span>Show QR code</span>
+  </button>
+</mat-menu>

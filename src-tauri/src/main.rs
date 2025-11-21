@@ -30,7 +30,7 @@ use tauri::{async_runtime, AppHandle, Manager};
 use tauri_plugin_autostart::MacosLauncher;
 use utils::monitor_utils::move_to_active_monitor;
 use utils::tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
-use utils::window_commands::{window_hide, window_show_qrviewer};
+use utils::window_commands::{window_hide, window_show_manager, window_show_qrviewer};
 use utils::window_custom::WebviewWindowExt;
 use utils::window_handlers::handle_window_event;
 
@@ -103,6 +103,7 @@ async fn main() {
             // window related
             window_hide,
             window_show_qrviewer,
+            window_show_manager,
             // notes related
             create_note,
             delete_note,

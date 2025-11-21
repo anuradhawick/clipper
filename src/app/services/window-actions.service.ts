@@ -16,4 +16,9 @@ export class WindowActionsService {
   openQrViewer(url: string) {
     invoke("window_show_qrviewer", { url });
   }
+
+  openManagerWindow() {
+    this.hideWindow();
+    invoke("window_show_manager", {});
+  }
 }

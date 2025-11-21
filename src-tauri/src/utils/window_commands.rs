@@ -7,6 +7,34 @@ pub fn window_hide(window: tauri::Window) {
 }
 
 #[tauri::command]
+pub fn window_show_manager(app_handle: AppHandle) {
+    if app_handle.get_webview_window("manager").is_none() {
+        let manager_window =
+            WebviewWindowBuilder::new(&app_handle, "manager", WebviewUrl::App("/manager".into()))
+                .title("Clipper Manager")
+                .inner_size(1024.0, 768.0)
+                .resizable(true)
+                .always_on_top(false)
+                .focused(true)
+                .visible(true)
+                .visible_on_all_workspaces(true)
+                .center()
+                .build();
+
+        if let Ok(window) = manager_window {
+            window.show().unwrap();
+            window.set_focus().unwrap();
+        }
+    } else {
+        let window = app_handle
+            .get_webview_window("manager")
+            .expect("Manager window not found");
+        window.show().unwrap();
+        window.set_focus().unwrap();
+    }
+}
+
+#[tauri::command]
 pub fn window_show_qrviewer(app_handle: AppHandle, url: String) {
     let encoded: String = form_urlencoded::Serializer::new(String::new())
         .append_pair("url", &url)

@@ -1,4 +1,8 @@
 <div class="clipper-bg grid grid-cols-10">
   <app-nav-pane class="h-screen col-span-2" />
-  <div class="h-screen col-span-8">An example text</div>
+  <div class="h-screen col-span-8 overflow-auto">
+    <div class="flex-grow rounded-lg overflow-auto shadow-inner pt-1">
+      <router-outlet />
+    </div>
+  </div>
 </div>
