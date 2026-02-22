@@ -27,6 +27,7 @@ The app itself is secure, however, your clipboard might see your passwords if yo
 * 👉 File and Folder drop area
 * 👉 Start on system startup option
 * 👉 Right click menus
+* 👉 Tracking copied links as bookmarks
 
 ## Installation Instructions
 
@@ -34,9 +35,9 @@ The app itself is secure, however, your clipboard might see your passwords if yo
 
 Before you install Clipper, ensure you have the following:
 
-- PNPM (9+) from [https://pnpm.io/](https://pnpm.io/)
+- PNPM (9.5+) from [https://pnpm.io/](https://pnpm.io/)
 - Node.js (LTS version 22+) [https://nodejs.org/en](https://nodejs.org/en)
-- Rust (rustc 1.82.0 (f6e511eec 2024-10-15)) [https://www.rust-lang.org/](https://www.rust-lang.org/)
+- Rust (rustc 1.93.1 (01f6ddf75 2026-02-11)) [https://www.rust-lang.org/](https://www.rust-lang.org/)
 - Tauri CLI from [https://tauri.app/](https://tauri.app/)
 
 You can install Tauri CLI by running:
