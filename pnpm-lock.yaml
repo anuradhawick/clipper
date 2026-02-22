@@ -54,8 +54,8 @@ importers:
         specifier: 2.2.1
         version: 2.2.1
       angularx-qrcode:
-        specifier: ^19.0.0
-        version: 19.0.0(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.1)(zone.js@0.15.0))
+        specifier: ^21.0.4
+        version: 21.0.4(@angular/common@21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.1)(zone.js@0.15.0))
       material-icons:
         specifier: ^1.13.12
         version: 1.13.12
@@ -66,8 +66,8 @@ importers:
         specifier: ^2.3.0
         version: 2.8.0
       uuid:
-        specifier: 11.0.3
-        version: 11.0.3
+        specifier: 13.0.0
+        version: 13.0.0
     devDependencies:
       '@angular/build':
         specifier: ^21.1.4
@@ -82,8 +82,8 @@ importers:
         specifier: 2.0.0-rc.18
         version: 2.0.0-rc.18
       '@types/jasmine':
-        specifier: ~5.1.0
-        version: 5.1.4
+        specifier: ~6.0.0
+        version: 6.0.0
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
@@ -91,8 +91,8 @@ importers:
         specifier: ^10.4.19
         version: 10.4.20(postcss@8.5.3)
       jasmine-core:
-        specifier: 5.4.0
-        version: 5.4.0
+        specifier: 6.0.1
+        version: 6.0.1
       karma:
         specifier: ~6.4.0
         version: 6.4.4
@@ -106,8 +106,8 @@ importers:
         specifier: ~5.1.0
         version: 5.1.0(karma@6.4.4)
       karma-jasmine-html-reporter:
-        specifier: ~2.1.0
-        version: 2.1.0(jasmine-core@5.4.0)(karma-jasmine@5.1.0(karma@6.4.4))(karma@6.4.4)
+        specifier: ~2.2.0
+        version: 2.2.0(jasmine-core@6.0.1)(karma-jasmine@5.1.0(karma@6.4.4))(karma@6.4.4)
       postcss:
         specifier: ^8.5.3
         version: 8.5.3
@@ -1565,8 +1565,8 @@ packages:
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
-  '@types/jasmine@5.1.4':
-    resolution: {integrity: sha512-px7OMFO/ncXxixDe1zR13V1iycqWae0MxTaw62RpFlksUi5QuNWgQJFkTQjIOvrmutJbI7Fp2Y2N1F6D2R4G6w==}
+  '@types/jasmine@6.0.0':
+    resolution: {integrity: sha512-18lgGsLmEh3VJk9eZ5wAjTISxdqzl6YOwu8UdMpolajN57QOCNbl+AbHUd+Yu9ItrsFdB+c8LSZSGNg8nHaguw==}
 
   '@types/node@22.8.1':
     resolution: {integrity: sha512-k6Gi8Yyo8EtrNtkHXutUu2corfDf9su95VYVP10aGYMMROM6SAItZi0w1XszA6RtWTHSVp5OeFof37w0IEqCQg==}
@@ -1625,10 +1625,11 @@ packages:
     resolution: {integrity: sha512-qqAXW9QvKf2tTyhpDA4qXv1IfBwD2eduSW6tUEBFIfCeE9gn9HQ9I5+MaKoenRuHrzk5sQoNh1/iof8mY7uD6Q==}
     engines: {node: '>= 14.0.0'}
 
-  angularx-qrcode@19.0.0:
-    resolution: {integrity: sha512-uH1gO/X1hgSojZwgO3EmaXP+MvWCgZm5WGh3y1ZL2+VMstEGEMtJGZTyR645fB7ABF2ZIBUMB9h/SKvGJQX/zQ==}
+  angularx-qrcode@21.0.4:
+    resolution: {integrity: sha512-GZFa/X/3rHx/4peA4zNROkK6UaYqxJX0dgkEMk7dCcoYNwJM8/UkOkEUfcx+Btjr7iT4UEhf9twWhFjFp58wfw==}
     peerDependencies:
-      '@angular/core': ^19.0.0
+      '@angular/common': ^21.0.0
+      '@angular/core': ^21.0.0
 
   ansi-escapes@7.0.0:
     resolution: {integrity: sha512-GdYO7a61mR0fOlAsvC9/rIHf7L96sBc6dEWzeOu+KAea5bZyQRPIpojrVoI4AXGJS/ycu/fBTdLrUkA4ODrvjw==}
@@ -2422,8 +2423,8 @@ packages:
   jasmine-core@4.6.1:
     resolution: {integrity: sha512-VYz/BjjmC3klLJlLwA4Kw8ytk0zDSmbbDLNs794VnWmkcCB7I9aAL/D48VNQtmITyPvea2C3jdUMfc3kAoy0PQ==}
 
-  jasmine-core@5.4.0:
-    resolution: {integrity: sha512-T4fio3W++llLd7LGSGsioriDHgWyhoL6YTu4k37uwJLF7DzOzspz7mNxRoM3cQdLWtL/ebazQpIf/yZGJx/gzg==}
+  jasmine-core@6.0.1:
+    resolution: {integrity: sha512-gUtzV5ASR0MLBwDNqri4kBsgKNCcRQd9qOlNw/w/deavD0cl3JmWXXfH8JhKM4LTg6LPTt2IOQ4px3YYfgh2Xg==}
 
   jiti@2.4.2:
     resolution: {integrity: sha512-rg9zJN+G4n2nfJl5MW3BMygZX56zKPNVEYYqq7adpmMh4Jn2QNEwhvQlFy6jPVdcod7txZtKHWnyZiA3a0zP7A==}
@@ -2478,10 +2479,10 @@ packages:
     resolution: {integrity: sha512-yj7hbequkQP2qOSb20GuNSIyE//PgJWHwC2IydLE6XRtsnaflv+/OSGNssPjobYUlhVVagy99TQpqUt3vAUG7A==}
     engines: {node: '>=10.0.0'}
 
-  karma-jasmine-html-reporter@2.1.0:
-    resolution: {integrity: sha512-sPQE1+nlsn6Hwb5t+HHwyy0A1FNCVKuL1192b+XNauMYWThz2kweiBVW1DqloRpVvZIJkIoHVB7XRpK78n1xbQ==}
+  karma-jasmine-html-reporter@2.2.0:
+    resolution: {integrity: sha512-J0laEC43Oy2RdR5V5R3bqmdo7yRIYySq6XHKbA+e5iSAgLjhR1oICLGeSREPlJXpeyNcdJf3J17YcdhD0mRssQ==}
     peerDependencies:
-      jasmine-core: ^4.0.0 || ^5.0.0
+      jasmine-core: ^4.0.0 || ^5.0.0 || ^6.0.0
       karma: ^6.0.0
       karma-jasmine: ^5.0.0
 
@@ -3404,8 +3405,8 @@ packages:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
 
-  uuid@11.0.3:
-    resolution: {integrity: sha512-d0z310fCWv5dJwnX1Y/MncBAqGMKEzlBb1AOf7z9K8ALnd0utBX/msg/fA0+sbyN1ihbMsLhrBlnl1ak7Wa0rg==}
+  uuid@13.0.0:
+    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
     hasBin: true
 
   validate-npm-package-name@7.0.2:
@@ -4896,7 +4897,7 @@ snapshots:
 
   '@types/estree@1.0.8': {}
 
-  '@types/jasmine@5.1.4': {}
+  '@types/jasmine@6.0.0': {}
 
   '@types/node@22.8.1':
     dependencies:
@@ -4963,8 +4964,9 @@ snapshots:
       '@algolia/requester-fetch': 5.46.2
       '@algolia/requester-node-http': 5.46.2
 
-  angularx-qrcode@19.0.0(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.1)(zone.js@0.15.0)):
+  angularx-qrcode@21.0.4(@angular/common@21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.1)(zone.js@0.15.0)):
     dependencies:
+      '@angular/common': 21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1)
       '@angular/core': 21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.1)(zone.js@0.15.0)
       qrcode: 1.5.4
       tslib: 2.8.0
@@ -5815,7 +5817,7 @@ snapshots:
 
   jasmine-core@4.6.1: {}
 
-  jasmine-core@5.4.0: {}
+  jasmine-core@6.0.1: {}
 
   jiti@2.4.2: {}
 
@@ -5860,9 +5862,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  karma-jasmine-html-reporter@2.1.0(jasmine-core@5.4.0)(karma-jasmine@5.1.0(karma@6.4.4))(karma@6.4.4):
+  karma-jasmine-html-reporter@2.2.0(jasmine-core@6.0.1)(karma-jasmine@5.1.0(karma@6.4.4))(karma@6.4.4):
     dependencies:
-      jasmine-core: 5.4.0
+      jasmine-core: 6.0.1
       karma: 6.4.4
       karma-jasmine: 5.1.0(karma@6.4.4)
 
@@ -6909,7 +6911,7 @@ snapshots:
 
   utils-merge@1.0.1: {}
 
-  uuid@11.0.3: {}
+  uuid@13.0.0: {}
 
   validate-npm-package-name@7.0.2: {}
 
