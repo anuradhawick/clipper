@@ -15,7 +15,8 @@ use tokio::sync::Mutex;
 pub struct SettingsEntry {
     color: String,
     lighting: String,
-    history_size: u32,
+    clipboard_history_size: u32,
+    bookmark_history_size: u32,
     autolaunch: bool,
     global_shortcut: Option<String>,
 }
@@ -35,7 +36,8 @@ impl SettingsManager {
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 color TEXT NOT NULL,
                 lighting TEXT NOT NULL,
-                historySize INTEGER NOT NULL,
+                clipboardHistorySize INTEGER NOT NULL,
+                bookmarkHistorySize INTEGER NOT NULL,
                 globalShortcut TEXT
             );
             "#,
@@ -53,8 +55,8 @@ impl SettingsManager {
 
         let initial_settings = sqlx::query(
             r#"
-            INSERT INTO settings (id, color, lighting, historySize, globalShortcut)
-            SELECT 1, 'default', 'system', 100, ?
+            INSERT INTO settings (id, color, lighting, clipboardHistorySize, bookmarkHistorySize, globalShortcut)
+            SELECT 1, 'default', 'system', 100, 100, ?
             WHERE NOT EXISTS (SELECT 1 FROM settings WHERE id = 1);
             "#,
         )
@@ -109,13 +111,14 @@ impl SettingsManager {
         sqlx::query(
             r#"
             UPDATE settings
-            SET color = ?, lighting = ?, historySize = ?, globalShortcut = ?
+            SET color = ?, lighting = ?, clipboardHistorySize = ?, bookmarkHistorySize = ?, globalShortcut = ?
             WHERE id = 1
             "#,
         )
         .bind(settings.color)
         .bind(settings.lighting)
-        .bind(settings.history_size)
+        .bind(settings.clipboard_history_size)
+        .bind(settings.bookmark_history_size)
         .bind(settings.global_shortcut.clone())
         .execute(&*pool)
         .await
@@ -171,7 +174,8 @@ impl SettingsManager {
         Ok(SettingsEntry {
             color: result.get("color"),
             lighting: result.get("lighting"),
-            history_size: result.get("historySize"),
+            clipboard_history_size: result.get("clipboardHistorySize"),
+            bookmark_history_size: result.get("bookmarkHistorySize"),
             autolaunch: self.app_handle.autolaunch().is_enabled().unwrap(),
             global_shortcut: result.get("globalShortcut"),
         })

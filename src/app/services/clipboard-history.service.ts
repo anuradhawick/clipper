@@ -27,14 +27,20 @@ export class ClipboardHistoryService implements OnDestroy {
   private unlistenClipboardEvent: UnlistenFn | undefined;
   private settingsSubscription: Subscription | undefined;
   private historyManagementSubscription: Subscription | undefined;
-  private settings: HistorySize = { historySize: 100 };
+  private settings: HistorySize = {
+    clipboardHistorySize: 100,
+    bookmarkHistorySize: 100,
+  };
   private readonly settingsService = inject(SettingsService);
 
   constructor() {
     console.log("ClipboardHistoryService created");
     listen("clipboard_entry_added", (event: { payload: ClipperEntry }) => {
       this.items.update((entries) =>
-        [event.payload, ...entries].slice(0, this.settings.historySize)
+        [event.payload, ...entries].slice(
+          0,
+          this.settings.clipboardHistorySize,
+        ),
       );
     }).then((func) => (this.unlistenClipboardEntry = func));
 
@@ -48,11 +54,11 @@ export class ClipboardHistoryService implements OnDestroy {
         console.log("Clipboard settings updated", saved);
         this.settings = saved;
         invoke<ClipperEntry[]>("clipboard_read_entries", {
-          count: saved.historySize,
+          count: saved.clipboardHistorySize,
         }).then((entries) => {
           this.items.set(entries);
         });
-      }
+      },
     );
 
     invoke<boolean>("clipboard_read_status", {}).then((running) => {
@@ -65,9 +71,9 @@ export class ClipboardHistoryService implements OnDestroy {
         delay(10000),
         concatMap(async () => {
           await invoke<void>("clipboard_clean_old_entries", {
-            count: this.settings.historySize,
+            count: this.settings.clipboardHistorySize,
           });
-        })
+        }),
       )
       .subscribe();
   }

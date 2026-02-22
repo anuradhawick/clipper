@@ -41,18 +41,20 @@ export class NavBarComponent implements OnDestroy {
   contextMenuPosition = { x: "0px", y: "0px" };
   menu = viewChild.required<MatMenuTrigger>(MatMenuTrigger);
   activeMenu = signal<MatMenu | null>(null);
+  pageTitle = signal<string>("");
   readonly clipboardHistoryService = inject(ClipboardHistoryService);
   readonly windowActionsService = inject(WindowActionsService);
   readonly changeDetectorRef = inject(ChangeDetectorRef);
   readonly dialog = inject(MatDialog);
   readonly dropperService = inject(DropperService);
-  pageTitle = signal<string>("");
+  readonly router = inject(Router);
+  readonly location = inject(Location);
 
-  constructor(router: Router, location: Location) {
-    this.routerSubscription = router.events.subscribe((event: Event) => {
+  constructor() {
+    this.routerSubscription = this.router.events.subscribe((event: Event) => {
       switch (event.type) {
         case EventType.NavigationEnd:
-          const url = location.path();
+          const url = this.location.path();
           const title = url.split("/")[2];
           this.pageTitle.set(title);
           break;

@@ -86,7 +86,26 @@
       <mat-label>History size</mat-label>
       <mat-select
         (valueChange)="changeHistorySize($event)"
-        [value]="settings()?.historySize"
+        [value]="settings()?.clipboardHistorySize"
+      >
+        @for (size of [100, 1000, 5000]; track size) {
+          <mat-option [value]="size">{{ size }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+  <!-- bookmark events -->
+  <div class="flex flex-row justify-between items-center">
+    <p class="flex">Number of bookmark events</p>
+    <mat-form-field
+      appearance="outline"
+      subscriptSizing="dynamic"
+      class="w-[220px]"
+    >
+      <mat-label>History size</mat-label>
+      <mat-select
+        (valueChange)="changeBookmarkHistorySize($event)"
+        [value]="settings()?.bookmarkHistorySize"
       >
         @for (size of [100, 1000, 5000]; track size) {
           <mat-option [value]="size">{{ size }}</mat-option>

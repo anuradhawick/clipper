@@ -13,6 +13,7 @@ import {
   provideClientHydration,
   withEventReplay,
 } from "@angular/platform-browser";
+import { BookmarksService } from "./services/bookmarks.service";
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -20,6 +21,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     provideAppInitializer(() => {
       inject(ClipboardHistoryService);
+      inject(BookmarksService);
       inject(ThemeService);
       inject(DropperService);
     }),

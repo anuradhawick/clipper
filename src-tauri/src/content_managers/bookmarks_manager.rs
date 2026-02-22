@@ -291,6 +291,27 @@ impl BookmarksManager {
         Ok(())
     }
 
+    pub async fn delete_with_skip(&self, skip: u32) -> Result<(), sqlx::Error> {
+        log::info!("Deleting bookmarks with skip {:#?}", skip);
+        let pool = self.pool.lock().await;
+        let res = sqlx::query(
+            r#"
+            DELETE FROM bookmarks
+            WHERE id NOT IN (
+                SELECT id
+                FROM bookmarks
+                ORDER BY timestamp DESC
+                LIMIT ?
+            )
+            "#,
+        )
+        .bind(skip)
+        .execute(&*pool)
+        .await?;
+        log::info!("Cleared number of entries: {:#?}", res.rows_affected());
+        Ok(())
+    }
+
     pub async fn read(&self) -> Result<Vec<BookmarkItem>, sqlx::Error> {
         log::info!("Reading bookmarks");
         let pool = self.pool.lock().await;
@@ -418,4 +439,17 @@ pub async fn bookmarks_read_entries(
 ) -> Result<Vec<BookmarkItem>, String> {
     log::info!("CMD:Reading bookmarks");
     state.lock().await.read().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn bookmarks_clean_old_entries(
+    count: u32,
+    state: State<'_, Arc<Mutex<BookmarksManager>>>,
+) -> Result<(), String> {
+    log::info!("CMD:bookmarks_clean_old_entries: {}", count);
+    let bookmarks_manager = state.lock().await;
+    bookmarks_manager
+        .delete_with_skip(count)
+        .await
+        .map_err(|e| e.to_string())
 }

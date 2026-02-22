@@ -8,7 +8,8 @@ mod content_managers;
 mod utils;
 
 use content_managers::bookmarks_manager::{
-    bookmarks_delete_all, bookmarks_delete_one, bookmarks_read_entries, BookmarksManager,
+    bookmarks_clean_old_entries, bookmarks_delete_all, bookmarks_delete_one,
+    bookmarks_read_entries, BookmarksManager,
 };
 use content_managers::clipboard_watcher::{
     clipboard_add_entry, clipboard_clean_old_entries, clipboard_delete_all_entries,
@@ -107,6 +108,7 @@ async fn main() {
             bookmarks_read_entries,
             bookmarks_delete_one,
             bookmarks_delete_all,
+            bookmarks_clean_old_entries,
             // window related
             window_hide,
             window_show_qrviewer,

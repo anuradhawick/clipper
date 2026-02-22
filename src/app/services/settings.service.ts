@@ -22,7 +22,8 @@ export interface ThemeSettings {
 }
 
 export interface HistorySize {
-  historySize: number;
+  clipboardHistorySize: number;
+  bookmarkHistorySize: number;
 }
 
 export interface GeneralSettings {
@@ -44,7 +45,8 @@ export class SettingsService implements OnDestroy {
     this.settingsSubject = new BehaviorSubject<Settings>({
       color: ColorPreference.DEFAULT,
       lighting: LightingPreference.SYSTEM,
-      historySize: 100,
+      clipboardHistorySize: 100,
+      bookmarkHistorySize: 100,
       autolaunch: false,
       globalShortcut: null,
     });
@@ -55,6 +57,7 @@ export class SettingsService implements OnDestroy {
 
   private async loadInitialSettings() {
     const settings = await this.get();
+    console.log("Initial settings loaded:", settings);
     this.settingsSubject.next(settings);
   }
 

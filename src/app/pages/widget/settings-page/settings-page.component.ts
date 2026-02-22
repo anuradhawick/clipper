@@ -62,7 +62,7 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
     this.settingsSubscription = this.settingsService.settings$.subscribe(
       (settings) => {
         this.settings.set(settings);
-      }
+      },
     );
     this.settingsService.getDBPath().then((path) => {
       this.database.set(path);
@@ -116,7 +116,13 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
   async changeHistorySize(size: number) {
     const settings = this.settings();
     if (!settings) return;
-    this.settingsService.update({ ...settings, historySize: size });
+    this.settingsService.update({ ...settings, clipboardHistorySize: size });
+  }
+
+  async changeBookmarkHistorySize(size: number) {
+    const settings = this.settings();
+    if (!settings) return;
+    this.settingsService.update({ ...settings, bookmarkHistorySize: size });
   }
 
   async deleteDB() {
