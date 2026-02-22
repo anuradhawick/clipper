@@ -1,13 +1,11 @@
-use super::{clipboard_watcher::ClipboardWatcher, db::DbConnection};
+use super::db::DbConnection;
 use crate::content_managers::message_bus::AppMessage;
 use crate::{content_managers::message_bus::MessageBus, AppHandle};
-use arboard::Clipboard;
 use chrono::Utc;
 use regex::Regex;
 use serde::Serialize;
 use sqlx::{sqlite::SqlitePool, Row};
 use std::collections::HashSet;
-use std::fmt::format;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 use tauri::async_runtime;
@@ -208,7 +206,7 @@ impl BookmarksManager {
                             };
 
                             {
-                                let mut app_state = cloned_state.lock().await;
+                                let app_state = cloned_state.lock().await;
 
                                 match app_state.create(bookmark.clone()).await {
                                     Ok(_) => {
@@ -258,23 +256,23 @@ impl BookmarksManager {
         Ok(())
     }
 
-    pub async fn update(&self, bookmark: BookmarkItem) -> Result<(), sqlx::Error> {
-        log::info!("Updating bookmark: {:#?}", bookmark);
-        let pool = self.pool.lock().await;
-        sqlx::query(
-            r#"
-            UPDATE bookmarks
-            SET text = ?, image = ?
-            WHERE id = ?
-            "#,
-        )
-        .bind(bookmark.text)
-        .bind(bookmark.image)
-        .bind(bookmark.id)
-        .execute(&*pool)
-        .await?;
-        Ok(())
-    }
+    // pub async fn update(&self, bookmark: BookmarkItem) -> Result<(), sqlx::Error> {
+    //     log::info!("Updating bookmark: {:#?}", bookmark);
+    //     let pool = self.pool.lock().await;
+    //     sqlx::query(
+    //         r#"
+    //         UPDATE bookmarks
+    //         SET text = ?, image = ?
+    //         WHERE id = ?
+    //         "#,
+    //     )
+    //     .bind(bookmark.text)
+    //     .bind(bookmark.image)
+    //     .bind(bookmark.id)
+    //     .execute(&*pool)
+    //     .await?;
+    //     Ok(())
+    // }
 
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
         log::info!("Deleting bookmark: {:#?}", id);
@@ -339,28 +337,28 @@ impl BookmarksManager {
         Ok(bookmarks)
     }
 
-    pub async fn get(&self, id: &str) -> Result<BookmarkItem, sqlx::Error> {
-        log::info!("Getting bookmark: {:#?}", id);
-        let pool = self.pool.lock().await;
-        let item = sqlx::query(
-            r#"
-            SELECT *
-            FROM bookmarks
-            WHERE id = ?
-            "#,
-        )
-        .bind(id)
-        .fetch_one(&*pool)
-        .await?;
+    // pub async fn get(&self, id: &str) -> Result<BookmarkItem, sqlx::Error> {
+    //     log::info!("Getting bookmark: {:#?}", id);
+    //     let pool = self.pool.lock().await;
+    //     let item = sqlx::query(
+    //         r#"
+    //         SELECT *
+    //         FROM bookmarks
+    //         WHERE id = ?
+    //         "#,
+    //     )
+    //     .bind(id)
+    //     .fetch_one(&*pool)
+    //     .await?;
 
-        Ok(BookmarkItem {
-            id: item.get("id"),
-            url: item.get("url"),
-            text: item.get("text"),
-            image: item.get("image"),
-            timestamp: item.get("timestamp"),
-        })
-    }
+    //     Ok(BookmarkItem {
+    //         id: item.get("id"),
+    //         url: item.get("url"),
+    //         text: item.get("text"),
+    //         image: item.get("image"),
+    //         timestamp: item.get("timestamp"),
+    //     })
+    // }
 
     pub async fn delete_all_bookmarks(&self) -> Result<(), sqlx::Error> {
         log::info!("Deleting all bookmarks");
