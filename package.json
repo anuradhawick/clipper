@@ -11,16 +11,17 @@
   },
   "private": true,
   "dependencies": {
-    "@angular/animations": "^19.2.2",
-    "@angular/cdk": "19.2.3",
-    "@angular/common": "^19.2.2",
-    "@angular/compiler": "^19.2.2",
-    "@angular/core": "^19.2.2",
-    "@angular/forms": "^19.2.2",
-    "@angular/material": "19.2.3",
-    "@angular/platform-browser": "^19.2.2",
-    "@angular/platform-browser-dynamic": "^19.2.2",
-    "@angular/router": "^19.2.2",
+    "@angular/animations": "^21.1.5",
+    "@angular/cdk": "21.1.5",
+    "@angular/common": "^21.1.5",
+    "@angular/compiler": "^21.1.5",
+    "@angular/core": "^21.1.5",
+    "@angular/forms": "^21.1.5",
+    "@angular/material": "21.1.5",
+    "@angular/platform-browser": "^21.1.5",
+    "@angular/platform-browser-dynamic": "^21.1.5",
+    "@angular/router": "^21.1.5",
+    "@angular/ssr": "^21.1.4",
     "@tailwindcss/postcss": "^4.0.14",
     "@tauri-apps/api": "^2.0.1",
     "@tauri-apps/plugin-opener": "^2.2.6",
@@ -32,9 +33,9 @@
     "uuid": "11.0.3"
   },
   "devDependencies": {
-    "@angular/build": "^19.2.3",
-    "@angular/cli": "^19.2.3",
-    "@angular/compiler-cli": "^19.2.2",
+    "@angular/build": "^21.1.4",
+    "@angular/cli": "^21.1.4",
+    "@angular/compiler-cli": "^21.1.5",
     "@tauri-apps/cli": "2.0.0-rc.18",
     "@types/jasmine": "~5.1.0",
     "@types/uuid": "^10.0.0",
@@ -49,7 +50,7 @@
     "prettier": "3.5.3",
     "schematics-scss-migrate": "2.3.17",
     "tailwindcss": "^4.0.14",
-    "typescript": "5.6.3"
+    "typescript": "5.9.3"
   },
   "packageManager": "pnpm@9.5.0+sha512.140036830124618d624a2187b50d04289d5a087f326c9edfc0ccd733d76c4f52c3a313d4fc148794a2a9d81553016004e6742e8cf850670268a7387fc220c903"
 }

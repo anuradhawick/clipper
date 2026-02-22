@@ -1,4 +1,4 @@
-import { Component, computed, Signal } from "@angular/core";
+import { Component, computed, inject, Signal } from "@angular/core";
 import {
   ClipboardHistoryService,
   ClipperEntry,
@@ -6,15 +6,24 @@ import {
 import { ClipboardItemComponent } from "./clipboard-item/clipboard-item.component";
 import { MatIconModule } from "@angular/material/icon";
 import { MatButtonModule } from "@angular/material/button";
+import { MatTooltipModule } from "@angular/material/tooltip";
+import { MatDialog } from "@angular/material/dialog";
+import { ActionConfirmationDialogComponent } from "../../../components/action-confirmation-dialog/action-confirmation-dialog.component";
 
 @Component({
   selector: "app-clipboard-page",
-  imports: [ClipboardItemComponent, MatButtonModule, MatIconModule],
+  imports: [
+    ClipboardItemComponent,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+  ],
   templateUrl: "./clipboard-page.component.html",
   styleUrl: "./clipboard-page.component.scss",
 })
 export class ClipboardPageComponent {
   clipperEntries: Signal<ClipperEntry[]>;
+  readonly dialog = inject(MatDialog);
 
   constructor(protected chs: ClipboardHistoryService) {
     this.clipperEntries = computed(() => chs.items());
@@ -51,5 +60,19 @@ export class ClipboardPageComponent {
     //     timestamp: '2024-08-02T09:18:00.776Z'
     //   },
     // ]);
+  }
+
+  clearClipboardHistory() {
+    const dialogRef = this.dialog.open(ActionConfirmationDialogComponent, {
+      data: {
+        title: `Clear Clipboard History`,
+        message: `Are you sure you want to clear all clipboard entries?`,
+      },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.chs.clear();
+      }
+    });
   }
 }

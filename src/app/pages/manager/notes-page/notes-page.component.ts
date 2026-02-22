@@ -4,6 +4,8 @@ import { MatIconModule } from "@angular/material/icon";
 import { NotesService } from "../../../services/notes.service";
 import { NoteItemComponent } from "./note-item/note-item.component";
 import { RouterOutlet } from "@angular/router";
+import { MatDialog } from "@angular/material/dialog";
+import { ActionConfirmationDialogComponent } from "../../../components/action-confirmation-dialog/action-confirmation-dialog.component";
 
 @Component({
   selector: "app-notes-page",
@@ -13,6 +15,7 @@ import { RouterOutlet } from "@angular/router";
 })
 export class NotesPageComponent {
   readonly notesService = inject(NotesService);
+  readonly dialog = inject(MatDialog);
 
   constructor() {
     // this.notes = computed(() => [
@@ -35,5 +38,19 @@ export class NotesPageComponent {
     //     entry: `This is a note. This is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nThis is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nThis is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nThis is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nThis is a multi line test\nwith many many lines\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>\nmay be too long for the <pre></pre>`,
     //   },
     // ]);
+  }
+
+  deleteNotes() {
+    const dialogRef = this.dialog.open(ActionConfirmationDialogComponent, {
+      data: {
+        title: `Clear Notes`,
+        message: `Are you sure you want to clear all notes?`,
+      },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.notesService.deleteAll();
+      }
+    });
   }
 }

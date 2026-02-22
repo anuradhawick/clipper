@@ -57,11 +57,11 @@ pub fn window_show_qrviewer(app_handle: AppHandle, url: String) {
                 }
                 WindowEvent::CloseRequested { api: _, .. } => {
                     log::info!("QR Viewer window close requested");
-                    app_handle
-                        .get_webview_window("main")
-                        .expect("Main window not found")
-                        .show()
-                        .expect("Failed to show main window");
+                    // app_handle
+                    //     .get_webview_window("main")
+                    //     .expect("Main window not found")
+                    //     .show()
+                    //     .expect("Failed to show main window");
                 }
                 _ => {}
             });

@@ -1,3 +1,22 @@
+<div class="wrapper items-center">
+  <div class="flex justify-end w-full m-1">
+    <div class="flex space-x-1">
+      <button
+        mat-mini-fab
+        (click)="deleteNotes()"
+        matTooltip="Clear all notes"
+        matTooltipShowDelay="1000"
+      >
+        <mat-icon>delete_sweep</mat-icon>
+      </button>
+    </div>
+  </div>
+  <div
+    class="absolute mx-auto w-full text-center items-center text-lg font-bold"
+  >
+    Notes
+  </div>
+</div>
 <router-outlet />
 @for (note of notesService.notes(); track note.id) {
   <app-note-item
