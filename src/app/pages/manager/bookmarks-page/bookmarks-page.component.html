@@ -1,3 +1,17 @@
+<div class="wrapper">
+  <div class="flex justify-end w-full m-1">
+    <div class="flex space-x-1">
+      <button
+        mat-mini-fab
+        (click)="clearBookmarks()"
+        matTooltip="Clear all bookmarks"
+        matTooltipShowDelay="1000"
+      >
+        <mat-icon>delete_sweep</mat-icon>
+      </button>
+    </div>
+  </div>
+</div>
 @for (bookmarkEntry of bookmarkEntries(); track bookmarkEntry.id) {
   <app-bookmark-item
     [bookmarkEntry]="bookmarkEntry"

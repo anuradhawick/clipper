@@ -11,6 +11,7 @@ use std::fmt::format;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 use tauri::async_runtime;
+use tauri::Emitter;
 use tauri::State;
 use tokio::sync::Mutex;
 
@@ -24,6 +25,7 @@ pub struct BookmarkItem {
 }
 
 pub struct BookmarksManager {
+    app_handle: AppHandle,
     pool: Arc<Mutex<SqlitePool>>,
 }
 
@@ -40,6 +42,7 @@ impl BookmarksManager {
             .into_iter()
             .collect()
     }
+
     async fn fetch_meta(
         url: &str,
     ) -> Result<(String, String, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
@@ -131,7 +134,11 @@ impl BookmarksManager {
         Ok((title, description, image_bytes))
     }
 
-    pub async fn new(db: Arc<DbConnection>, bus: MessageBus) -> Arc<Mutex<Self>> {
+    pub async fn new(
+        db: Arc<DbConnection>,
+        bus: MessageBus,
+        app_handle: AppHandle,
+    ) -> Arc<Mutex<Self>> {
         let pool = db.pool.lock().await;
 
         // create table if not exist for bookmark entries
@@ -151,6 +158,7 @@ impl BookmarksManager {
         .expect("Unable to execute SQL!");
 
         let state = Arc::new(Mutex::new(Self {
+            app_handle,
             pool: Arc::clone(&db.pool),
         }));
 
@@ -168,16 +176,17 @@ impl BookmarksManager {
                             url.hash(&mut hasher);
                             let id = hasher.finish();
                             log::info!("Extracted URL: {}", url);
-                            let bookmark = {
-                                if let Ok((title, description, image)) =
-                                    Self::fetch_meta(&url).await
-                                {
+
+                            let bookmark_extraction = Self::fetch_meta(&url).await;
+                            let bookmark = match bookmark_extraction {
+                                Ok((title, description, image)) => {
                                     log::info!(
                                         "Fetched metadata - Title: {}, Description: {}, Image size: {} bytes",
                                         title,
                                         description,
                                         image.len()
                                     );
+
                                     BookmarkItem {
                                         id: id.to_string(),
                                         url: url.clone(),
@@ -185,7 +194,8 @@ impl BookmarksManager {
                                         image: image,
                                         timestamp: Utc::now().to_rfc3339(),
                                     }
-                                } else {
+                                }
+                                Err(_) => {
                                     log::warn!("Failed to fetch metadata for URL: {}", url);
                                     BookmarkItem {
                                         id: id.to_string(),
@@ -197,8 +207,23 @@ impl BookmarksManager {
                                 }
                             };
 
-                            if let Err(e) = cloned_state.lock().await.create(bookmark).await {
-                                log::error!("Unable to save bookmark for URL {}: {}", url, e);
+                            {
+                                let mut app_state = cloned_state.lock().await;
+
+                                match app_state.create(bookmark.clone()).await {
+                                    Ok(_) => {
+                                        app_state
+                                            .app_handle
+                                            .emit("bookmark_entry_added", bookmark)
+                                            .ok();
+                                        log::info!("Bookmark saved for URL: {}", url)
+                                    }
+                                    Err(e) => log::error!(
+                                        "Failed to save bookmark for URL {}: {}",
+                                        url,
+                                        e
+                                    ),
+                                }
                             }
                         }
                     }
@@ -361,7 +386,7 @@ impl BookmarksManager {
 // }
 
 #[tauri::command]
-pub async fn delete_bookmark(
+pub async fn bookmarks_delete_one(
     state: State<'_, Arc<Mutex<BookmarksManager>>>,
     id: String,
 ) -> Result<(), String> {
@@ -375,7 +400,7 @@ pub async fn delete_bookmark(
 }
 
 #[tauri::command]
-pub async fn delete_all_bookmarks(
+pub async fn bookmarks_delete_all(
     state_bookmarks_mgr: State<'_, Arc<Mutex<BookmarksManager>>>,
 ) -> Result<(), String> {
     log::info!("CMD:Deleting all bookmarks");
@@ -394,21 +419,3 @@ pub async fn bookmarks_read_entries(
     log::info!("CMD:Reading bookmarks");
     state.lock().await.read().await.map_err(|e| e.to_string())
 }
-
-// #[tauri::command]
-// pub async fn clipboard_add_bookmark(
-//     id: String,
-//     state_clipboard_mgr: State<'_, Arc<Mutex<ClipboardWatcher>>>,
-//     state_bookmarks_mgr: State<'_, Arc<Mutex<BookmarksManager>>>,
-// ) -> Result<(), String> {
-//     log::info!("CMD:Note added to clipboard: {:#?}", id);
-//     let mut clipboard_watcher = state_clipboard_mgr.lock().await;
-//     let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
-//     let bookmarks_mgr = state_bookmarks_mgr.lock().await;
-//     let entry = bookmarks_mgr.get(&id).await.map_err(|e| e.to_string())?;
-//     let text = entry.entry;
-//     clipboard_watcher.set_last_text(text.clone());
-//     clipboard.set_text(text).map_err(|e| e.to_string())?;
-
-//     Ok(())
-// }

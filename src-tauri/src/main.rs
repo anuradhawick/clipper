@@ -8,7 +8,7 @@ mod content_managers;
 mod utils;
 
 use content_managers::bookmarks_manager::{
-    bookmarks_read_entries, delete_all_bookmarks, delete_bookmark, BookmarksManager,
+    bookmarks_delete_all, bookmarks_delete_one, bookmarks_read_entries, BookmarksManager,
 };
 use content_managers::clipboard_watcher::{
     clipboard_add_entry, clipboard_clean_old_entries, clipboard_delete_all_entries,
@@ -105,8 +105,8 @@ async fn main() {
             clipboard_read_status,
             // bookmarks related
             bookmarks_read_entries,
-            delete_bookmark,
-            delete_all_bookmarks,
+            bookmarks_delete_one,
+            bookmarks_delete_all,
             // window related
             window_hide,
             window_show_qrviewer,
@@ -202,7 +202,7 @@ async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
     let settings_manager = SettingsManager::new(Arc::clone(&db), app.clone()).await;
     app.manage(settings_manager);
     // register bookmarks manager
-    let bookmarks_manager = BookmarksManager::new(Arc::clone(&db), bus.clone()).await;
+    let bookmarks_manager = BookmarksManager::new(Arc::clone(&db), bus.clone(), app.clone()).await;
     app.manage(bookmarks_manager);
     // register file service
     let files_manager = FilesManager::new(

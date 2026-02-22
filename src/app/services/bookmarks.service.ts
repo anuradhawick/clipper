@@ -1,9 +1,6 @@
-import { inject, Injectable, OnDestroy, signal } from "@angular/core";
+import { Injectable, OnDestroy, signal } from "@angular/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { HistorySize, SettingsService } from "./settings.service";
-import { delay, interval, Subscription } from "rxjs";
-import { concatMap } from "rxjs/operators";
 
 export enum ClipperEntryKind {
   Text = "Text",
@@ -28,11 +25,9 @@ export class BookmarksService implements OnDestroy {
 
   constructor() {
     console.log("BookmarksService created");
-    // listen("clipboard_entry_added", (event: { payload: BookmarkEntry }) => {
-    //   this.items.update((entries) =>
-    //     [event.payload, ...entries].slice(0, this.settings.historySize)
-    //   );
-    // }).then((func) => (this.unlistenBookmarkEntry = func));
+    listen("bookmark_entry_added", (event: { payload: BookmarkEntry }) => {
+      this.items.update((entries) => [event.payload, ...entries]);
+    }).then((func) => (this.unlistenBookmarkEntry = func));
 
     invoke<BookmarkEntry[]>("bookmarks_read_entries", {}).then((entries) => {
       this.items.set(entries);
@@ -51,22 +46,22 @@ export class BookmarksService implements OnDestroy {
   }
 
   async copy(id: string) {
-    await invoke<void>("clipboard_add_entry", {
-      id,
-    });
+    // await invoke<void>("bookmarks_add_entry", {
+    //   id,
+    // });
   }
 
   async open(id: string) {
-    await invoke<void>("clipboard_open_entry", { id });
+    // await invoke<void>("bookmarks_open_entry", { id });
   }
 
   async clear() {
     this.items.set([]);
-    // await invoke<void>("clipboard_delete_all_entries", {});
+    await invoke<void>("bookmarks_delete_all", {});
   }
 
   async delete(id: string) {
     this.items.update((entries) => entries.filter((e) => e.id != id));
-    await invoke<void>("delete_bookmark", { id });
+    await invoke<void>("bookmarks_delete_one", { id });
   }
 }
