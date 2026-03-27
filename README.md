@@ -16,18 +16,19 @@ The app itself is secure, however, your clipboard might see your passwords if yo
   <img src="./assets/home.png" alt="Home page" width="800">
 </p>
 
-* 👉 Configurable Global Shortcut 
+* 👉 Configurable Global Shortcut
   - 🍎 CMD + OPT + C 
   - 🐧 CTRL + ALT + C
-* 👉 Support images in the clipboard view and copying
-* 👉 Open images in system image viewer
-* 👉 Maintain quick text notes in notes manager
-* 👉 Multi monitor support
-* 👉 URL detection and view in QR form
+* 👉 Clipboard history for text and images, including copy and system image viewer support
+* 👉 Regex-based clipboard filters to ignore matching clipboard entries
+* 👉 Configurable clipboard and bookmark history size limits
+* 👉 Automatic bookmark tracking for copied links, with refresh and QR actions
+* 👉 Quick text notes in both widget and manager views
 * 👉 File and Folder drop area
 * 👉 Start on system startup option
-* 👉 Right click menus
-* 👉 Tracking copied links as bookmarks
+* 👉 Right click menus for quick actions
+* 👉 URL detection and QR code viewing
+* 👉 Multi monitor support
 
 ## Installation Instructions
 
