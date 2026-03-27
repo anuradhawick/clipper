@@ -72,6 +72,108 @@
     </div>
   </div>
 </div>
+<!-- clipboard filters -->
+<div class="wrapper p-2 flex-col space-y-3">
+  <div class="flex items-center justify-between gap-2">
+    <div class="block mb-1">Clipboard Filters</div>
+    @if (clipboardFilters().length > 0) {
+      <div class="flex flex-row space-x-1">
+        @if (promptedFiltersDelete()) {
+          <div class="flex items-center">Are you sure?</div>
+          <button
+            mat-raised-button
+            color="primary"
+            class="w-[95px]"
+            type="button"
+            (click)="promptedFiltersDelete.set(false)"
+          >
+            Cancel
+          </button>
+          <button
+            mat-raised-button
+            color="warn"
+            class="w-[95px]"
+            type="button"
+            (click)="clearClipboardFilters()"
+          >
+            Proceed
+          </button>
+        } @else {
+          <button
+            mat-mini-fab
+            type="button"
+            aria-label="Clear all clipboard filters"
+            matTooltip="Clear all filters"
+            matTooltipShowDelay="1000"
+            (click)="promptedFiltersDelete.set(true)"
+          >
+            <mat-icon>delete_sweep</mat-icon>
+          </button>
+        }
+      </div>
+    }
+  </div>
+  <p class="text-sm opacity-75">
+    Matching clipboard entries will be ignored when they match one of these
+    regular expressions.
+  </p>
+
+  <div class="flex flex-row items-start gap-2">
+    <mat-form-field
+      appearance="outline"
+      subscriptSizing="dynamic"
+      class="flex-1"
+    >
+      <mat-label>Add regex</mat-label>
+      <input
+        matInput
+        type="text"
+        placeholder="^https://internal\\."
+        [ngModel]="clipboardFilterDraft()"
+        (ngModelChange)="setClipboardFilterDraft($event)"
+        (keyup.enter)="addClipboardFilter()"
+      />
+    </mat-form-field>
+    <button
+      mat-mini-fab
+      color="primary"
+      type="button"
+      aria-label="Add clipboard filter"
+      class="mt-1 shrink-0"
+      matTooltip="Add clipboard filter"
+      matTooltipShowDelay="1000"
+      (click)="addClipboardFilter()"
+    >
+      <mat-icon>add</mat-icon>
+    </button>
+  </div>
+
+  @if (clipboardFilterError()) {
+    <p class="text-sm text-red-400">{{ clipboardFilterError() }}</p>
+  }
+
+  <div class="flex flex-col gap-2">
+    @if (clipboardFilters().length === 0) {
+      <div class="filter-empty-state">No clipboard filters added yet.</div>
+    } @else {
+      @for (filter of clipboardFilters(); track filter.id) {
+        <div class="filter-row">
+          <code class="filter-pattern">{{ filter.filter_regex }}</code>
+          <button
+            mat-icon-button
+            type="button"
+            aria-label="Delete clipboard filter"
+            matTooltip="Remove filter"
+            matTooltipShowDelay="1000"
+            (click)="deleteClipboardFilter(filter)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      }
+    }
+  </div>
+</div>
 <!-- general settings -->
 <div class="wrapper p-2 flex-col space-y-2">
   <div class="block mb-1">Advanced Settings</div>

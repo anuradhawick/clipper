@@ -1,7 +1,8 @@
-import { Injectable, OnDestroy } from "@angular/core";
+import { Injectable, OnDestroy, signal } from "@angular/core";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { BehaviorSubject, Observable } from "rxjs";
+import { v4 as uuidv4 } from "uuid";
 
 export enum LightingPreference {
   SYSTEM = "system",
@@ -31,12 +32,19 @@ export interface GeneralSettings {
   globalShortcut: string | null;
 }
 
+export interface ClipboardFilter {
+  id: string;
+  filter_regex: string;
+  created_date?: string;
+}
+
 export interface Settings extends ThemeSettings, HistorySize, GeneralSettings {}
 
 @Injectable({
   providedIn: "root",
 })
 export class SettingsService implements OnDestroy {
+  clipboardFilters = signal<ClipboardFilter[]>([]);
   private settingsSubject: BehaviorSubject<Settings>;
   public settings$: Observable<Settings>;
   private unlistenSettingsChanged: UnlistenFn | undefined;
@@ -52,6 +60,7 @@ export class SettingsService implements OnDestroy {
     });
     this.settings$ = this.settingsSubject.asObservable();
     this.loadInitialSettings();
+    this.loadInitialClipboardFilters();
     this.listenForSettingsChanges();
   }
 
@@ -85,6 +94,73 @@ export class SettingsService implements OnDestroy {
 
   async get(): Promise<Settings> {
     return await invoke<Settings>("settings_read", {});
+  }
+
+  private async loadInitialClipboardFilters() {
+    const filters = await this.readClipboardFilters();
+    this.clipboardFilters.set(filters);
+  }
+
+  async readClipboardFilters(): Promise<ClipboardFilter[]> {
+    return await invoke<ClipboardFilter[]>("filters_read_entries", {});
+  }
+
+  async createClipboardFilter(filterRegex: string): Promise<ClipboardFilter> {
+    const normalizedRegex = this.normalizeRegex(filterRegex);
+    const savedFilter = await invoke<ClipboardFilter>("filters_create_entry", {
+      id: uuidv4(),
+      filterRegex: normalizedRegex,
+    });
+
+    this.clipboardFilters.update((filters) => [savedFilter, ...filters]);
+    return savedFilter;
+  }
+
+  async updateClipboardFilter(
+    id: string,
+    filterRegex: string,
+  ): Promise<ClipboardFilter> {
+    const normalizedRegex = this.normalizeRegex(filterRegex);
+    const updatedFilter = await invoke<ClipboardFilter>(
+      "filters_update_entry",
+      {
+        id,
+        filterRegex: normalizedRegex,
+      },
+    );
+
+    this.clipboardFilters.update((filters) =>
+      filters.map((filter) => (filter.id === id ? updatedFilter : filter)),
+    );
+    return updatedFilter;
+  }
+
+  async deleteClipboardFilter(id: string) {
+    await invoke("filters_delete_one", { id });
+    this.clipboardFilters.update((filters) =>
+      filters.filter((filter) => filter.id !== id),
+    );
+  }
+
+  async clearClipboardFilters() {
+    await invoke("filters_delete_all", {});
+    this.clipboardFilters.set([]);
+  }
+
+  private normalizeRegex(filterRegex: string): string {
+    const normalizedRegex = filterRegex.trim();
+
+    if (normalizedRegex.length === 0) {
+      throw new Error("Regex cannot be empty.");
+    }
+
+    try {
+      new RegExp(normalizedRegex);
+    } catch {
+      throw new Error("Enter a valid regular expression.");
+    }
+
+    return normalizedRegex;
   }
 
   async deleteDB() {

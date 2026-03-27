@@ -1,9 +1,17 @@
-import { Component, inject, OnDestroy, OnInit, signal } from "@angular/core";
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+} from "@angular/core";
 import { MatRippleModule } from "@angular/material/core";
 import { MatIconModule } from "@angular/material/icon";
 import { Color, colors, ThemeService } from "../../../services/theme.service";
 import { MatSelectModule } from "@angular/material/select";
 import {
+  ClipboardFilter,
   ColorPreference,
   LightingPreference,
   Settings,
@@ -19,6 +27,7 @@ import {
   MatCheckboxModule,
 } from "@angular/material/checkbox";
 import { MatInputModule } from "@angular/material/input";
+import { MatTooltipModule } from "@angular/material/tooltip";
 import { platform } from "@tauri-apps/plugin-os";
 import {
   tauriHotkeyToBrowserHotkey,
@@ -30,6 +39,7 @@ import {
 
 @Component({
   selector: "app-settings-page",
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatIconModule,
     MatButtonModule,
@@ -39,22 +49,27 @@ import {
     MatCheckboxModule,
     FormsModule,
     MatInputModule,
+    MatTooltipModule,
   ],
   templateUrl: "./settings-page.component.html",
   styleUrl: "./settings-page.component.scss",
 })
 export class SettingsPageComponent implements OnInit, OnDestroy {
-  colors: Color[] = colors;
-  settingsSubscription: Subscription | undefined;
-  settings = signal<Settings | null>(null);
-  database = signal("loading...");
-  filesPath = signal("loading...");
-  promptedDBDelete = signal(false);
-  promptedFilesDelete = signal(false);
-  recordingStarted = signal(false);
   readonly themeService = inject(ThemeService);
   readonly settingsService = inject(SettingsService);
   readonly dropperService = inject(DropperService);
+  colors: Color[] = colors;
+  settingsSubscription: Subscription | undefined;
+  settings = signal<Settings | null>(null);
+  clipboardFilters = this.settingsService.clipboardFilters;
+  clipboardFilterDraft = signal("");
+  clipboardFilterError = signal("");
+  database = signal("loading...");
+  filesPath = signal("loading...");
+  promptedFiltersDelete = signal(false);
+  promptedDBDelete = signal(false);
+  promptedFilesDelete = signal(false);
+  recordingStarted = signal(false);
   // this is no needed in signal form
   pressedKeys = new Set<string>();
 
@@ -125,6 +140,34 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
     this.settingsService.update({ ...settings, bookmarkHistorySize: size });
   }
 
+  setClipboardFilterDraft(value: string) {
+    this.clipboardFilterDraft.set(value);
+    if (this.clipboardFilterError()) {
+      this.clipboardFilterError.set("");
+    }
+  }
+
+  async addClipboardFilter() {
+    try {
+      await this.settingsService.createClipboardFilter(
+        this.clipboardFilterDraft(),
+      );
+      this.clipboardFilterDraft.set("");
+      this.clipboardFilterError.set("");
+    } catch (error) {
+      this.clipboardFilterError.set(this.getErrorMessage(error));
+    }
+  }
+
+  async deleteClipboardFilter(filter: ClipboardFilter) {
+    await this.settingsService.deleteClipboardFilter(filter.id);
+  }
+
+  async clearClipboardFilters() {
+    this.promptedFiltersDelete.set(false);
+    await this.settingsService.clearClipboardFilters();
+  }
+
   async deleteDB() {
     this.database.set("deleting...");
     this.promptedDBDelete.set(false);
@@ -156,5 +199,17 @@ export class SettingsPageComponent implements OnInit, OnDestroy {
     return platform() === "macos"
       ? browserHotkeyToMacSymbols(webKeys)
       : browserHotkeyToLinuxString(webKeys);
+  }
+
+  private getErrorMessage(error: unknown) {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === "string") {
+      return error;
+    }
+
+    return "Unable to save regex.";
   }
 }

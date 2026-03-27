@@ -1,4 +1,5 @@
 use super::db::DbConnection;
+use super::filters_manager::FiltersManager;
 use crate::content_managers::message_bus::AppMessage;
 use crate::content_managers::message_bus::MessageBus;
 use arboard::Clipboard;
@@ -7,6 +8,7 @@ use chrono::Utc;
 use image::codecs::png::{PngDecoder, PngEncoder};
 use image::ImageDecoder;
 use image::ImageEncoder;
+use regex::Regex;
 use sqlx::Row;
 use sqlx::SqlitePool;
 use std::env::temp_dir;
@@ -20,7 +22,7 @@ use std::io::Write;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::Emitter;
-use tauri::{self, async_runtime, AppHandle, State};
+use tauri::{self, async_runtime, AppHandle, Manager, State};
 use tauri_plugin_opener::OpenerExt;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -62,6 +64,7 @@ pub struct ClipboardWatcher {
     last_text: String,
     last_image: u64,
     pool: Arc<Mutex<SqlitePool>>,
+    filters: Vec<Regex>,
 }
 
 fn buffer_hash(buffer: &[u8]) -> u64 {
@@ -84,6 +87,39 @@ fn image_to_png(image: ImageData) -> Vec<u8> {
 }
 
 impl ClipboardWatcher {
+    async fn load_filters(app_handle: &AppHandle) -> Vec<Regex> {
+        let filters_manager = app_handle
+            .state::<Arc<Mutex<FiltersManager>>>()
+            .inner()
+            .clone();
+
+        let filters = {
+            let manager = filters_manager.lock().await;
+            match manager.read_filter_regexes().await {
+                Ok(filters) => filters,
+                Err(err) => {
+                    log::error!("Unable to load clipboard filters: {}", err);
+                    return Vec::new();
+                }
+            }
+        };
+
+        filters
+            .into_iter()
+            .filter_map(|filter| match Regex::new(&filter) {
+                Ok(regex) => Some(regex),
+                Err(err) => {
+                    log::warn!("Skipping invalid filter regex '{}': {}", filter, err);
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn is_filtered(&self, text: &str) -> bool {
+        self.filters.iter().any(|regex| regex.is_match(text))
+    }
+
     pub async fn new(
         db: Arc<DbConnection>,
         bus: MessageBus,
@@ -107,6 +143,7 @@ impl ClipboardWatcher {
         .execute(&*pool)
         .await
         .expect("Unable to execute SQL!");
+        drop(pool);
 
         // try to assign last text to last clipboard entry
         let mut clipboard = Clipboard::new().expect("Clipboard must be accessible");
@@ -121,13 +158,39 @@ impl ClipboardWatcher {
             last_image = buffer_hash(&image.bytes);
         }
 
+        let filters = Self::load_filters(&app_handle).await;
+        log::info!("Clipboard watcher loaded {} filters", filters.len());
+
         let state = Arc::new(Mutex::new(Self {
             running: true,
-            app_handle,
+            app_handle: app_handle.clone(),
             last_text,
             last_image,
             pool: Arc::clone(&db.pool),
+            filters,
         }));
+
+        let refresh_state = Arc::clone(&state);
+        let refresh_app_handle = app_handle.clone();
+        let refresh_bus = bus.clone();
+        async_runtime::spawn(async move {
+            let mut receiver = refresh_bus.subscribe();
+
+            while let Ok(msg) = receiver.recv().await {
+                match msg {
+                    AppMessage::FiltersUpdated => {
+                        let filters = Self::load_filters(&refresh_app_handle).await;
+                        let mut watcher = refresh_state.lock().await;
+                        watcher.filters = filters;
+                        log::info!(
+                            "Clipboard watcher refreshed filters: {}",
+                            watcher.filters.len()
+                        );
+                    }
+                    AppMessage::AddedToClipboard(_) => {}
+                }
+            }
+        });
 
         // watcher
         let cloned_state = Arc::clone(&state);
@@ -143,6 +206,12 @@ impl ClipboardWatcher {
                     // if running and text is not same (we also discard empty text)
                     if !text.trim().is_empty() && app_state.running && text != app_state.last_text {
                         app_state.last_text.clone_from(&text);
+
+                        if app_state.is_filtered(&text) {
+                            log::info!("Clipboard text skipped by active filters");
+                            continue;
+                        }
+
                         let entry = ClipboardEvent {
                             id: Uuid::new_v4().to_string(),
                             entry: text.as_bytes().to_vec(),

@@ -3,6 +3,7 @@ use tokio::sync::broadcast;
 #[derive(Clone)]
 pub enum AppMessage {
     AddedToClipboard(String),
+    FiltersUpdated,
 }
 
 #[derive(Clone)]

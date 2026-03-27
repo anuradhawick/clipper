@@ -21,6 +21,10 @@ use content_managers::files_manager::{
     files_delete_one_file, files_delete_storage_path, files_get_entries, files_get_storage_path,
     FilesManager,
 };
+use content_managers::filters_manager::{
+    filters_create_entry, filters_delete_all, filters_delete_one, filters_read_entries,
+    filters_update_entry, FiltersManager,
+};
 use content_managers::notes_manager::{
     clipboard_add_note, create_note, delete_all_notes, delete_note, read_notes, update_note,
     NotesManager,
@@ -129,6 +133,12 @@ async fn main() {
             files_get_storage_path,
             files_delete_storage_path,
             files_delete_one_file,
+            // filters related
+            filters_create_entry,
+            filters_update_entry,
+            filters_delete_one,
+            filters_delete_all,
+            filters_read_entries,
             // db related
             db_delete_dbfile,
             db_get_dbfile_path,
@@ -198,6 +208,9 @@ async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
     // register notes manager
     let notes_manager = NotesManager::new(Arc::clone(&db)).await;
     app.manage(notes_manager);
+    // register filters manager
+    let filters_manager = FiltersManager::new(Arc::clone(&db), bus.clone()).await;
+    app.manage(filters_manager);
     // register watcher state
     let clipboard_watcher = ClipboardWatcher::new(Arc::clone(&db), bus.clone(), app.clone()).await;
     app.manage(clipboard_watcher);

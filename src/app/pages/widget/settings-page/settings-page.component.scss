@@ -43,3 +43,18 @@
 ::ng-deep .caret-invisible {
   caret-color: transparent !important;
 }
+
+.filter-row {
+  @apply flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2;
+}
+
+.filter-pattern {
+  @apply flex-1 overflow-x-auto whitespace-pre-wrap break-all text-sm;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}
+
+.filter-empty-state {
+  @apply rounded-lg border border-dashed border-white/10 px-3 py-4 text-sm opacity-70;
+}

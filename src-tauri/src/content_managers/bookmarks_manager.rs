@@ -225,6 +225,7 @@ impl BookmarksManager {
                             }
                         }
                     }
+                    AppMessage::FiltersUpdated => {}
                 }
             }
         });
