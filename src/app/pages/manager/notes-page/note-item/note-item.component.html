@@ -19,12 +19,16 @@
     [class.h-[100px]]="!expanded()"
   >
     @if (editable()) {
-      <div class="overflow-hidden h-full">
+      <div
+        class="relative min-h-[100px] overflow-hidden rounded-lg border border-dashed border-slate-400/70 bg-white/35 px-4 pt-4 pb-3"
+      >
         <div
           #editor
           [contentEditable]="editable()"
-          class="overflow-hidden whitespace-pre-wrap font-mono mb-2 min-h-[100px]"
+          class="block min-h-[100px] w-full whitespace-pre-wrap font-mono text-sm leading-6 outline-none"
           [innerText]="note().entry"
+          aria-label="Edit note content"
+          role="textbox"
         ></div>
       </div>
     } @else {

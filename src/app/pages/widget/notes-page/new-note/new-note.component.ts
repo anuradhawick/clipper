@@ -1,5 +1,6 @@
 import {
   AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
   inject,
@@ -10,15 +11,17 @@ import {
 } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
+import { MatTooltipModule } from "@angular/material/tooltip";
 import { ActivatedRoute, ParamMap, Router, RouterLink } from "@angular/router";
 import { Subscription } from "rxjs";
 import { NotesService } from "../../../../services/notes.service";
 
 @Component({
   selector: "app-new-note",
-  imports: [MatIconModule, MatButtonModule, RouterLink],
+  imports: [MatIconModule, MatButtonModule, MatTooltipModule, RouterLink],
   templateUrl: "./new-note.component.html",
   styleUrl: "./new-note.component.scss",
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   paramsSub: Subscription | null = null;

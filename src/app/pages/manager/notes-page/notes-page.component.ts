@@ -1,17 +1,26 @@
-import { Component, inject } from "@angular/core";
+import { ChangeDetectionStrategy, Component, inject } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { NotesService } from "../../../services/notes.service";
 import { NoteItemComponent } from "./note-item/note-item.component";
-import { RouterOutlet } from "@angular/router";
+import { RouterLink, RouterOutlet } from "@angular/router";
 import { MatDialog } from "@angular/material/dialog";
 import { ActionConfirmationDialogComponent } from "../../../components/action-confirmation-dialog/action-confirmation-dialog.component";
+import { MatTooltipModule } from "@angular/material/tooltip";
 
 @Component({
   selector: "app-notes-page",
-  imports: [MatButtonModule, MatIconModule, NoteItemComponent, RouterOutlet],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+    NoteItemComponent,
+    RouterLink,
+    RouterOutlet,
+  ],
   templateUrl: "./notes-page.component.html",
   styleUrl: "./notes-page.component.scss",
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotesPageComponent {
   readonly notesService = inject(NotesService);

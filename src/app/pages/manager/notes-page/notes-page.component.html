@@ -3,6 +3,14 @@
     <div class="flex space-x-1">
       <button
         mat-mini-fab
+        [routerLink]="['new']"
+        matTooltip="Create a new note"
+        matTooltipShowDelay="1000"
+      >
+        <mat-icon>edit_note</mat-icon>
+      </button>
+      <button
+        mat-mini-fab
         (click)="deleteNotes()"
         matTooltip="Clear all notes"
         matTooltipShowDelay="1000"

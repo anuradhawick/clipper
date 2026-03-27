@@ -2,13 +2,14 @@ import { Routes } from "@angular/router";
 import { ClipboardItemsPageComponent } from "./pages/widget/clipboard-items/clipboard-items-page.component";
 import { SettingsPageComponent } from "./pages/widget/settings-page/settings-page.component";
 import { NotesPageComponent as WidgetNotesPageComponent } from "./pages/widget/notes-page/notes-page.component";
-import { NewNoteComponent } from "./pages/widget/notes-page/new-note/new-note.component";
+import { NewNoteComponent as WidgetNewNoteComponent } from "./pages/widget/notes-page/new-note/new-note.component";
 import { FilesPageComponent } from "./pages/widget/files-page/files-page.component";
 import { WidgetComponent } from "./pages/widget/widget.component";
 import { ManagerComponent } from "./pages/manager/manager.component";
 import { QrviewerComponent } from "./pages/qrviewer/qrviewer.component";
 import { ClipboardPageComponent } from "./pages/manager/clipboard-page/clipboard-page.component";
 import { NotesPageComponent as ManagerNotesPageComponent } from "./pages/manager/notes-page/notes-page.component";
+import { NewNoteComponent as ManagerNewNoteComponent } from "./pages/manager/notes-page/new-note/new-note.component";
 import { BookmarksPageComponent } from "./pages/manager/bookmarks-page/bookmarks-page.component";
 
 export const routes: Routes = [
@@ -35,7 +36,7 @@ export const routes: Routes = [
         children: [
           {
             path: "new",
-            component: NewNoteComponent,
+            component: WidgetNewNoteComponent,
           },
         ],
       },
@@ -57,6 +58,12 @@ export const routes: Routes = [
       {
         path: "notes",
         component: ManagerNotesPageComponent,
+        children: [
+          {
+            path: "new",
+            component: ManagerNewNoteComponent,
+          },
+        ],
       },
       {
         path: "clipboard",
