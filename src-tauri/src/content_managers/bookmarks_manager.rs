@@ -189,7 +189,7 @@ impl BookmarksManager {
                                         id: id.to_string(),
                                         url: url.clone(),
                                         text: format!("{}\\n{}", title, description),
-                                        image: image,
+                                        image,
                                         timestamp: Utc::now().to_rfc3339(),
                                     }
                                 }
