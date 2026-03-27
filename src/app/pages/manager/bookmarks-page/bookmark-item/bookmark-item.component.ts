@@ -9,7 +9,6 @@ import {
 } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
-import { RouterLink } from "@angular/router";
 import { DatePipe } from "@angular/common";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { asPlainText, processBytes } from "../../../../utils/text";
@@ -31,6 +30,7 @@ export class BookmarkItemComponent {
   deleteClicked = output();
   copyClicked = output();
   openClicked = output();
+  refreshClicked = output();
   expanded = signal(false);
   clickedUrl = signal("");
   menu = viewChild.required<MatMenuTrigger>(MatMenuTrigger);
@@ -60,7 +60,7 @@ export class BookmarkItemComponent {
     this.menu().openMenu();
   }
 
-  showQRCode() {
-    this.windowService.openQrViewer(this.clickedUrl());
+  showQRCode(url = this.clickedUrl()) {
+    this.windowService.openQrViewer(url);
   }
 }

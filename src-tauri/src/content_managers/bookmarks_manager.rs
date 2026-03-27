@@ -256,23 +256,25 @@ impl BookmarksManager {
         Ok(())
     }
 
-    // pub async fn update(&self, bookmark: BookmarkItem) -> Result<(), sqlx::Error> {
-    //     log::info!("Updating bookmark: {:#?}", bookmark);
-    //     let pool = self.pool.lock().await;
-    //     sqlx::query(
-    //         r#"
-    //         UPDATE bookmarks
-    //         SET text = ?, image = ?
-    //         WHERE id = ?
-    //         "#,
-    //     )
-    //     .bind(bookmark.text)
-    //     .bind(bookmark.image)
-    //     .bind(bookmark.id)
-    //     .execute(&*pool)
-    //     .await?;
-    //     Ok(())
-    // }
+    pub async fn update(&self, bookmark: BookmarkItem) -> Result<(), sqlx::Error> {
+        log::info!("Updating bookmark: {:#?}", bookmark.url);
+        let pool = self.pool.lock().await;
+        sqlx::query(
+            r#"
+            UPDATE bookmarks
+            SET url = ?, text = ?, image = ?, timestamp = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(bookmark.url)
+        .bind(bookmark.text)
+        .bind(bookmark.image)
+        .bind(bookmark.timestamp)
+        .bind(bookmark.id)
+        .execute(&*pool)
+        .await?;
+        Ok(())
+    }
 
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
         log::info!("Deleting bookmark: {:#?}", id);
@@ -337,28 +339,28 @@ impl BookmarksManager {
         Ok(bookmarks)
     }
 
-    // pub async fn get(&self, id: &str) -> Result<BookmarkItem, sqlx::Error> {
-    //     log::info!("Getting bookmark: {:#?}", id);
-    //     let pool = self.pool.lock().await;
-    //     let item = sqlx::query(
-    //         r#"
-    //         SELECT *
-    //         FROM bookmarks
-    //         WHERE id = ?
-    //         "#,
-    //     )
-    //     .bind(id)
-    //     .fetch_one(&*pool)
-    //     .await?;
+    pub async fn get(&self, id: &str) -> Result<BookmarkItem, sqlx::Error> {
+        log::info!("Getting bookmark: {:#?}", id);
+        let pool = self.pool.lock().await;
+        let item = sqlx::query(
+            r#"
+            SELECT *
+            FROM bookmarks
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_one(&*pool)
+        .await?;
 
-    //     Ok(BookmarkItem {
-    //         id: item.get("id"),
-    //         url: item.get("url"),
-    //         text: item.get("text"),
-    //         image: item.get("image"),
-    //         timestamp: item.get("timestamp"),
-    //     })
-    // }
+        Ok(BookmarkItem {
+            id: item.get("id"),
+            url: item.get("url"),
+            text: item.get("text"),
+            image: item.get("image"),
+            timestamp: item.get("timestamp"),
+        })
+    }
 
     pub async fn delete_all_bookmarks(&self) -> Result<(), sqlx::Error> {
         log::info!("Deleting all bookmarks");
@@ -386,23 +388,44 @@ impl BookmarksManager {
 //     mgr.get(&id).await.map_err(|e| e.to_string())
 // }
 
-// #[tauri::command]
-// pub async fn update_bookmark(
-//     state: State<'_, Arc<Mutex<BookmarksManager>>>,
-//     id: String,
-//     entry: String,
-// ) -> Result<BookmarkItem, String> {
-//     log::info!("CMD:Updating bookmark: {:#?} {:#?}", id, entry);
-//     let bookmark = BookmarkItem {
-//         id: id.clone(),
-//         entry,
-//         created_time: String::new(),
-//         updated_time: String::new(),
-//     };
-//     let mgr = state.lock().await;
-//     mgr.update(bookmark).await.map_err(|e| e.to_string())?;
-//     mgr.get(&id).await.map_err(|e| e.to_string())
-// }
+#[tauri::command]
+pub async fn bookmarks_update_entry(
+    state: State<'_, Arc<Mutex<BookmarksManager>>>,
+    id: String,
+) -> Result<BookmarkItem, String> {
+    log::info!("CMD:Updating bookmark: {:#?}", id);
+
+    let existing = {
+        let mgr = state.lock().await;
+        mgr.get(&id).await.map_err(|e| e.to_string())?
+    };
+
+    let (title, description, image) = BookmarksManager::fetch_meta(&existing.url)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let updated_bookmark = BookmarkItem {
+        id: existing.id,
+        url: existing.url,
+        text: format!("{}\n{}", title, description),
+        image,
+        timestamp: Utc::now().to_rfc3339(),
+    };
+
+    let app_handle = {
+        let mgr = state.lock().await;
+        mgr.update(updated_bookmark.clone())
+            .await
+            .map_err(|e| e.to_string())?;
+        mgr.app_handle.clone()
+    };
+
+    app_handle
+        .emit("bookmark_entry_added", updated_bookmark.clone())
+        .map_err(|e| e.to_string())?;
+
+    Ok(updated_bookmark)
+}
 
 #[tauri::command]
 pub async fn bookmarks_delete_one(

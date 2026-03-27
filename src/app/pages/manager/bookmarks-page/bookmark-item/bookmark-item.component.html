@@ -43,18 +43,38 @@
   </div>
   <div class="flex flex-row mt-3 space-x-1 justify-end">
     <div class="flex flex-col space-y-2 w-[50px] items-center">
-      <!-- <button mat-mini-fab class="w-full">
-        <mat-icon>save</mat-icon>
-      </button> -->
-      <!-- <button mat-mini-fab class="w-full">
+      <button
+        mat-mini-fab
+        class="w-full"
+        aria-label="Refresh bookmark metadata"
+        (click)="refreshClicked.emit()"
+      >
         <mat-icon>refresh</mat-icon>
-      </button> -->
+      </button>
+      <button
+        mat-mini-fab
+        class="w-full"
+        aria-label="Show bookmark QR code"
+        (click)="showQRCode(bookmarkEntry().url)"
+      >
+        <mat-icon>qr_code_2</mat-icon>
+      </button>
     </div>
     <div class="flex flex-col space-y-2 w-[50px]">
-      <button mat-mini-fab class="w-full" (click)="toggleView()">
+      <button
+        mat-mini-fab
+        class="w-full"
+        aria-label="Toggle bookmark preview"
+        (click)="toggleView()"
+      >
         <mat-icon>{{ expanded() ? "zoom_in_map" : "zoom_out_map" }}</mat-icon>
       </button>
-      <button mat-mini-fab class="w-full" (click)="deleteClicked.emit()">
+      <button
+        mat-mini-fab
+        class="w-full"
+        aria-label="Delete bookmark"
+        (click)="deleteClicked.emit()"
+      >
         <mat-icon>delete</mat-icon>
       </button>
     </div>

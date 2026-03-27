@@ -100,6 +100,10 @@ export class BookmarksService implements OnDestroy {
     // await invoke<void>("bookmarks_open_entry", { id });
   }
 
+  async update(id: string) {
+    await invoke<BookmarkEntry>("bookmarks_update_entry", { id });
+  }
+
   async clear() {
     this.items.set([]);
     await invoke<void>("bookmarks_delete_all", {});
