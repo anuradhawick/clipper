@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   inject,
   input,
   output,
@@ -30,7 +31,7 @@ import {
   selector: "app-clipboard-item",
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    class: "block w-full min-w-0 pb-1",
+    class: "relative block w-full min-w-0 pb-1",
     "[style.height.px]": "itemHeightPx",
   },
   imports: [
@@ -58,6 +59,7 @@ export class ClipboardItemComponent {
   openUrl = openUrl;
   readonly itemHeightPx = ITEM_HEIGHT_PX;
   readonly dialog = inject(MatDialog);
+  readonly hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly windowService = inject(WindowActionsService);
 
   processImage(image: Array<number>): string {
@@ -69,8 +71,12 @@ export class ClipboardItemComponent {
   }
 
   onLinkRightClick(event: MouseEvent, url: string) {
-    this.contextMenuPosition.x = event.clientX + "px";
-    this.contextMenuPosition.y = event.clientY + "px";
+    event.preventDefault();
+
+    const hostRect = this.hostElement.nativeElement.getBoundingClientRect();
+
+    this.contextMenuPosition.x = `${event.clientX - hostRect.left}px`;
+    this.contextMenuPosition.y = `${event.clientY - hostRect.top}px`;
     this.clickedUrl.set(url);
     this.menu().openMenu();
   }

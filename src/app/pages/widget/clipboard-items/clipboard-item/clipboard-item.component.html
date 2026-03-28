@@ -1,5 +1,6 @@
 <div
-  style="visibility: hidden; position: fixed"
+  aria-hidden="true"
+  style="visibility: hidden; position: absolute; pointer-events: none"
   [style.left]="contextMenuPosition.x"
   [style.top]="contextMenuPosition.y"
   [matMenuTriggerFor]="linkMenu"
