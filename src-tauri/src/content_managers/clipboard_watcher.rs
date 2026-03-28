@@ -187,7 +187,7 @@ impl ClipboardWatcher {
                             watcher.filters.len()
                         );
                     }
-                    AppMessage::AddedToClipboard(_) => {}
+                    _ => {}
                 }
             }
         });
