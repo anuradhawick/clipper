@@ -4,44 +4,39 @@
   [style.top]="contextMenuPosition.y"
   [matMenuTriggerFor]="linkMenu"
 ></div>
-<div class="wrapper">
+<div
+  class="relative m-1 mt-0 flex h-full min-w-0 overflow-hidden rounded-lg border border-solid bg-slate-50/30 shadow-lg"
+>
   <div class="absolute bottom-0 text-xs text-slate-700 px-3">
     @if (note().updated_time) {
-      <!-- updated  -->
       Updated: {{ note().updated_time | date: "yyyy-MM-dd HH:mm" }}
     }
-    <!-- created -->
     Created: {{ note().created_time | date: "yyyy-MM-dd HH:mm" }}
   </div>
-  <!-- editor -->
-  <div
-    class="flex-1 min-h-[100px] overflow-hidden rounded-lg p-2 mb-4"
-    [class.h-[100px]]="!expanded()"
-  >
+  <div class="mb-4 flex min-h-0 flex-1 overflow-hidden rounded-lg p-2">
     @if (editable()) {
       <div
-        class="relative min-h-[100px] overflow-hidden rounded-lg border border-dashed border-slate-400/70 bg-white/35 px-4 pt-4 pb-3"
+        class="relative min-h-0 w-full overflow-auto rounded-lg border border-dashed border-slate-400/70 bg-white/35 px-4 pb-3 pt-4"
       >
         <div
           #editor
           [contentEditable]="editable()"
-          class="block min-h-[100px] w-full whitespace-pre-wrap font-mono text-sm leading-6 outline-none"
+          class="block min-h-full w-full whitespace-pre-wrap break-all font-mono leading-6 outline-none"
           [innerText]="note().entry"
           aria-label="Edit note content"
           role="textbox"
         ></div>
       </div>
     } @else {
-      <div class="overflow-hidden whitespace-pre-wrap font-mono mb-2">
+      <div class="h-full min-w-0 overflow-auto">
         @for (part of processText(note().entry); track $index) {
-          <!-- plain text -->
           @if (part.type == "text") {
-            <span>{{ part.content }}</span>
-          }
-          <!-- https url -->
-          @else {
+            <span class="whitespace-pre-wrap break-all font-mono">{{
+              part.content
+            }}</span>
+          } @else {
             <span
-              class="underline cursor-pointer italic"
+              class="cursor-pointer break-all whitespace-pre-wrap font-mono italic underline"
               (click)="openUrl(part.content)"
               (contextmenu)="onLinkRightClick($event, part.content)"
               >{{ part.content }}</span
@@ -51,11 +46,10 @@
       </div>
     }
   </div>
-  <!-- buttons -->
-  <div class="flex flex-row mt-3 space-x-1 justify-end">
-    <div class="flex flex-col space-y-2 w-[50px] items-center">
-      <button mat-mini-fab class="w-full" (click)="toggleView()">
-        <mat-icon>{{ expanded() ? "zoom_in_map" : "zoom_out_map" }}</mat-icon>
+  <div class="mt-3 flex flex-row justify-end space-x-1">
+    <div class="flex w-[50px] flex-col items-center space-y-2">
+      <button mat-mini-fab class="w-full" (click)="openExpandedView()">
+        <mat-icon>zoom_out_map</mat-icon>
       </button>
       @if (editable()) {
         <button mat-mini-fab class="w-full" (click)="updateNote()">
@@ -67,7 +61,7 @@
         </button>
       }
     </div>
-    <div class="flex flex-col space-y-2 w-[50px]">
+    <div class="flex w-[50px] flex-col space-y-2">
       <button
         mat-mini-fab
         class="w-full"

@@ -1,0 +1,16 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.clipper-fullscreen-dialog-panel {
+  .mat-mdc-dialog-container {
+    padding: 0;
+  }
+
+  .mat-mdc-dialog-surface {
+    border-radius: 0;
+    height: 100%;
+    max-height: 100%;
+  }
+}

@@ -1,10 +1,12 @@
 <div
-  class="clipper-bg backdrop-filter backdrop-blur-sm h-screen flex flex-col bg-transparent bg-opacity-50"
+  class="clipper-bg backdrop-filter backdrop-blur-sm flex flex-col overflow-hidden bg-transparent bg-opacity-50"
+  [style.width.px]="windowSize.width"
+  [style.height.px]="windowSize.height"
 >
   <!-- navbar -->
   <app-nav-bar class="sticky top-0 w-full z-10" />
   <!-- scroll layout -->
-  <div class="flex-grow rounded-lg overflow-auto shadow-inner">
+  <div class="min-h-0 flex-1 rounded-lg overflow-hidden shadow-inner">
     <!-- router -->
     <router-outlet />
   </div>

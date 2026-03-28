@@ -1,7 +1,7 @@
-<div class="clipper-bg grid grid-cols-10">
-  <app-nav-pane class="h-screen col-span-2" />
-  <div class="h-screen col-span-8 overflow-auto">
-    <div class="flex-grow rounded-lg overflow-auto shadow-inner pt-1">
+<div class="clipper-bg grid h-screen grid-cols-10 overflow-hidden">
+  <app-nav-pane class="col-span-2 h-full" />
+  <div class="col-span-8 flex h-full min-h-0 flex-col overflow-hidden">
+    <div class="flex-1 min-h-0 overflow-hidden rounded-lg shadow-inner pt-1">
       <router-outlet />
     </div>
   </div>

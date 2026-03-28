@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -16,9 +17,21 @@ import { asPlainText, processText } from "../../../../utils/text";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { MatMenuModule, MatMenuTrigger } from "@angular/material/menu";
 import { WindowActionsService } from "../../../../services/window-actions.service";
+import { MatDialog } from "@angular/material/dialog";
+import {
+  NoteItemDialogComponent,
+  NoteItemDialogData,
+} from "./note-item-dialog.component";
+
+const ITEM_HEIGHT_PX = 120;
 
 @Component({
   selector: "app-note-item",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class: "block w-full min-w-0 pb-1",
+    "[style.height.px]": "itemHeightPx",
+  },
   imports: [MatButtonModule, MatIconModule, DatePipe, MatMenuModule],
   templateUrl: "./note-item.component.html",
   styleUrl: "./note-item.component.scss",
@@ -31,7 +44,6 @@ export class NoteItemComponent {
   clickedUrl = signal("");
   contentUpdated = output<string>();
   menu = viewChild.required<MatMenuTrigger>(MatMenuTrigger);
-  expanded = signal(false);
   editable = signal(false);
   editor = viewChild<ElementRef>("editor");
   contextMenuPosition = { x: "0px", y: "0px" };
@@ -39,16 +51,10 @@ export class NoteItemComponent {
   processText = processText;
   asPlainText = asPlainText;
   openUrl = openUrl;
+  readonly itemHeightPx = ITEM_HEIGHT_PX;
   readonly changeDetectorRef = inject(ChangeDetectorRef);
   readonly windowService = inject(WindowActionsService);
-
-  toggleView() {
-    this.expanded.update((x) => !x);
-  }
-
-  collapse() {
-    this.expanded.set(false);
-  }
+  readonly dialog = inject(MatDialog);
 
   uneditable() {
     this.editable.set(false);
@@ -57,7 +63,6 @@ export class NoteItemComponent {
   toggleEditable() {
     this.editable.update((x) => !x);
     if (this.editable()) {
-      this.expanded.set(true);
       this.changeDetectorRef.detectChanges();
       this.editor()!.nativeElement.focus();
     }
@@ -68,7 +73,6 @@ export class NoteItemComponent {
     this.editor()!.nativeElement.innerHTML = "";
     this.editor()!.nativeElement.innerText = "";
     this.uneditable();
-    this.collapse();
     this.contentUpdated.emit(note);
   }
 
@@ -82,5 +86,22 @@ export class NoteItemComponent {
   showQRCode() {
     this.windowService.hideWindow();
     this.windowService.openQrViewer(this.clickedUrl());
+  }
+
+  openExpandedView() {
+    this.dialog.open<NoteItemDialogComponent, NoteItemDialogData>(
+      NoteItemDialogComponent,
+      {
+        data: {
+          note: this.note(),
+        },
+        width: "100vw",
+        height: "100vh",
+        maxWidth: "100vw",
+        maxHeight: "100vh",
+        autoFocus: false,
+        panelClass: "clipper-fullscreen-dialog-panel",
+      },
+    );
   }
 }

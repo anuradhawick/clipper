@@ -4,45 +4,39 @@
   [style.top]="contextMenuPosition.y"
   [matMenuTriggerFor]="linkMenu"
 ></div>
-<div class="wrapper">
+<div
+  class="relative m-1 mt-0 flex h-full min-w-0 overflow-hidden rounded-lg border border-solid bg-slate-50/30 shadow-lg"
+>
   <div class="absolute bottom-0 text-xs text-slate-700 px-3">
     Added: {{ bookmarkEntry().timestamp | date: "yyyy-MM-dd HH:mm" }}
   </div>
-  <div
-    class="flex-1 min-h-[100px] overflow-hidden rounded-lg p-2 mb-4"
-    [class.h-[100px]]="!expanded()"
-  >
-    <div class="overflow-hidden h-full">
-      <div class="overflow-hidden whitespace-pre-wrap font-mono mb-2">
+  <div class="mb-4 flex min-h-0 flex-1 overflow-hidden rounded-lg p-2">
+    <div class="h-full min-w-0 overflow-auto">
+      <div class="mb-2 whitespace-pre-wrap font-mono">
         <span
-          class="underline cursor-pointer italic"
+          class="cursor-pointer break-all italic underline"
           (click)="openUrl(bookmarkEntry().url)"
           (contextmenu)="onLinkRightClick($event, bookmarkEntry().url)"
           >{{ bookmarkEntry().url }}</span
         >
         <br />
-        <div class="flex flex-row space-x-2 my-1 items-start">
-          @if (bookmarkEntry().image?.length !== 0) {
+        <div class="my-1 flex flex-row items-start space-x-2">
+          @if (bookmarkEntry().image?.length) {
             <img
               [src]="processImage(bookmarkEntry().image!)"
               alt="Image"
-              class="max-w-[250px] h-auto object-contain"
+              class="h-auto max-w-[180px] object-contain"
             />
           }
-          <div
-            class="text-sm text-slate-800"
-            [innerHTML]="
-              sanitizer.bypassSecurityTrustHtml(
-                bookmarkEntry().text.replaceAll('\\n', '<br/>')
-              )
-            "
-          ></div>
+          <div class="whitespace-pre-wrap break-all text-sm text-slate-800">
+            {{ bookmarkEntry().text }}
+          </div>
         </div>
       </div>
     </div>
   </div>
-  <div class="flex flex-row mt-3 space-x-1 justify-end">
-    <div class="flex flex-col space-y-2 w-[50px] items-center">
+  <div class="mt-3 flex flex-row justify-end space-x-1">
+    <div class="flex w-[50px] flex-col items-center space-y-2">
       <button
         mat-mini-fab
         class="w-full"
@@ -64,10 +58,10 @@
       <button
         mat-mini-fab
         class="w-full"
-        aria-label="Toggle bookmark preview"
-        (click)="toggleView()"
+        aria-label="Expand bookmark preview"
+        (click)="openExpandedView()"
       >
-        <mat-icon>{{ expanded() ? "zoom_in_map" : "zoom_out_map" }}</mat-icon>
+        <mat-icon>zoom_out_map</mat-icon>
       </button>
       <button
         mat-mini-fab

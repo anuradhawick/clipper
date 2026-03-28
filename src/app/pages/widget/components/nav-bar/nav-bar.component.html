@@ -5,60 +5,58 @@
   [matMenuTriggerFor]="activeMenu()"
 ></div>
 <div
-  class="flex items-center bg-slate-50/30 m-1 border border-solid rounded-lg p-1 shadow-lg"
+  class="m-1 grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg border border-solid bg-slate-50/30 p-1 shadow-lg"
 >
-  <div class="flex justify-between w-full">
-    <div class="flex space-x-1">
-      <button
-        mat-mini-fab
-        [routerLink]="''"
-        (contextmenu)="onRightClick($event, clipboardMenu)"
-        matBadge="-"
-        matBadgeSize="small"
-        [matBadgeHidden]="clipboardHistoryService.running()"
-        matTooltip="Clipboard history"
-        matTooltipShowDelay="1000"
-      >
-        <mat-icon>attach_file</mat-icon>
-      </button>
-      <button
-        mat-mini-fab
-        [routerLink]="['notes']"
-        (contextmenu)="onRightClick($event, notesMenu)"
-        matTooltip="Notes"
-        matTooltipShowDelay="1000"
-      >
-        <mat-icon>notes</mat-icon>
-      </button>
-      <button
-        mat-mini-fab
-        [routerLink]="['files']"
-        (contextmenu)="onRightClick($event, fileMenu)"
-        matTooltip="Files"
-        matTooltipShowDelay="1000"
-      >
-        <mat-icon>folder_copy</mat-icon>
-      </button>
-      <button
-        mat-mini-fab
-        [routerLink]="['settings']"
-        matTooltip="Settings"
-        matTooltipShowDelay="1000"
-      >
-        <mat-icon>settings</mat-icon>
-      </button>
-    </div>
-    <div class="flex space-x-1">
-      <button mat-mini-fab (click)="windowActionsService.openManagerWindow()">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-      <button mat-mini-fab (click)="windowActionsService.hideWindow()">
-        <mat-icon>visibility_off</mat-icon>
-      </button>
-    </div>
+  <div class="flex items-center gap-1">
+    <button
+      mat-mini-fab
+      [routerLink]="''"
+      (contextmenu)="onRightClick($event, clipboardMenu)"
+      matBadge="-"
+      matBadgeSize="small"
+      [matBadgeHidden]="clipboardHistoryService.running()"
+      matTooltip="Clipboard history"
+      matTooltipShowDelay="1000"
+    >
+      <mat-icon>attach_file</mat-icon>
+    </button>
+    <button
+      mat-mini-fab
+      [routerLink]="['notes']"
+      (contextmenu)="onRightClick($event, notesMenu)"
+      matTooltip="Notes"
+      matTooltipShowDelay="1000"
+    >
+      <mat-icon>notes</mat-icon>
+    </button>
+    <button
+      mat-mini-fab
+      [routerLink]="['files']"
+      (contextmenu)="onRightClick($event, fileMenu)"
+      matTooltip="Files"
+      matTooltipShowDelay="1000"
+    >
+      <mat-icon>folder_copy</mat-icon>
+    </button>
+    <button
+      mat-mini-fab
+      [routerLink]="['settings']"
+      matTooltip="Settings"
+      matTooltipShowDelay="1000"
+    >
+      <mat-icon>settings</mat-icon>
+    </button>
   </div>
-  <div class="fixed mx-auto w-full text-center items-center text-lg font-bold">
+  <div class="min-w-0 px-2 text-center text-lg font-bold">
     {{ pageTitle() | titlecase }}
+  </div>
+  <div class="flex items-center justify-end gap-1">
+    <button mat-mini-fab (click)="windowActionsService.openManagerWindow()">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <button mat-mini-fab (click)="windowActionsService.hideWindow()">
+      <mat-icon>visibility_off</mat-icon>
+    </button>
   </div>
 </div>
 

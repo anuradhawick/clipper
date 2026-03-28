@@ -11,15 +11,24 @@ import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { DatePipe } from "@angular/common";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { asPlainText, processBytes } from "../../../../utils/text";
 import { MatMenuModule, MatMenuTrigger } from "@angular/material/menu";
 import { WindowActionsService } from "../../../../services/window-actions.service";
 import { BookmarkEntry } from "../../../../services/bookmarks.service";
-import { DomSanitizer } from "@angular/platform-browser";
+import { MatDialog } from "@angular/material/dialog";
+import {
+  BookmarkItemDialogComponent,
+  BookmarkItemDialogData,
+} from "./bookmark-item-dialog.component";
+
+const ITEM_HEIGHT_PX = 140;
 
 @Component({
   selector: "app-bookmark-item",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class: "block w-full min-w-0 pb-1",
+    "[style.height.px]": "itemHeightPx",
+  },
   imports: [MatButtonModule, MatIconModule, DatePipe, MatMenuModule],
   templateUrl: "./bookmark-item.component.html",
   styleUrl: "./bookmark-item.component.scss",
@@ -31,19 +40,13 @@ export class BookmarkItemComponent {
   copyClicked = output();
   openClicked = output();
   refreshClicked = output();
-  expanded = signal(false);
   clickedUrl = signal("");
   menu = viewChild.required<MatMenuTrigger>(MatMenuTrigger);
   contextMenuPosition = { x: "0px", y: "0px" };
-  processBytes = processBytes;
-  asPlainText = asPlainText;
   openUrl = openUrl;
+  readonly itemHeightPx = ITEM_HEIGHT_PX;
   readonly windowService = inject(WindowActionsService);
-  readonly sanitizer = inject(DomSanitizer);
-
-  toggleView() {
-    this.expanded.update((x) => !x);
-  }
+  readonly dialog = inject(MatDialog);
 
   processImage(image: Array<number>): string {
     const bytes = Uint8Array.from(image);
@@ -62,5 +65,22 @@ export class BookmarkItemComponent {
 
   showQRCode(url = this.clickedUrl()) {
     this.windowService.openQrViewer(url);
+  }
+
+  openExpandedView() {
+    this.dialog.open<BookmarkItemDialogComponent, BookmarkItemDialogData>(
+      BookmarkItemDialogComponent,
+      {
+        data: {
+          bookmarkEntry: this.bookmarkEntry(),
+        },
+        width: "100vw",
+        height: "100vh",
+        maxWidth: "100vw",
+        maxHeight: "100vh",
+        autoFocus: false,
+        panelClass: "clipper-fullscreen-dialog-panel",
+      },
+    );
   }
 }

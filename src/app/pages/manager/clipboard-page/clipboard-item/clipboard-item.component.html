@@ -4,19 +4,18 @@
   [style.top]="contextMenuPosition.y"
   [matMenuTriggerFor]="linkMenu"
 ></div>
-<div class="wrapper">
+<div
+  class="relative m-1 mt-0 flex h-full min-w-0 overflow-hidden rounded-lg border border-solid bg-slate-50/30 shadow-lg"
+>
   <div class="absolute bottom-0 text-xs text-slate-700 px-3">
     Added: {{ clipperEntry().timestamp | date: "yyyy-MM-dd HH:mm" }}
   </div>
-  <div
-    class="flex-1 min-h-[100px] overflow-hidden rounded-lg p-2 mb-4"
-    [class.h-[100px]]="!expanded()"
-  >
+  <div class="mb-4 flex-1 min-h-0 overflow-hidden rounded-lg p-2">
     @switch (clipperEntry().kind) {
       <!-- text -->
       @case (ClipperEntryKind.Text) {
-        <div class="overflow-hidden h-full">
-          <div class="overflow-hidden whitespace-pre-wrap font-mono mb-2">
+        <div class="h-full min-w-0 overflow-auto">
+          <div class="w-full max-w-full whitespace-pre-wrap break-all font-mono">
             @for (part of processBytes(clipperEntry().entry); track $index) {
               <!-- plain text -->
               @if (part.type == "text") {
@@ -25,7 +24,7 @@
               <!-- https url -->
               @else {
                 <span
-                  class="underline cursor-pointer italic"
+                  class="cursor-pointer break-all italic underline"
                   (click)="openUrl(part.content)"
                   (contextmenu)="onLinkRightClick($event, part.content)"
                   >{{ part.content }}</span
@@ -37,11 +36,13 @@
       }
       <!-- image -->
       @case (ClipperEntryKind.Image) {
-        <img
-          class="object-contain h-full w-full max-h-[250px]"
-          [src]="processImage(clipperEntry().entry)"
-          alt="Image"
-        />
+        <div class="flex h-full items-center justify-center overflow-auto">
+          <img
+            class="max-h-full w-full object-contain"
+            [src]="processImage(clipperEntry().entry)"
+            alt="Image"
+          />
+        </div>
       }
       <!-- default -->
       @default {}
@@ -49,8 +50,8 @@
   </div>
   <div class="flex flex-row mt-3 space-x-1 justify-end">
     <div class="flex flex-col space-y-2 w-[50px] items-center">
-      <button mat-mini-fab class="w-full" (click)="toggleView()">
-        <mat-icon>{{ expanded() ? "zoom_in_map" : "zoom_out_map" }}</mat-icon>
+      <button mat-mini-fab class="w-full" (click)="openExpandedView()">
+        <mat-icon>zoom_out_map</mat-icon>
       </button>
       @if (clipperEntry().kind == ClipperEntryKind.Text) {
         <button

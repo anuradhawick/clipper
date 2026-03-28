@@ -8,6 +8,7 @@ import {
   viewChild,
 } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
+import { MatDialog } from "@angular/material/dialog";
 import { MatIconModule } from "@angular/material/icon";
 import { RouterLink } from "@angular/router";
 import {
@@ -19,10 +20,20 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { asPlainText, processBytes } from "../../../../utils/text";
 import { MatMenuModule, MatMenuTrigger } from "@angular/material/menu";
 import { WindowActionsService } from "../../../../services/window-actions.service";
+import {
+  ClipboardItemDialogComponent,
+  ClipboardItemDialogData,
+} from "./clipboard-item-dialog.component";
+
+const ITEM_HEIGHT_PX = 120;
 
 @Component({
   selector: "app-clipboard-item",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class: "block w-full min-w-0 pb-1",
+    "[style.height.px]": "itemHeightPx",
+  },
   imports: [
     MatButtonModule,
     MatIconModule,
@@ -39,7 +50,6 @@ export class ClipboardItemComponent {
   deleteClicked = output();
   copyClicked = output();
   openClicked = output();
-  expanded = signal(false);
   clickedUrl = signal("");
   ClipperEntryKind = ClipperEntryKind;
   menu = viewChild.required<MatMenuTrigger>(MatMenuTrigger);
@@ -47,15 +57,9 @@ export class ClipboardItemComponent {
   processBytes = processBytes;
   asPlainText = asPlainText;
   openUrl = openUrl;
+  readonly itemHeightPx = ITEM_HEIGHT_PX;
+  readonly dialog = inject(MatDialog);
   readonly windowService = inject(WindowActionsService);
-
-  toggleView() {
-    this.expanded.update((x) => !x);
-  }
-
-  collapse() {
-    this.expanded.set(false);
-  }
 
   processImage(image: Array<number>): string {
     const bytes = Uint8Array.from(image);
@@ -75,5 +79,22 @@ export class ClipboardItemComponent {
   showQRCode() {
     this.windowService.hideWindow();
     this.windowService.openQrViewer(this.clickedUrl());
+  }
+
+  openExpandedView() {
+    this.dialog.open<ClipboardItemDialogComponent, ClipboardItemDialogData>(
+      ClipboardItemDialogComponent,
+      {
+        data: {
+          clipperEntry: this.clipperEntry(),
+        },
+        width: "100vw",
+        height: "100vh",
+        maxWidth: "100vw",
+        maxHeight: "100vh",
+        autoFocus: false,
+        panelClass: "clipper-fullscreen-dialog-panel",
+      },
+    );
   }
 }

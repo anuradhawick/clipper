@@ -1,0 +1,45 @@
+<div
+  class="flex h-full min-h-0 flex-col bg-slate-100/95 text-slate-900 backdrop-blur-sm"
+>
+  <div
+    class="flex items-start justify-between gap-3 border-b border-black/10 px-4 py-3"
+  >
+    <div class="min-w-0">
+      <div class="text-lg font-semibold">Bookmark</div>
+      <div class="pt-1 text-sm text-slate-600">
+        Added: {{ data.bookmarkEntry.timestamp | date: "yyyy-MM-dd HH:mm" }}
+      </div>
+    </div>
+    <button mat-mini-fab mat-dialog-close aria-label="Close expanded bookmark">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="min-h-0 flex-1 overflow-auto px-4 py-4">
+    <div class="whitespace-pre-wrap font-mono">
+      <span
+        class="cursor-pointer break-all italic underline"
+        (click)="openUrl(data.bookmarkEntry.url)"
+        >{{ data.bookmarkEntry.url }}</span
+      >
+    </div>
+
+    <div class="mt-4 flex flex-col gap-4">
+      @if (data.bookmarkEntry.image?.length) {
+        <div class="flex justify-center">
+          <img
+            class="block max-w-full object-contain"
+            [src]="processImage(data.bookmarkEntry.image!)"
+            alt="Expanded bookmark preview"
+          />
+        </div>
+      }
+
+      <div
+        class="whitespace-pre-wrap break-all text-sm leading-6 text-slate-800"
+      >
+        {{ data.bookmarkEntry.text }}
+      </div>
+    </div>
+  </div>
+</div>

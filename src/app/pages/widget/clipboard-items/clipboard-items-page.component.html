@@ -1,12 +1,25 @@
-@for (clipperEntry of clipperEntries(); track clipperEntry.id) {
-  <app-clipboard-item
-    [clipperEntry]="clipperEntry"
-    (copyClicked)="chs.copy(clipperEntry.id)"
-    (deleteClicked)="chs.delete(clipperEntry.id)"
-    (openClicked)="chs.open(clipperEntry.id)"
-  />
-} @empty {
-  <div class="dark:text-white m-1">
+@if (clipperEntries().length) {
+  <div class="h-full min-h-0 overflow-hidden">
+    <cdk-virtual-scroll-viewport
+      class="clipboard-viewport w-full overflow-x-hidden"
+      [itemSize]="itemHeightPx"
+      [minBufferPx]="minBufferPx"
+      [maxBufferPx]="maxBufferPx"
+    >
+      <app-clipboard-item
+        *cdkVirtualFor="
+          let clipperEntry of clipperEntries();
+          trackBy: trackByEntryId
+        "
+        [clipperEntry]="clipperEntry"
+        (copyClicked)="chs.copy(clipperEntry.id)"
+        (deleteClicked)="chs.delete(clipperEntry.id)"
+        (openClicked)="chs.open(clipperEntry.id)"
+      />
+    </cdk-virtual-scroll-viewport>
+  </div>
+} @else {
+  <div class="px-2 py-1 dark:text-white">
     Your clipboard entries will appear here! 📖
   </div>
 }
