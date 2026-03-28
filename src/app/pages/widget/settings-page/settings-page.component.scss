@@ -1,6 +1,13 @@
 @use "@angular/material" as mat;
 @use "../../../../styles.scss" as style;
 
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .default-light {
   @include mat.icon-color(
     style.$clipper-default-light,
@@ -42,6 +49,10 @@
 
 ::ng-deep .caret-invisible {
   caret-color: transparent !important;
+}
+
+.settings-page-scroll {
+  @apply h-full overflow-y-auto overflow-x-hidden pt-1 pb-2;
 }
 
 .filter-row {

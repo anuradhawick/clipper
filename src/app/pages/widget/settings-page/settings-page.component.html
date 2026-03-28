@@ -1,91 +1,284 @@
-<!-- theme selector -->
-<div class="wrapper p-2 flex-col">
-  <div class="block mb-1">Select Theme</div>
+<div class="settings-page-scroll">
+  <!-- theme selector -->
+  <div class="wrapper p-2 flex-col">
+    <div class="block mb-1">Select Theme</div>
 
-  <div class="flex flex-row justify-between w-full cursor-pointer">
-    @for (color of colors; track $index) {
+    <div class="flex flex-row justify-between w-full cursor-pointer">
+      @for (color of colors; track $index) {
+        <div
+          matRipple
+          class="w-[180px] h-[100px] rounded-lg flex flex-row overflow-hidden"
+          [class.selected]="themeService.selectedColor == color.name"
+          (click)="changeColor(color.name)"
+        >
+          <div
+            class="w-1/2 h-full flex items-center bg-gradient-to-br"
+            [class]="[color.light.from, color.light.to]"
+          >
+            <mat-icon
+              class="block mx-auto scale-150"
+              [class]="color.name + '-light'"
+              >light_mode</mat-icon
+            >
+          </div>
+          <div
+            class="w-1/2 h-full flex items-center bg-gradient-to-br"
+            [class]="[color.dark.from, color.dark.to]"
+          >
+            <mat-icon
+              class="block mx-auto scale-150"
+              [class]="color.name + '-dark'"
+              >dark_mode</mat-icon
+            >
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- lighting selector -->
+  <div class="wrapper p-2 flex-col">
+    <div class="block mb-1">Select Lighting</div>
+    <div class="flex flex-row justify-between w-full space-x-1">
       <div
         matRipple
-        class="w-[180px] h-[100px] rounded-lg flex flex-row overflow-hidden"
-        [class.selected]="themeService.selectedColor == color.name"
-        (click)="changeColor(color.name)"
+        class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden cursor-pointer clipper-bg"
+        [class]="
+          themeService.userLightingPreference == 'light' ? 'selected' : ''
+        "
+        (click)="changeLighting($any('light'))"
       >
-        <div
-          class="w-1/2 h-full flex items-center bg-gradient-to-br"
-          [class]="[color.light.from, color.light.to]"
-        >
-          <mat-icon
-            class="block mx-auto scale-150"
-            [class]="color.name + '-light'"
-            >light_mode</mat-icon
-          >
-        </div>
-        <div
-          class="w-1/2 h-full flex items-center bg-gradient-to-br"
-          [class]="[color.dark.from, color.dark.to]"
-        >
-          <mat-icon
-            class="block mx-auto scale-150"
-            [class]="color.name + '-dark'"
-            >dark_mode</mat-icon
-          >
+        <div class="w-full h-full flex items-center bg-gradient-to-br">
+          <mat-icon class="block mx-auto scale-150">light_mode</mat-icon>
         </div>
       </div>
+      <div
+        matRipple
+        class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden cursor-pointer clipper-bg"
+        [class]="
+          themeService.userLightingPreference == 'system' ? 'selected' : ''
+        "
+        (click)="changeLighting($any('system'))"
+      >
+        <div class="w-full h-full flex items-center bg-gradient-to-br">
+          <mat-icon class="block mx-auto scale-150">computer</mat-icon>
+        </div>
+      </div>
+      <div
+        matRipple
+        class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden cursor-pointer clipper-bg"
+        [class]="
+          themeService.userLightingPreference == 'dark' ? 'selected' : ''
+        "
+        (click)="changeLighting($any('dark'))"
+      >
+        <div class="w-full h-full flex items-center bg-gradient-to-br">
+          <mat-icon class="block mx-auto scale-150">dark_mode</mat-icon>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- clipboard filters -->
+  <div class="wrapper p-2 flex-col space-y-3">
+    <div class="flex items-center justify-between gap-2">
+      <div class="block mb-1">Clipboard Filters</div>
+      @if (clipboardFilters().length > 0) {
+        <div class="flex flex-row space-x-1">
+          @if (promptedFiltersDelete()) {
+            <div class="flex items-center">Are you sure?</div>
+            <button
+              mat-raised-button
+              color="primary"
+              class="w-[95px]"
+              type="button"
+              (click)="promptedFiltersDelete.set(false)"
+            >
+              Cancel
+            </button>
+            <button
+              mat-raised-button
+              color="warn"
+              class="w-[95px]"
+              type="button"
+              (click)="clearClipboardFilters()"
+            >
+              Proceed
+            </button>
+          } @else {
+            <button
+              mat-mini-fab
+              type="button"
+              aria-label="Clear all clipboard filters"
+              matTooltip="Clear all filters"
+              matTooltipShowDelay="1000"
+              (click)="promptedFiltersDelete.set(true)"
+            >
+              <mat-icon>delete_sweep</mat-icon>
+            </button>
+          }
+        </div>
+      }
+    </div>
+    <p class="text-sm opacity-75">
+      Matching clipboard entries will be ignored when they match one of these
+      regular expressions.
+    </p>
+
+    <div class="flex flex-row items-start gap-2">
+      <mat-form-field
+        appearance="outline"
+        subscriptSizing="dynamic"
+        class="flex-1"
+      >
+        <mat-label>Add regex</mat-label>
+        <input
+          matInput
+          type="text"
+          placeholder="^https://internal\\."
+          [ngModel]="clipboardFilterDraft()"
+          (ngModelChange)="setClipboardFilterDraft($event)"
+          (keyup.enter)="addClipboardFilter()"
+        />
+      </mat-form-field>
+      <button
+        mat-mini-fab
+        color="primary"
+        type="button"
+        aria-label="Add clipboard filter"
+        class="mt-1 shrink-0"
+        matTooltip="Add clipboard filter"
+        matTooltipShowDelay="1000"
+        (click)="addClipboardFilter()"
+      >
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+
+    @if (clipboardFilterError()) {
+      <p class="text-sm text-red-400">{{ clipboardFilterError() }}</p>
     }
-  </div>
-</div>
-<!-- lighting selector -->
-<div class="wrapper p-2 flex-col">
-  <div class="block mb-1">Select Lighting</div>
-  <div class="flex flex-row justify-between w-full space-x-1">
-    <div
-      matRipple
-      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden cursor-pointer clipper-bg"
-      [class]="themeService.userLightingPreference == 'light' ? 'selected' : ''"
-      (click)="changeLighting($any('light'))"
-    >
-      <div class="w-full h-full flex items-center bg-gradient-to-br">
-        <mat-icon class="block mx-auto scale-150">light_mode</mat-icon>
-      </div>
-    </div>
-    <div
-      matRipple
-      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden cursor-pointer clipper-bg"
-      [class]="
-        themeService.userLightingPreference == 'system' ? 'selected' : ''
-      "
-      (click)="changeLighting($any('system'))"
-    >
-      <div class="w-full h-full flex items-center bg-gradient-to-br">
-        <mat-icon class="block mx-auto scale-150">computer</mat-icon>
-      </div>
-    </div>
-    <div
-      matRipple
-      class="w-1/3 h-[100px] rounded-lg flex flex-row overflow-hidden cursor-pointer clipper-bg"
-      [class]="themeService.userLightingPreference == 'dark' ? 'selected' : ''"
-      (click)="changeLighting($any('dark'))"
-    >
-      <div class="w-full h-full flex items-center bg-gradient-to-br">
-        <mat-icon class="block mx-auto scale-150">dark_mode</mat-icon>
-      </div>
+
+    <div class="flex flex-col gap-2">
+      @if (clipboardFilters().length === 0) {
+        <div class="filter-empty-state">No clipboard filters added yet.</div>
+      } @else {
+        @for (filter of clipboardFilters(); track filter.id) {
+          <div class="filter-row">
+            <code class="filter-pattern">{{ filter.filter_regex }}</code>
+            <button
+              mat-icon-button
+              type="button"
+              aria-label="Delete clipboard filter"
+              matTooltip="Remove filter"
+              matTooltipShowDelay="1000"
+              (click)="deleteClipboardFilter(filter)"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+      }
     </div>
   </div>
-</div>
-<!-- clipboard filters -->
-<div class="wrapper p-2 flex-col space-y-3">
-  <div class="flex items-center justify-between gap-2">
-    <div class="block mb-1">Clipboard Filters</div>
-    @if (clipboardFilters().length > 0) {
+
+  <!-- general settings -->
+  <div class="wrapper p-2 flex-col space-y-2">
+    <div class="block mb-1">Advanced Settings</div>
+    <!-- clipboard events -->
+    <div class="flex flex-row justify-between items-center">
+      <p class="flex">Number of clipboard events</p>
+      <mat-form-field
+        appearance="outline"
+        subscriptSizing="dynamic"
+        class="w-[220px]"
+      >
+        <mat-label>History size</mat-label>
+        <mat-select
+          (valueChange)="changeHistorySize($event)"
+          [value]="settings()?.clipboardHistorySize"
+        >
+          @for (size of [100, 1000, 5000]; track size) {
+            <mat-option [value]="size">{{ size }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <!-- bookmark events -->
+    <div class="flex flex-row justify-between items-center">
+      <p class="flex">Number of bookmark events</p>
+      <mat-form-field
+        appearance="outline"
+        subscriptSizing="dynamic"
+        class="w-[220px]"
+      >
+        <mat-label>History size</mat-label>
+        <mat-select
+          (valueChange)="changeBookmarkHistorySize($event)"
+          [value]="settings()?.bookmarkHistorySize"
+        >
+          @for (size of [100, 1000, 5000]; track size) {
+            <mat-option [value]="size">{{ size }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <!-- auto-launch -->
+    <div class="flex flex-row justify-between items-center">
+      <p class="flex">Run on startup</p>
+      <mat-checkbox
+        [checked]="settings()?.autolaunch"
+        (change)="changeAutoLaunch($event)"
+        labelPosition="before"
+      >
+      </mat-checkbox>
+    </div>
+    <!-- global shortcut -->
+    <div class="flex flex-row justify-between items-center">
+      <p class="flex">Setup a global shortcut</p>
+      <mat-form-field
+        appearance="outline"
+        subscriptSizing="dynamic"
+        class="w-[220px]"
+      >
+        <input
+          matInput
+          type="text"
+          class="caret-invisible text-center"
+          readonly
+          [value]="parseGlobalShortcut(settings()?.globalShortcut || '')"
+          (keydown)="onKeydown($event)"
+          (keyup)="onKeyup($event)"
+          (focus)="recordingStarted.set(true)"
+          (blur)="recordingStarted.set(false)"
+        />
+        @if (settings()?.globalShortcut) {
+          <button
+            matSuffix
+            mat-icon-button
+            aria-label="Clear"
+            (click)="clearPressedKeys()"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </mat-form-field>
+    </div>
+  </div>
+
+  <!-- danger zone -->
+  <div class="wrapper p-2 flex-col space-y-2">
+    <div class="block mb-1">Danger Zone</div>
+    <div class="flex flex-row justify-between items-center">
+      <p class="flex">Database path: {{ database() }}</p>
       <div class="flex flex-row space-x-1">
-        @if (promptedFiltersDelete()) {
+        @if (promptedDBDelete()) {
           <div class="flex items-center">Are you sure?</div>
           <button
             mat-raised-button
             color="primary"
             class="w-[95px]"
-            type="button"
-            (click)="promptedFiltersDelete.set(false)"
+            (click)="promptedDBDelete.set(false)"
           >
             Cancel
           </button>
@@ -93,235 +286,52 @@
             mat-raised-button
             color="warn"
             class="w-[95px]"
-            type="button"
-            (click)="clearClipboardFilters()"
+            (click)="deleteDB()"
           >
             Proceed
           </button>
         } @else {
           <button
             mat-mini-fab
-            type="button"
-            aria-label="Clear all clipboard filters"
-            matTooltip="Clear all filters"
-            matTooltipShowDelay="1000"
-            (click)="promptedFiltersDelete.set(true)"
+            color="primary"
+            (click)="promptedDBDelete.set(true)"
           >
-            <mat-icon>delete_sweep</mat-icon>
+            <mat-icon>delete</mat-icon>
           </button>
         }
       </div>
-    }
-  </div>
-  <p class="text-sm opacity-75">
-    Matching clipboard entries will be ignored when they match one of these
-    regular expressions.
-  </p>
-
-  <div class="flex flex-row items-start gap-2">
-    <mat-form-field
-      appearance="outline"
-      subscriptSizing="dynamic"
-      class="flex-1"
-    >
-      <mat-label>Add regex</mat-label>
-      <input
-        matInput
-        type="text"
-        placeholder="^https://internal\\."
-        [ngModel]="clipboardFilterDraft()"
-        (ngModelChange)="setClipboardFilterDraft($event)"
-        (keyup.enter)="addClipboardFilter()"
-      />
-    </mat-form-field>
-    <button
-      mat-mini-fab
-      color="primary"
-      type="button"
-      aria-label="Add clipboard filter"
-      class="mt-1 shrink-0"
-      matTooltip="Add clipboard filter"
-      matTooltipShowDelay="1000"
-      (click)="addClipboardFilter()"
-    >
-      <mat-icon>add</mat-icon>
-    </button>
-  </div>
-
-  @if (clipboardFilterError()) {
-    <p class="text-sm text-red-400">{{ clipboardFilterError() }}</p>
-  }
-
-  <div class="flex flex-col gap-2">
-    @if (clipboardFilters().length === 0) {
-      <div class="filter-empty-state">No clipboard filters added yet.</div>
-    } @else {
-      @for (filter of clipboardFilters(); track filter.id) {
-        <div class="filter-row">
-          <code class="filter-pattern">{{ filter.filter_regex }}</code>
-          <button
-            mat-icon-button
-            type="button"
-            aria-label="Delete clipboard filter"
-            matTooltip="Remove filter"
-            matTooltipShowDelay="1000"
-            (click)="deleteClipboardFilter(filter)"
-          >
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
-      }
-    }
-  </div>
-</div>
-<!-- general settings -->
-<div class="wrapper p-2 flex-col space-y-2">
-  <div class="block mb-1">Advanced Settings</div>
-  <!-- clipboard events -->
-  <div class="flex flex-row justify-between items-center">
-    <p class="flex">Number of clipboard events</p>
-    <mat-form-field
-      appearance="outline"
-      subscriptSizing="dynamic"
-      class="w-[220px]"
-    >
-      <mat-label>History size</mat-label>
-      <mat-select
-        (valueChange)="changeHistorySize($event)"
-        [value]="settings()?.clipboardHistorySize"
-      >
-        @for (size of [100, 1000, 5000]; track size) {
-          <mat-option [value]="size">{{ size }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-  </div>
-  <!-- bookmark events -->
-  <div class="flex flex-row justify-between items-center">
-    <p class="flex">Number of bookmark events</p>
-    <mat-form-field
-      appearance="outline"
-      subscriptSizing="dynamic"
-      class="w-[220px]"
-    >
-      <mat-label>History size</mat-label>
-      <mat-select
-        (valueChange)="changeBookmarkHistorySize($event)"
-        [value]="settings()?.bookmarkHistorySize"
-      >
-        @for (size of [100, 1000, 5000]; track size) {
-          <mat-option [value]="size">{{ size }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-  </div>
-  <!-- auto-launch -->
-  <div class="flex flex-row justify-between items-center">
-    <p class="flex">Run on startup</p>
-    <mat-checkbox
-      [checked]="settings()?.autolaunch"
-      (change)="changeAutoLaunch($event)"
-      labelPosition="before"
-    >
-    </mat-checkbox>
-  </div>
-  <!-- global shortcut -->
-  <div class="flex flex-row justify-between items-center">
-    <p class="flex">Setup a global shortcut</p>
-    <mat-form-field
-      appearance="outline"
-      subscriptSizing="dynamic"
-      class="w-[220px]"
-    >
-      <input
-        matInput
-        type="text"
-        class="caret-invisible text-center"
-        readonly
-        [value]="parseGlobalShortcut(settings()?.globalShortcut || '')"
-        (keydown)="onKeydown($event)"
-        (keyup)="onKeyup($event)"
-        (focus)="recordingStarted.set(true)"
-        (blur)="recordingStarted.set(false)"
-      />
-      @if (settings()?.globalShortcut) {
-        <button
-          matSuffix
-          mat-icon-button
-          aria-label="Clear"
-          (click)="clearPressedKeys()"
-        >
-          <mat-icon>close</mat-icon>
-        </button>
-      }
-    </mat-form-field>
-  </div>
-</div>
-<!-- danger zone -->
-<div class="wrapper p-2 flex-col space-y-2">
-  <div class="block mb-1">Danger Zone</div>
-  <div class="flex flex-row justify-between items-center">
-    <p class="flex">Database path: {{ database() }}</p>
-    <div class="flex flex-row space-x-1">
-      @if (promptedDBDelete()) {
-        <div class="flex items-center">Are you sure?</div>
-        <button
-          mat-raised-button
-          color="primary"
-          class="w-[95px]"
-          (click)="promptedDBDelete.set(false)"
-        >
-          Cancel
-        </button>
-        <button
-          mat-raised-button
-          color="warn"
-          class="w-[95px]"
-          (click)="deleteDB()"
-        >
-          Proceed
-        </button>
-      } @else {
-        <button
-          mat-mini-fab
-          color="primary"
-          (click)="promptedDBDelete.set(true)"
-        >
-          <mat-icon>delete</mat-icon>
-        </button>
-      }
     </div>
-  </div>
-  <div class="flex flex-row justify-between items-center">
-    <p class="flex">Clipper files path: {{ filesPath() }}</p>
-    <div class="flex flex-row space-x-1">
-      @if (promptedFilesDelete()) {
-        <div class="flex items-center">Are you sure?</div>
-        <button
-          mat-raised-button
-          color="primary"
-          class="w-[95px]"
-          (click)="promptedFilesDelete.set(false)"
-        >
-          Cancel
-        </button>
-        <button
-          mat-raised-button
-          color="warn"
-          class="w-[95px]"
-          (click)="deleteFiles()"
-        >
-          Proceed
-        </button>
-      } @else {
-        <button
-          mat-mini-fab
-          color="primary"
-          (click)="promptedFilesDelete.set(true)"
-        >
-          <mat-icon>delete</mat-icon>
-        </button>
-      }
+    <div class="flex flex-row justify-between items-center">
+      <p class="flex">Clipper files path: {{ filesPath() }}</p>
+      <div class="flex flex-row space-x-1">
+        @if (promptedFilesDelete()) {
+          <div class="flex items-center">Are you sure?</div>
+          <button
+            mat-raised-button
+            color="primary"
+            class="w-[95px]"
+            (click)="promptedFilesDelete.set(false)"
+          >
+            Cancel
+          </button>
+          <button
+            mat-raised-button
+            color="warn"
+            class="w-[95px]"
+            (click)="deleteFiles()"
+          >
+            Proceed
+          </button>
+        } @else {
+          <button
+            mat-mini-fab
+            color="primary"
+            (click)="promptedFilesDelete.set(true)"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        }
+      </div>
     </div>
   </div>
 </div>
