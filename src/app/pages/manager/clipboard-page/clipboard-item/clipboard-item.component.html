@@ -6,7 +6,20 @@
 ></div>
 <div
   class="relative m-1 mt-0 flex h-full min-w-0 overflow-hidden rounded-lg border border-solid bg-slate-50/30 shadow-lg"
+  [class.border-amber-400]="clipperEntry().pinned"
 >
+  @if (clipperEntry().pinned) {
+    <span
+      class="absolute right-[110px] top-1 z-10 flex items-center gap-0.5 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+    >
+      <mat-icon
+        class="text-[10px]!"
+        style="font-size: 10px; width: 10px; height: 10px; line-height: 10px"
+        >push_pin</mat-icon
+      >
+      pinned
+    </span>
+  }
   <div class="absolute bottom-0 text-xs text-slate-700 px-3">
     Added: {{ clipperEntry().timestamp | date: "yyyy-MM-dd HH:mm" }}
   </div>
@@ -15,7 +28,9 @@
       <!-- text -->
       @case (ClipperEntryKind.Text) {
         <div class="h-full min-w-0 overflow-auto">
-          <div class="w-full max-w-full whitespace-pre-wrap break-all font-mono">
+          <div
+            class="w-full max-w-full whitespace-pre-wrap break-all font-mono"
+          >
             @for (part of processBytes(clipperEntry().entry); track $index) {
               <!-- plain text -->
               @if (part.type == "text") {
@@ -76,6 +91,16 @@
     <div class="flex flex-col space-y-2 w-[50px]">
       <button mat-mini-fab class="w-full" (click)="copyClicked.emit()">
         <mat-icon>content_copy</mat-icon>
+      </button>
+      <button
+        mat-mini-fab
+        class="w-full"
+        (click)="
+          clipperEntry().pinned ? unpinClicked.emit() : pinClicked.emit()
+        "
+        [attr.aria-label]="clipperEntry().pinned ? 'Unpin item' : 'Pin item'"
+      >
+        <mat-icon>push_pin</mat-icon>
       </button>
       <button mat-mini-fab class="w-full" (click)="deleteClicked.emit()">
         <mat-icon>delete</mat-icon>

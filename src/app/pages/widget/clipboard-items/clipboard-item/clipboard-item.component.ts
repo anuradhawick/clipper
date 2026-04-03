@@ -50,6 +50,8 @@ export class ClipboardItemComponent {
   deleteClicked = output();
   copyClicked = output();
   openClicked = output();
+  pinClicked = output();
+  unpinClicked = output();
   clickedUrl = signal("");
   ClipperEntryKind = ClipperEntryKind;
   menu = viewChild.required<MatMenuTrigger>(MatMenuTrigger);

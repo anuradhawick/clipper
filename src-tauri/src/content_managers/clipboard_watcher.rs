@@ -56,6 +56,7 @@ pub struct ClipboardEvent {
     entry: Vec<u8>,
     kind: ClipboardEventKind,
     timestamp: String,
+    pinned: bool,
 }
 
 pub struct ClipboardWatcher {
@@ -143,6 +144,12 @@ impl ClipboardWatcher {
         .execute(&*pool)
         .await
         .expect("Unable to execute SQL!");
+
+        // migrate: add pinned column if it does not yet exist
+        let _ = sqlx::query("ALTER TABLE clipboard ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+            .execute(&*pool)
+            .await;
+
         drop(pool);
 
         // try to assign last text to last clipboard entry
@@ -217,6 +224,7 @@ impl ClipboardWatcher {
                             entry: text.as_bytes().to_vec(),
                             kind: ClipboardEventKind::Text,
                             timestamp: Utc::now().to_rfc3339(),
+                            pinned: false,
                         };
                         log::info!("Clipboard text changed: {:#?}", entry.id);
                         if app_state
@@ -251,6 +259,7 @@ impl ClipboardWatcher {
                             entry: image_to_png(image),
                             kind: ClipboardEventKind::Image,
                             timestamp: Utc::now().to_rfc3339(),
+                            pinned: false,
                         };
                         log::info!("Clipboard image changed: Image hash - {:#?}", hash);
                         if app_state
@@ -292,7 +301,7 @@ impl ClipboardWatcher {
             r#"
             SELECT *
             FROM clipboard
-            ORDER BY timestamp DESC
+            ORDER BY pinned DESC, timestamp DESC
             LIMIT ?
             "#,
         )
@@ -308,6 +317,7 @@ impl ClipboardWatcher {
                 kind: ClipboardEventKind::from_str(row.get("kind"))
                     .expect("Unexpected ClipboardEventKind"),
                 timestamp: row.get("timestamp"),
+                pinned: row.get::<i64, _>("pinned") != 0,
             });
         }
         log::info!("Read clipboard entries: {:#?}", events.len());
@@ -334,6 +344,7 @@ impl ClipboardWatcher {
             kind: ClipboardEventKind::from_str(row.get("kind"))
                 .expect("Unexpected ClipboardEventKind"),
             timestamp: row.get("timestamp"),
+            pinned: row.get::<i64, _>("pinned") != 0,
         })
     }
 
@@ -372,10 +383,11 @@ impl ClipboardWatcher {
         let res = sqlx::query(
             r#"
             DELETE FROM clipboard
-            WHERE id in 
+            WHERE pinned = 0 AND id IN
                 (
-                SELECT id FROM clipboard 
-                ORDER BY timestamp DESC 
+                SELECT id FROM clipboard
+                WHERE pinned = 0
+                ORDER BY timestamp DESC
                 LIMIT -1 OFFSET ?
                 )
             "#,
@@ -387,13 +399,33 @@ impl ClipboardWatcher {
         Ok(())
     }
 
+    pub async fn pin(&self, id: String) -> Result<(), sqlx::Error> {
+        log::info!("Pinned clipboard entry: {:#?}", id);
+        let pool = self.pool.lock().await;
+        sqlx::query("UPDATE clipboard SET pinned = 1 WHERE id = ?")
+            .bind(id)
+            .execute(&*pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn unpin(&self, id: String) -> Result<(), sqlx::Error> {
+        log::info!("Unpinned clipboard entry: {:#?}", id);
+        let pool = self.pool.lock().await;
+        sqlx::query("UPDATE clipboard SET pinned = 0 WHERE id = ?")
+            .bind(id)
+            .execute(&*pool)
+            .await?;
+        Ok(())
+    }
+
     async fn save(&self, event: ClipboardEvent) -> Result<(), sqlx::Error> {
         log::info!("Saved clipboard entry: {:#?}", event.id);
         let pool = self.pool.lock().await;
         sqlx::query(
             r#"
-            INSERT INTO clipboard (id, entry, kind, timestamp)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO clipboard (id, entry, kind, timestamp, pinned)
+            VALUES (?, ?, ?, ?, 0)
             "#,
         )
         .bind(event.id)
@@ -578,4 +610,27 @@ pub async fn clipboard_read_status(
     log::info!("CMD:clipboard_read_status");
     let clipboard_watcher = state.lock().await;
     Ok(clipboard_watcher.running)
+}
+
+#[tauri::command]
+pub async fn clipboard_pin_entry(
+    id: String,
+    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+) -> Result<(), String> {
+    log::info!("CMD:clipboard_pin_entry: {:#?}", id);
+    state.lock().await.pin(id).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn clipboard_unpin_entry(
+    id: String,
+    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+) -> Result<(), String> {
+    log::info!("CMD:clipboard_unpin_entry: {:#?}", id);
+    state
+        .lock()
+        .await
+        .unpin(id)
+        .await
+        .map_err(|e| e.to_string())
 }

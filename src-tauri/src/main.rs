@@ -14,7 +14,8 @@ use content_managers::bookmarks_manager::{
 use content_managers::clipboard_watcher::{
     clipboard_add_entry, clipboard_clean_old_entries, clipboard_delete_all_entries,
     clipboard_delete_one_entry, clipboard_open_entry, clipboard_pause_watcher,
-    clipboard_read_entries, clipboard_read_status, clipboard_resume_watcher, ClipboardWatcher,
+    clipboard_pin_entry, clipboard_read_entries, clipboard_read_status, clipboard_resume_watcher,
+    clipboard_unpin_entry, ClipboardWatcher,
 };
 use content_managers::db::{db_delete_dbfile, db_get_dbfile_path, DbConnection};
 use content_managers::files_manager::{
@@ -108,6 +109,8 @@ async fn main() {
             clipboard_open_entry,
             clipboard_clean_old_entries,
             clipboard_read_status,
+            clipboard_pin_entry,
+            clipboard_unpin_entry,
             // bookmarks related
             bookmarks_read_entries,
             bookmarks_delete_one,

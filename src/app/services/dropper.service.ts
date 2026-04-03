@@ -57,7 +57,7 @@ export class DropperService implements OnDestroy {
       this.files.update((files) => {
         const newFiles = event.payload;
         const existingFilesWithoutNewFiles = files.filter(
-          (file) => !newFiles.some((newFile) => newFile.file === file.file)
+          (file) => !newFiles.some((newFile) => newFile.file === file.file),
         );
         return [...existingFilesWithoutNewFiles, ...newFiles];
       });

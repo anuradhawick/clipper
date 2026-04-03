@@ -15,6 +15,7 @@ export interface ClipperEntry {
   entry: Array<number>;
   kind: ClipperEntryKind;
   timestamp: string;
+  pinned: boolean;
 }
 
 @Injectable({
@@ -120,5 +121,31 @@ export class ClipboardHistoryService implements OnDestroy {
   async delete(id: string) {
     this.items.update((entries) => entries.filter((e) => e.id != id));
     await invoke<void>("clipboard_delete_one_entry", { id });
+  }
+
+  async pin(id: string) {
+    this.items.update((entries) => {
+      const updated = entries.map((e) =>
+        e.id === id ? { ...e, pinned: true } : e,
+      );
+      return [
+        ...updated.filter((e) => e.pinned),
+        ...updated.filter((e) => !e.pinned),
+      ];
+    });
+    await invoke<void>("clipboard_pin_entry", { id });
+  }
+
+  async unpin(id: string) {
+    this.items.update((entries) => {
+      const updated = entries.map((e) =>
+        e.id === id ? { ...e, pinned: false } : e,
+      );
+      return [
+        ...updated.filter((e) => e.pinned),
+        ...updated.filter((e) => !e.pinned),
+      ];
+    });
+    await invoke<void>("clipboard_unpin_entry", { id });
   }
 }
