@@ -52,8 +52,12 @@ export const routes: Routes = [
     children: [
       {
         path: "",
-        redirectTo: "notes",
+        redirectTo: "clipboard",
         pathMatch: "full",
+      },
+      {
+        path: "clipboard",
+        component: ClipboardPageComponent,
       },
       {
         path: "notes",
@@ -64,10 +68,6 @@ export const routes: Routes = [
             component: ManagerNewNoteComponent,
           },
         ],
-      },
-      {
-        path: "clipboard",
-        component: ClipboardPageComponent,
       },
       {
         path: "bookmarks",
