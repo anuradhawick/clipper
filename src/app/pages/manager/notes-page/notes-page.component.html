@@ -1,10 +1,23 @@
 <div class="flex h-full min-h-0 flex-col overflow-hidden">
   <div class="wrapper items-center">
-    <div class="m-1 flex w-full justify-end">
+    <div class="m-1 flex w-full justify-between">
+      <button
+        mat-mini-fab
+        (click)="toggleSearch()"
+        matTooltip="Toggle search bar"
+        matTooltipShowDelay="1000"
+      >
+        @if (showSearch()) {
+          <mat-icon>search_off</mat-icon>
+        } @else {
+          <mat-icon>search</mat-icon>
+        }
+      </button>
       <div class="flex space-x-1">
         <button
           mat-mini-fab
           [routerLink]="['new']"
+          queryParamsHandling="preserve"
           matTooltip="Create a new note"
           matTooltipShowDelay="1000"
         >
@@ -23,7 +36,33 @@
     <div
       class="absolute mx-auto w-full items-center text-center text-lg font-bold"
     >
-      Notes
+      @if (showSearch()) {
+        <mat-form-field
+          class="search-field m-0 w-[600px]"
+          subscriptSizing="dynamic"
+          appearance="outline"
+        >
+          <input
+            #searchInput
+            matInput
+            type="text"
+            placeholder="Search notes"
+            [value]="searchQuery()"
+            (input)="searchQuery.set(searchInput.value)"
+          />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            aria-label="Cancel search"
+            (click)="clearSearch(searchInput)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-form-field>
+      } @else {
+        Notes
+      }
     </div>
   </div>
   @if (isCreatingNote()) {
@@ -33,7 +72,7 @@
   } @else {
     <router-outlet />
 
-    @if (notesService.notes().length) {
+    @if (filteredNotes().length) {
       <div class="min-h-0 flex-1 overflow-hidden">
         <cdk-virtual-scroll-viewport
           class="notes-viewport h-full w-full overflow-x-hidden"
@@ -42,10 +81,7 @@
           [maxBufferPx]="maxBufferPx"
         >
           <app-note-item
-            *cdkVirtualFor="
-              let note of notesService.notes();
-              trackBy: trackByNoteId
-            "
+            *cdkVirtualFor="let note of filteredNotes(); trackBy: trackByNoteId"
             [note]="note"
             (copyClicked)="notesService.copy(note.id)"
             (deleteClicked)="notesService.delete(note.id)"

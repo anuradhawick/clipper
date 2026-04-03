@@ -48,9 +48,44 @@
     </button>
   </div>
   <div class="min-w-0 px-2 text-center text-lg font-bold">
-    {{ pageTitle() | titlecase }}
+    @if (showSearch()) {
+      <mat-form-field
+        class="search-field m-0 w-[300px]"
+        subscriptSizing="dynamic"
+        appearance="outline"
+      >
+        <input
+          #searchInput
+          matInput
+          type="text"
+          placeholder="Search {{ pageTitle() }}"
+          [value]="searchQuery()"
+          (input)="searchQuery.set(searchInput.value)"
+        />
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          aria-label="Cancel search"
+          (click)="clearSearch(searchInput)"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      </mat-form-field>
+    } @else {
+      {{ pageTitle() | titlecase }}
+    }
   </div>
   <div class="flex items-center justify-end gap-1">
+    @if (searchable()) {
+      <button mat-mini-fab (click)="toggleSearch()">
+        @if (showSearch()) {
+          <mat-icon>search_off</mat-icon>
+        } @else {
+          <mat-icon>search</mat-icon>
+        }
+      </button>
+    }
     <button mat-mini-fab (click)="windowActionsService.openManagerWindow()">
       <mat-icon>more_vert</mat-icon>
     </button>
@@ -79,7 +114,11 @@
 </mat-menu>
 
 <mat-menu #notesMenu="matMenu">
-  <button mat-menu-item [routerLink]="['notes', 'new']">
+  <button
+    mat-menu-item
+    [routerLink]="['notes', 'new']"
+    queryParamsHandling="preserve"
+  >
     <mat-icon>edit_note</mat-icon>
     <span>New note</span>
   </button>

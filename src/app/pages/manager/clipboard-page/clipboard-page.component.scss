@@ -9,3 +9,8 @@
   height: 100%;
   width: 100%;
 }
+
+.search-field {
+  --mat-form-field-container-height: 40px;
+  --mat-form-field-container-vertical-padding: 8px;
+}

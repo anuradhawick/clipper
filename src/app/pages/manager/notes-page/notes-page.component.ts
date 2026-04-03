@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject } from "@angular/core";
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Signal,
+  signal,
+  viewChild,
+  ViewChild,
+} from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { ScrollingModule } from "@angular/cdk/scrolling";
 import { MatButtonModule } from "@angular/material/button";
@@ -14,6 +24,8 @@ import {
 import { MatDialog } from "@angular/material/dialog";
 import { ActionConfirmationDialogComponent } from "../../../components/action-confirmation-dialog/action-confirmation-dialog.component";
 import { MatTooltipModule } from "@angular/material/tooltip";
+import { MatFormFieldModule } from "@angular/material/form-field";
+import { MatInputModule } from "@angular/material/input";
 import { filter, map, startWith } from "rxjs";
 
 const ITEM_HEIGHT_PX = 120;
@@ -26,6 +38,8 @@ const MAX_BUFFER_PX = 480;
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    MatFormFieldModule,
+    MatInputModule,
     NoteItemComponent,
     RouterLink,
     RouterOutlet,
@@ -39,9 +53,18 @@ export class NotesPageComponent {
   readonly notesService = inject(NotesService);
   readonly dialog = inject(MatDialog);
   readonly router = inject(Router);
+  private searchInputRef =
+    viewChild<ElementRef<HTMLInputElement>>("searchInput");
+  protected readonly filteredNotes: Signal<NoteItem[]> = computed(() =>
+    this.notesService
+      .notes()
+      .filter((note) => this.matchesSearch(note, this.searchQuery())),
+  );
   protected readonly itemHeightPx = ITEM_HEIGHT_PX;
   protected readonly minBufferPx = MIN_BUFFER_PX;
   protected readonly maxBufferPx = MAX_BUFFER_PX;
+  protected showSearch = signal(false);
+  protected searchQuery = signal("");
   protected readonly isCreatingNote = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
@@ -53,6 +76,30 @@ export class NotesPageComponent {
 
   protected trackByNoteId(_: number, note: NoteItem): string {
     return note.id;
+  }
+
+  protected toggleSearch(): void {
+    const shouldShow = !this.showSearch();
+    this.showSearch.set(shouldShow);
+
+    if (shouldShow) {
+      setTimeout(() => this.searchInputRef()?.nativeElement.focus());
+    } else {
+      this.searchQuery.set("");
+    }
+  }
+
+  protected clearSearch(searchInput: HTMLInputElement) {
+    searchInput.value = "";
+    this.searchQuery.set("");
+  }
+
+  private matchesSearch(note: NoteItem, query: string): boolean {
+    if (!query) {
+      return true;
+    }
+
+    return note.entry.toLowerCase().includes(query.toLowerCase());
   }
 
   deleteNotes() {

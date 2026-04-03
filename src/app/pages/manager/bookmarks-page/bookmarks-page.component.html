@@ -1,7 +1,19 @@
 <div class="flex h-full min-h-0 flex-col overflow-hidden">
   <div class="wrapper items-center">
-    <div class="m-1 flex w-full items-center">
-      <div class="flex w-full justify-end space-x-1">
+    <div class="m-1 flex w-full items-center justify-between">
+      <button
+        mat-mini-fab
+        (click)="toggleSearch()"
+        matTooltip="Toggle search bar"
+        matTooltipShowDelay="1000"
+      >
+        @if (showSearch()) {
+          <mat-icon>search_off</mat-icon>
+        } @else {
+          <mat-icon>search</mat-icon>
+        }
+      </button>
+      <div class="flex justify-end space-x-1">
         <button
           mat-mini-fab
           (click)="clearBookmarks()"
@@ -15,7 +27,33 @@
     <div
       class="absolute mx-auto w-full items-center text-center text-lg font-bold"
     >
-      Bookmarks
+      @if (showSearch()) {
+        <mat-form-field
+          class="search-field m-0 w-[600px]"
+          subscriptSizing="dynamic"
+          appearance="outline"
+        >
+          <input
+            #searchInput
+            matInput
+            type="text"
+            placeholder="Search bookmarks"
+            [value]="searchQuery()"
+            (input)="searchQuery.set(searchInput.value)"
+          />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            aria-label="Cancel search"
+            (click)="clearSearch(searchInput)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-form-field>
+      } @else {
+        Bookmarks
+      }
     </div>
   </div>
 

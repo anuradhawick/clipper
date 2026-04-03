@@ -2,6 +2,8 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  ElementRef,
+  effect,
   inject,
   OnDestroy,
   signal,
@@ -11,7 +13,13 @@ import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { ClipboardHistoryService } from "../../../../services/clipboard-history.service";
 import { WindowActionsService } from "../../../../services/window-actions.service";
-import { Event, EventType, Router, RouterLink } from "@angular/router";
+import {
+  ActivatedRoute,
+  Event,
+  EventType,
+  Router,
+  RouterLink,
+} from "@angular/router";
 import { Subscription } from "rxjs";
 import { MatMenu, MatMenuModule, MatMenuTrigger } from "@angular/material/menu";
 import { MatDialog } from "@angular/material/dialog";
@@ -20,6 +28,8 @@ import { MatBadgeModule } from "@angular/material/badge";
 import { DropperService } from "../../../../services/dropper.service";
 import { Location, TitleCasePipe } from "@angular/common";
 import { MatTooltipModule } from "@angular/material/tooltip";
+import { MatFormField } from "@angular/material/select";
+import { MatInputModule } from "@angular/material/input";
 
 @Component({
   selector: "app-nav-bar",
@@ -32,11 +42,15 @@ import { MatTooltipModule } from "@angular/material/tooltip";
     MatBadgeModule,
     TitleCasePipe,
     MatTooltipModule,
+    MatFormField,
+    MatInputModule,
   ],
   templateUrl: "./nav-bar.component.html",
   styleUrl: "./nav-bar.component.scss",
 })
 export class NavBarComponent implements OnDestroy {
+  private searchInputRef =
+    viewChild<ElementRef<HTMLInputElement>>("searchInput");
   routerSubscription: Subscription;
   contextMenuPosition = { x: "0px", y: "0px" };
   menu = viewChild.required<MatMenuTrigger>(MatMenuTrigger);
@@ -48,18 +62,61 @@ export class NavBarComponent implements OnDestroy {
   readonly dialog = inject(MatDialog);
   readonly dropperService = inject(DropperService);
   readonly router = inject(Router);
+  readonly activatedRoute = inject(ActivatedRoute);
   readonly location = inject(Location);
+  protected showSearch = signal(false);
+  protected searchable = signal(false);
+  protected searchQuery = signal("");
 
   constructor() {
+    this.searchQuery.set(
+      this.activatedRoute.snapshot.queryParamMap.get("search") ?? "",
+    );
+
+    effect(() => {
+      const nextSearch = this.searchQuery();
+      const currentSearch =
+        this.activatedRoute.snapshot.queryParamMap.get("search") ?? "";
+
+      if (nextSearch === currentSearch) {
+        return;
+      }
+
+      void this.router.navigate([], {
+        relativeTo: this.activatedRoute,
+        queryParams: { search: nextSearch || null },
+        queryParamsHandling: "merge",
+        replaceUrl: true,
+      });
+    });
+
     this.routerSubscription = this.router.events.subscribe((event: Event) => {
+      console.log("Router event:", event);
       switch (event.type) {
         case EventType.NavigationEnd:
           const url = this.location.path();
-          const title = url.split("/")[2];
+          const title = url.split("/")[2].split("?")[0];
           this.pageTitle.set(title);
+          this.searchable.set(["notes", "clipboard"].includes(title));
           break;
       }
     });
+  }
+
+  protected toggleSearch(): void {
+    const shouldShow = !this.showSearch();
+    this.showSearch.set(shouldShow);
+
+    if (shouldShow) {
+      setTimeout(() => this.searchInputRef()?.nativeElement.focus());
+    } else {
+      this.searchQuery.set("");
+    }
+  }
+
+  protected clearSearch(searchInput: HTMLInputElement) {
+    searchInput.value = "";
+    this.searchQuery.set("");
   }
 
   onRightClick(event: MouseEvent, menu: MatMenu): void {
@@ -100,5 +157,7 @@ export class NavBarComponent implements OnDestroy {
     });
   }
 
-  ngOnDestroy(): void {}
+  ngOnDestroy(): void {
+    this.routerSubscription.unsubscribe();
+  }
 }

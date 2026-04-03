@@ -6,7 +6,7 @@
   } @else {
     <router-outlet />
 
-    @if (notesService.notes().length) {
+    @if (filteredNotes().length) {
       <div class="min-h-0 flex-1 overflow-hidden">
         <cdk-virtual-scroll-viewport
           class="notes-viewport h-full w-full overflow-x-hidden"
@@ -15,10 +15,7 @@
           [maxBufferPx]="maxBufferPx"
         >
           <app-note-item
-            *cdkVirtualFor="
-              let note of notesService.notes();
-              trackBy: trackByNoteId
-            "
+            *cdkVirtualFor="let note of filteredNotes(); trackBy: trackByNoteId"
             [note]="note"
             (copyClicked)="notesService.copy(note.id)"
             (deleteClicked)="notesService.delete(note.id)"

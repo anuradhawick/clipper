@@ -1,21 +1,57 @@
 <div class="flex h-full min-h-0 flex-col overflow-hidden">
   <div class="wrapper items-center">
-    <div class="flex justify-end w-full m-1">
-      <div class="flex space-x-1">
-        <button
-          mat-mini-fab
-          (click)="clearClipboardHistory()"
-          matTooltip="Clear all clipboard entries"
-          matTooltipShowDelay="1000"
-        >
-          <mat-icon>delete_sweep</mat-icon>
-        </button>
-      </div>
+    <div class="flex justify-between w-full m-1">
+      <button
+        mat-mini-fab
+        (click)="toggleSearch()"
+        matTooltip="Toggle search bar"
+        matTooltipShowDelay="1000"
+      >
+        @if (showSearch()) {
+          <mat-icon>search_off</mat-icon>
+        } @else {
+          <mat-icon>search</mat-icon>
+        }
+      </button>
+      <button
+        mat-mini-fab
+        (click)="clearClipboardHistory()"
+        matTooltip="Clear all clipboard entries"
+        matTooltipShowDelay="1000"
+      >
+        <mat-icon>delete_sweep</mat-icon>
+      </button>
     </div>
     <div
-      class="absolute mx-auto w-full text-center items-center text-lg font-bold"
+      class="absolute mx-auto w-full px-2 text-center items-center text-lg font-bold"
     >
-      Clipboard
+      @if (showSearch()) {
+        <mat-form-field
+          class="search-field m-0 w-[600px]"
+          subscriptSizing="dynamic"
+          appearance="outline"
+        >
+          <input
+            #searchInput
+            matInput
+            type="text"
+            placeholder="Search clipboard"
+            [value]="searchQuery()"
+            (input)="searchQuery.set(searchInput.value)"
+          />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            aria-label="Cancel search"
+            (click)="clearSearch(searchInput)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-form-field>
+      } @else {
+        Clipboard
+      }
     </div>
   </div>
 
