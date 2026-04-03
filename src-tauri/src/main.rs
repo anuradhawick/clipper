@@ -30,6 +30,9 @@ use content_managers::notes_manager::{
     NotesManager,
 };
 use content_managers::settings::{settings_read, settings_update, SettingsManager};
+use content_managers::tags_manager::{
+    tags_create_entry, tags_delete_one, tags_read_entries, tags_update_entry, TagsManager,
+};
 use std::env;
 use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
@@ -139,6 +142,11 @@ async fn main() {
             filters_delete_one,
             filters_delete_all,
             filters_read_entries,
+            // tags related
+            tags_create_entry,
+            tags_update_entry,
+            tags_delete_one,
+            tags_read_entries,
             // db related
             db_delete_dbfile,
             db_get_dbfile_path,
@@ -206,11 +214,14 @@ async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
     let bus = content_managers::message_bus::MessageBus::new(100);
     let db = Arc::new(DbConnection::new(app.clone()).await);
     // register notes manager
-    let notes_manager = NotesManager::new(Arc::clone(&db)).await;
+    let notes_manager = NotesManager::new(Arc::clone(&db), app.clone()).await;
     app.manage(notes_manager);
     // register filters manager
     let filters_manager = FiltersManager::new(Arc::clone(&db), bus.clone()).await;
     app.manage(filters_manager);
+    // register tags manager
+    let tags_manager = TagsManager::new(Arc::clone(&db), app.clone()).await;
+    app.manage(tags_manager);
     // register watcher state
     let clipboard_watcher = ClipboardWatcher::new(Arc::clone(&db), bus.clone(), app.clone()).await;
     app.manage(clipboard_watcher);

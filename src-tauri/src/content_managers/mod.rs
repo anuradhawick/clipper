@@ -7,3 +7,4 @@ pub mod global_shortcut;
 pub mod message_bus;
 pub mod notes_manager;
 pub mod settings;
+pub mod tags_manager;
