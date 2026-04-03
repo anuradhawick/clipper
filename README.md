@@ -31,6 +31,10 @@ The app itself is secure, however, your clipboard might see your passwords if yo
 * 👉 Right click menus for quick actions
 * 👉 Multi monitor support
 
+<p align="center">
+  <img src="./assets/manager.png" alt="Manager page" width="800">
+</p>
+
 ## Installation Instructions
 
 ### Prerequisites
