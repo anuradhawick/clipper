@@ -2,7 +2,10 @@
   "tailwindCSS.includeLanguages": {
     "html": "html",
     "javascript": "javascript",
-    "css": "css"
+    "css": "css",
+  },
+  "tailwindCSS.experimental.configFile": {
+    "src/styles.scss": "src/**/*"
   },
   "editor.quickSuggestions": {
     "strings": true
