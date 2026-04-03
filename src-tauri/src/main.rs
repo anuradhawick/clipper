@@ -33,6 +33,7 @@ use content_managers::settings::{settings_read, settings_update, SettingsManager
 use content_managers::tags_manager::{
     tags_create_entry, tags_delete_one, tags_read_entries, tags_update_entry, TagsManager,
 };
+use regex::Regex;
 use std::env;
 use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
@@ -219,7 +220,24 @@ async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
     app.manage(notes_manager);
     // register filters manager
     let filters_manager = FiltersManager::new(Arc::clone(&db), bus.clone()).await;
-    app.manage(filters_manager);
+    app.manage(Arc::clone(&filters_manager));
+    // preload initial settings/filters once and pass them into managers
+    let initial_settings = settings_manager
+        .lock()
+        .await
+        .read()
+        .await
+        .expect("Unable to read initial settings for managers");
+    let initial_filters = match filters_manager.lock().await.read().await {
+        Ok(filters) => filters,
+        Err(err) => {
+            log::error!(
+                "Unable to read initial filters for clipboard watcher: {}",
+                err
+            );
+            Vec::new()
+        }
+    };
     // register tags manager
     let tags_manager = TagsManager::new(Arc::clone(&db), app.clone()).await;
     app.manage(tags_manager);
@@ -228,18 +246,27 @@ async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
         Arc::clone(&db),
         bus.clone(),
         app.clone(),
-        Arc::clone(&settings_manager),
+        initial_settings.clone(),
+        initial_filters
+            .into_iter()
+            .filter_map(|filter| match Regex::new(filter.regex()) {
+                Ok(regex) => Some(regex),
+                Err(err) => {
+                    log::warn!(
+                        "Skipping invalid filter regex '{}': {}",
+                        filter.regex(),
+                        err
+                    );
+                    None
+                }
+            })
+            .collect(),
     )
     .await;
     app.manage(clipboard_watcher);
     // register bookmarks manager
-    let bookmarks_manager = BookmarksManager::new(
-        Arc::clone(&db),
-        bus.clone(),
-        app.clone(),
-        Arc::clone(&settings_manager),
-    )
-    .await;
+    let bookmarks_manager =
+        BookmarksManager::new(Arc::clone(&db), bus.clone(), app.clone(), initial_settings).await;
     app.manage(bookmarks_manager);
     // register file service
     let files_manager = FilesManager::new(

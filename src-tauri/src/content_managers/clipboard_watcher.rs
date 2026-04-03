@@ -1,6 +1,5 @@
 use super::db::DbConnection;
-use super::filters_manager::FiltersManager;
-use super::settings::SettingsManager;
+use super::settings::SettingsEntry;
 use crate::content_managers::message_bus::AppMessage;
 use crate::content_managers::message_bus::MessageBus;
 use arboard::Clipboard;
@@ -23,7 +22,7 @@ use std::io::Write;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::Emitter;
-use tauri::{self, async_runtime, AppHandle, Manager, State};
+use tauri::{self, async_runtime, AppHandle, State};
 use tauri_plugin_opener::OpenerExt;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -64,9 +63,9 @@ pub struct ClipboardWatcher {
     app_handle: AppHandle,
     last_text: String,
     last_image: u64,
+    filters: Vec<Regex>,
     history_limit: u32,
     pool: Arc<Mutex<SqlitePool>>,
-    filters: Vec<Regex>,
 }
 
 fn buffer_hash(buffer: &[u8]) -> u64 {
@@ -95,48 +94,20 @@ impl ClipboardWatcher {
         }
     }
 
-    async fn load_filters(app_handle: &AppHandle) -> Vec<Regex> {
-        let filters_manager = app_handle
-            .state::<Arc<Mutex<FiltersManager>>>()
-            .inner()
-            .clone();
-
-        let filters = {
-            let manager = filters_manager.lock().await;
-            match manager.read_filter_regexes().await {
-                Ok(filters) => filters,
-                Err(err) => {
-                    log::error!("Unable to load clipboard filters: {}", err);
-                    return Vec::new();
-                }
-            }
-        };
-
-        filters
-            .into_iter()
-            .filter_map(|filter| match Regex::new(&filter) {
-                Ok(regex) => Some(regex),
-                Err(err) => {
-                    log::warn!("Skipping invalid filter regex '{}': {}", filter, err);
-                    None
-                }
-            })
-            .collect()
-    }
-
-    fn is_filtered(&self, text: &str) -> bool {
-        self.filters.iter().any(|regex| regex.is_match(text))
+    fn is_filtered(filters: &[Regex], text: &str) -> bool {
+        filters.iter().any(|regex| regex.is_match(text))
     }
 
     pub async fn new(
         db: Arc<DbConnection>,
         bus: MessageBus,
         app_handle: AppHandle,
-        settings_manager: Arc<Mutex<SettingsManager>>,
+        settings: SettingsEntry,
+        initial_filters: Vec<Regex>,
     ) -> Arc<Mutex<Self>> {
         let mut last_text = String::from("");
         let mut last_image = 0;
-        let mut history_limit = 100;
+        let history_limit = settings.clipboard_history_size;
         let pool = db.pool.lock().await;
 
         // create table if not exist for clipboard entries
@@ -168,21 +139,7 @@ impl ClipboardWatcher {
             last_image = buffer_hash(&image.bytes);
         }
 
-        match settings_manager.lock().await.read().await {
-            Ok(settings) => {
-                history_limit = settings.clipboard_history_size;
-            }
-            Err(err) => {
-                log::error!(
-                    "Unable to read initial settings for clipboard history limit, using default {}: {}",
-                    history_limit,
-                    err
-                );
-            }
-        }
-
-        let filters = Self::load_filters(&app_handle).await;
-        log::info!("Clipboard watcher loaded {} filters", filters.len());
+        log::info!("Clipboard watcher loaded {} filters", initial_filters.len());
         log::info!("Clipboard watcher history limit set to {}", history_limit);
 
         let state = Arc::new(Mutex::new(Self {
@@ -190,46 +147,33 @@ impl ClipboardWatcher {
             app_handle: app_handle.clone(),
             last_text,
             last_image,
+            filters: initial_filters.clone(),
             history_limit,
             pool: Arc::clone(&db.pool),
-            filters,
         }));
 
         let refresh_state = Arc::clone(&state);
-        let refresh_app_handle = app_handle.clone();
-        let refresh_settings_manager = Arc::clone(&settings_manager);
         let refresh_bus = bus.clone();
         async_runtime::spawn(async move {
             let mut receiver = refresh_bus.subscribe();
 
             loop {
                 match receiver.recv().await {
-                    Ok(AppMessage::FiltersUpdated) => {
-                        let filters = Self::load_filters(&refresh_app_handle).await;
+                    Ok(AppMessage::SettingsUpdated(settings)) => {
                         let mut watcher = refresh_state.lock().await;
-                        watcher.filters = filters;
+                        watcher.history_limit = settings.clipboard_history_size;
+                        log::info!(
+                            "Clipboard watcher updated history limit: {}",
+                            watcher.history_limit
+                        );
+                    }
+                    Ok(AppMessage::FiltersUpdated(updated_filters)) => {
+                        let mut watcher = refresh_state.lock().await;
+                        watcher.filters = updated_filters.filter_regexes;
                         log::info!(
                             "Clipboard watcher refreshed filters: {}",
                             watcher.filters.len()
                         );
-                    }
-                    Ok(AppMessage::SettingsUpdated) => {
-                        match refresh_settings_manager.lock().await.read().await {
-                            Ok(settings) => {
-                                let mut watcher = refresh_state.lock().await;
-                                watcher.history_limit = settings.clipboard_history_size;
-                                log::info!(
-                                    "Clipboard watcher updated history limit: {}",
-                                    watcher.history_limit
-                                );
-                            }
-                            Err(err) => {
-                                log::error!(
-                                    "Unable to refresh clipboard history limit from settings: {}",
-                                    err
-                                );
-                            }
-                        }
                     }
                     Ok(_) => {}
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
@@ -258,7 +202,7 @@ impl ClipboardWatcher {
                     if !text.trim().is_empty() && app_state.running && text != app_state.last_text {
                         app_state.last_text.clone_from(&text);
 
-                        if app_state.is_filtered(&text) {
+                        if Self::is_filtered(&app_state.filters, &text) {
                             log::info!("Clipboard text skipped by active filters");
                             continue;
                         }

@@ -2,6 +2,7 @@ use super::db::DbConnection;
 use super::global_shortcut::{register_global_shortcut, unregister_global_shortcut};
 use crate::content_managers::message_bus::AppMessage;
 use crate::content_managers::message_bus::MessageBus;
+use crate::content_managers::message_bus::SettingsUpdatedPayload;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{sqlite::SqlitePool, Row};
@@ -115,6 +116,7 @@ impl SettingsManager {
 
     pub async fn update(&self, settings: SettingsEntry) -> Result<(), String> {
         log::info!("Updating settings: {:#?}", settings);
+        let settings_for_event = settings.clone();
         let pool = self.pool.lock().await;
         sqlx::query(
             r#"
@@ -163,7 +165,12 @@ impl SettingsManager {
             }
         }
 
-        if self.bus.send(AppMessage::SettingsUpdated).is_err() {
+        let payload = SettingsUpdatedPayload {
+            clipboard_history_size: settings_for_event.clipboard_history_size,
+            bookmark_history_size: settings_for_event.bookmark_history_size,
+        };
+
+        if self.bus.send(AppMessage::SettingsUpdated(payload)).is_err() {
             log::error!("Unable to send message: SettingsUpdated");
         }
 

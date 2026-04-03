@@ -1,5 +1,5 @@
 use super::db::DbConnection;
-use super::settings::SettingsManager;
+use super::settings::SettingsEntry;
 use crate::content_managers::message_bus::AppMessage;
 use crate::{content_managers::message_bus::MessageBus, AppHandle};
 use chrono::Utc;
@@ -25,7 +25,7 @@ pub struct BookmarkItem {
 
 pub struct BookmarksManager {
     app_handle: AppHandle,
-    history_limit: u32,
+    settings: SettingsEntry,
     pool: Arc<Mutex<SqlitePool>>,
 }
 
@@ -144,9 +144,9 @@ impl BookmarksManager {
         db: Arc<DbConnection>,
         bus: MessageBus,
         app_handle: AppHandle,
-        settings_manager: Arc<Mutex<SettingsManager>>,
+        settings: SettingsEntry,
     ) -> Arc<Mutex<Self>> {
-        let mut history_limit = 100;
+        let history_limit = settings.bookmark_history_size;
         let pool = db.pool.lock().await;
 
         // create table if not exist for bookmark entries
@@ -165,29 +165,15 @@ impl BookmarksManager {
         .await
         .expect("Unable to execute SQL!");
 
-        match settings_manager.lock().await.read().await {
-            Ok(settings) => {
-                history_limit = settings.bookmark_history_size;
-            }
-            Err(err) => {
-                log::error!(
-                    "Unable to read initial settings for bookmark history limit, using default {}: {}",
-                    history_limit,
-                    err
-                );
-            }
-        }
-
         let state = Arc::new(Mutex::new(Self {
             app_handle,
-            history_limit,
+            settings,
             pool: Arc::clone(&db.pool),
         }));
 
         log::info!("Bookmarks manager history limit set to {}", history_limit);
 
         let cloned_state = Arc::clone(&state);
-        let refresh_settings_manager = Arc::clone(&settings_manager);
         async_runtime::spawn(async move {
             let mut receiver = bus.subscribe();
 
@@ -252,23 +238,14 @@ impl BookmarksManager {
                             }
                         }
                     }
-                    Ok(AppMessage::SettingsUpdated) => {
-                        match refresh_settings_manager.lock().await.read().await {
-                            Ok(settings) => {
-                                let mut app_state = cloned_state.lock().await;
-                                app_state.history_limit = settings.bookmark_history_size;
-                                log::info!(
-                                    "Bookmarks manager updated history limit: {}",
-                                    app_state.history_limit
-                                );
-                            }
-                            Err(err) => {
-                                log::error!(
-                                    "Unable to refresh bookmark history limit from settings: {}",
-                                    err
-                                );
-                            }
-                        }
+                    Ok(AppMessage::SettingsUpdated(settings)) => {
+                        let mut app_state = cloned_state.lock().await;
+                        app_state.settings.clipboard_history_size = settings.clipboard_history_size;
+                        app_state.settings.bookmark_history_size = settings.bookmark_history_size;
+                        log::info!(
+                            "Bookmarks manager updated history limit: {}",
+                            app_state.settings.bookmark_history_size
+                        );
                     }
                     Ok(_) => {}
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
@@ -319,7 +296,7 @@ impl BookmarksManager {
             )
             "#,
         )
-        .bind(self.history_limit)
+        .bind(self.settings.bookmark_history_size)
         .execute(&*pool)
         .await?;
 

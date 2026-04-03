@@ -1,6 +1,7 @@
 use super::db::DbConnection;
-use super::message_bus::{AppMessage, MessageBus};
+use super::message_bus::{AppMessage, FiltersUpdatedPayload, MessageBus};
 use chrono::Utc;
+use regex::Regex;
 use serde::Serialize;
 use sqlx::{sqlite::SqlitePool, Row};
 use std::sync::Arc;
@@ -12,6 +13,12 @@ pub struct FilterItem {
     id: String,
     filter_regex: String,
     created_date: String,
+}
+
+impl FilterItem {
+    pub fn regex(&self) -> &str {
+        &self.filter_regex
+    }
 }
 
 pub struct FiltersManager {
@@ -57,7 +64,8 @@ impl FiltersManager {
         .bind(Utc::now().to_rfc3339())
         .execute(&*pool)
         .await?;
-        self.notify_filters_updated();
+        drop(pool);
+        self.notify_filters_updated().await;
         Ok(())
     }
 
@@ -75,7 +83,8 @@ impl FiltersManager {
         .bind(filter.id)
         .execute(&*pool)
         .await?;
-        self.notify_filters_updated();
+        drop(pool);
+        self.notify_filters_updated().await;
         Ok(())
     }
 
@@ -91,7 +100,8 @@ impl FiltersManager {
         .bind(id)
         .execute(&*pool)
         .await?;
-        self.notify_filters_updated();
+        drop(pool);
+        self.notify_filters_updated().await;
         Ok(())
     }
 
@@ -120,25 +130,6 @@ impl FiltersManager {
         Ok(filters)
     }
 
-    pub async fn read_filter_regexes(&self) -> Result<Vec<String>, sqlx::Error> {
-        log::info!("Reading filter regexes");
-        let pool = self.pool.lock().await;
-        let rows = sqlx::query(
-            r#"
-            SELECT filter_regex
-            FROM filters
-            ORDER BY created_date DESC
-            "#,
-        )
-        .fetch_all(&*pool)
-        .await?;
-
-        Ok(rows
-            .into_iter()
-            .map(|row| row.get("filter_regex"))
-            .collect::<Vec<String>>())
-    }
-
     pub async fn get(&self, id: &str) -> Result<FilterItem, sqlx::Error> {
         log::info!("Getting filter: {:#?}", id);
         let pool = self.pool.lock().await;
@@ -164,13 +155,36 @@ impl FiltersManager {
         log::info!("Deleting all filters");
         let pool = self.pool.lock().await;
         sqlx::query("DELETE FROM filters").execute(&*pool).await?;
-        self.notify_filters_updated();
+        drop(pool);
+        self.notify_filters_updated().await;
         Ok(())
     }
 
-    fn notify_filters_updated(&self) {
-        if self.bus.send(AppMessage::FiltersUpdated).is_err() {
-            log::warn!("Unable to send message: FiltersUpdated");
+    async fn notify_filters_updated(&self) {
+        match self.read().await {
+            Ok(filters) => {
+                let filter_regexes = filters
+                    .into_iter()
+                    .filter_map(|filter| match Regex::new(filter.regex()) {
+                        Ok(regex) => Some(regex),
+                        Err(err) => {
+                            log::warn!(
+                                "Skipping invalid filter regex '{}': {}",
+                                filter.regex(),
+                                err
+                            );
+                            None
+                        }
+                    })
+                    .collect();
+                let payload = FiltersUpdatedPayload { filter_regexes };
+                if self.bus.send(AppMessage::FiltersUpdated(payload)).is_err() {
+                    log::warn!("Unable to send message: FiltersUpdated");
+                }
+            }
+            Err(err) => {
+                log::error!("Unable to read filter regexes for bus update: {}", err);
+            }
         }
     }
 }

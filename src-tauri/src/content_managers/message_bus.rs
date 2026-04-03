@@ -1,10 +1,22 @@
+use regex::Regex;
 use tokio::sync::broadcast;
+
+#[derive(Clone, Debug)]
+pub struct SettingsUpdatedPayload {
+    pub clipboard_history_size: u32,
+    pub bookmark_history_size: u32,
+}
+
+#[derive(Clone, Debug)]
+pub struct FiltersUpdatedPayload {
+    pub filter_regexes: Vec<Regex>,
+}
 
 #[derive(Clone)]
 pub enum AppMessage {
     AddedToClipboard(String),
-    FiltersUpdated,
-    SettingsUpdated,
+    FiltersUpdated(FiltersUpdatedPayload),
+    SettingsUpdated(SettingsUpdatedPayload),
 }
 
 #[derive(Clone)]
