@@ -1,7 +1,7 @@
 import { inject, Injectable, OnDestroy, signal } from "@angular/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { concatMap, delay, interval, Subscription } from "rxjs";
+import { Subscription } from "rxjs";
 import { HistorySize, SettingsService } from "./settings.service";
 
 export enum ClipperEntryKind {
@@ -22,7 +22,6 @@ export interface BookmarkEntry {
 })
 export class BookmarksService implements OnDestroy {
   public items = signal<BookmarkEntry[]>([]);
-  private historyManagementSubscription: Subscription | undefined;
   private settingsSubscription: Subscription | undefined;
   private unlistenBookmarkEntry: UnlistenFn | undefined;
   private unlistenBookmarkEvent: UnlistenFn | undefined;
@@ -70,18 +69,6 @@ export class BookmarksService implements OnDestroy {
         );
       },
     );
-
-    // clear old entries every 60 seconds, starts with a delay of 10 seconds
-    this.historyManagementSubscription = interval(60000)
-      .pipe(
-        delay(10000),
-        concatMap(async () => {
-          await invoke<void>("bookmarks_clean_old_entries", {
-            count: this.settings.bookmarkHistorySize,
-          });
-        }),
-      )
-      .subscribe();
   }
 
   ngOnDestroy(): void {
@@ -94,8 +81,6 @@ export class BookmarksService implements OnDestroy {
       unlisten();
     }
     this.settingsSubscription && this.settingsSubscription.unsubscribe();
-    this.historyManagementSubscription &&
-      this.historyManagementSubscription.unsubscribe();
   }
 
   async copy(id: string) {

@@ -4,6 +4,7 @@ use tokio::sync::broadcast;
 pub enum AppMessage {
     AddedToClipboard(String),
     FiltersUpdated,
+    SettingsUpdated,
 }
 
 #[derive(Clone)]

@@ -1,5 +1,7 @@
 use super::db::DbConnection;
 use super::global_shortcut::{register_global_shortcut, unregister_global_shortcut};
+use crate::content_managers::message_bus::AppMessage;
+use crate::content_managers::message_bus::MessageBus;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{sqlite::SqlitePool, Row};
@@ -15,19 +17,24 @@ use tokio::sync::Mutex;
 pub struct SettingsEntry {
     color: String,
     lighting: String,
-    clipboard_history_size: u32,
-    bookmark_history_size: u32,
-    autolaunch: bool,
-    global_shortcut: Option<String>,
+    pub clipboard_history_size: u32,
+    pub bookmark_history_size: u32,
+    pub autolaunch: bool,
+    pub global_shortcut: Option<String>,
 }
 
 pub struct SettingsManager {
     app_handle: AppHandle,
     pool: Arc<Mutex<SqlitePool>>,
+    bus: MessageBus,
 }
 
 impl SettingsManager {
-    pub async fn new(db: Arc<DbConnection>, app_handle: AppHandle) -> Arc<Mutex<Self>> {
+    pub async fn new(
+        db: Arc<DbConnection>,
+        bus: MessageBus,
+        app_handle: AppHandle,
+    ) -> Arc<Mutex<Self>> {
         let pool = db.pool.lock().await;
 
         sqlx::query(
@@ -102,6 +109,7 @@ impl SettingsManager {
         Arc::new(Mutex::new(Self {
             pool: Arc::clone(&db.pool),
             app_handle,
+            bus,
         }))
     }
 
@@ -153,6 +161,10 @@ impl SettingsManager {
                     e.to_string()
                 })?;
             }
+        }
+
+        if self.bus.send(AppMessage::SettingsUpdated).is_err() {
+            log::error!("Unable to send message: SettingsUpdated");
         }
 
         Ok(())

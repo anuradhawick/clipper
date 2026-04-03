@@ -2,8 +2,7 @@ import { inject, Injectable, OnDestroy, signal } from "@angular/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { HistorySize, SettingsService } from "./settings.service";
-import { delay, interval, Subscription } from "rxjs";
-import { concatMap } from "rxjs/operators";
+import { Subscription } from "rxjs";
 
 export enum ClipperEntryKind {
   Text = "Text",
@@ -27,7 +26,6 @@ export class ClipboardHistoryService implements OnDestroy {
   private unlistenClipboardStatus: UnlistenFn | undefined;
   private unlistenClipboardEvent: UnlistenFn | undefined;
   private settingsSubscription: Subscription | undefined;
-  private historyManagementSubscription: Subscription | undefined;
   private settings: HistorySize = {
     clipboardHistorySize: 100,
     bookmarkHistorySize: 100,
@@ -72,18 +70,6 @@ export class ClipboardHistoryService implements OnDestroy {
     invoke<boolean>("clipboard_read_status", {}).then((running) => {
       this.running.set(running);
     });
-
-    // clear old entries every 60 seconds, starts with a delay of 10 seconds
-    this.historyManagementSubscription = interval(60000)
-      .pipe(
-        delay(10000),
-        concatMap(async () => {
-          await invoke<void>("clipboard_clean_old_entries", {
-            count: this.settings.clipboardHistorySize,
-          });
-        }),
-      )
-      .subscribe();
   }
 
   ngOnDestroy(): void {
@@ -100,8 +86,6 @@ export class ClipboardHistoryService implements OnDestroy {
       unlisten();
     }
     this.settingsSubscription && this.settingsSubscription.unsubscribe();
-    this.historyManagementSubscription &&
-      this.historyManagementSubscription.unsubscribe();
   }
 
   async copy(id: string) {

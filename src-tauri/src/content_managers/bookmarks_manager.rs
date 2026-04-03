@@ -1,4 +1,5 @@
 use super::db::DbConnection;
+use super::settings::SettingsManager;
 use crate::content_managers::message_bus::AppMessage;
 use crate::{content_managers::message_bus::MessageBus, AppHandle};
 use chrono::Utc;
@@ -24,6 +25,7 @@ pub struct BookmarkItem {
 
 pub struct BookmarksManager {
     app_handle: AppHandle,
+    history_limit: u32,
     pool: Arc<Mutex<SqlitePool>>,
 }
 
@@ -142,7 +144,9 @@ impl BookmarksManager {
         db: Arc<DbConnection>,
         bus: MessageBus,
         app_handle: AppHandle,
+        settings_manager: Arc<Mutex<SettingsManager>>,
     ) -> Arc<Mutex<Self>> {
+        let mut history_limit = 100;
         let pool = db.pool.lock().await;
 
         // create table if not exist for bookmark entries
@@ -161,12 +165,29 @@ impl BookmarksManager {
         .await
         .expect("Unable to execute SQL!");
 
+        match settings_manager.lock().await.read().await {
+            Ok(settings) => {
+                history_limit = settings.bookmark_history_size;
+            }
+            Err(err) => {
+                log::error!(
+                    "Unable to read initial settings for bookmark history limit, using default {}: {}",
+                    history_limit,
+                    err
+                );
+            }
+        }
+
         let state = Arc::new(Mutex::new(Self {
             app_handle,
+            history_limit,
             pool: Arc::clone(&db.pool),
         }));
 
+        log::info!("Bookmarks manager history limit set to {}", history_limit);
+
         let cloned_state = Arc::clone(&state);
+        let refresh_settings_manager = Arc::clone(&settings_manager);
         async_runtime::spawn(async move {
             let mut receiver = bus.subscribe();
 
@@ -231,6 +252,24 @@ impl BookmarksManager {
                             }
                         }
                     }
+                    Ok(AppMessage::SettingsUpdated) => {
+                        match refresh_settings_manager.lock().await.read().await {
+                            Ok(settings) => {
+                                let mut app_state = cloned_state.lock().await;
+                                app_state.history_limit = settings.bookmark_history_size;
+                                log::info!(
+                                    "Bookmarks manager updated history limit: {}",
+                                    app_state.history_limit
+                                );
+                            }
+                            Err(err) => {
+                                log::error!(
+                                    "Unable to refresh bookmark history limit from settings: {}",
+                                    err
+                                );
+                            }
+                        }
+                    }
                     Ok(_) => {}
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
                         log::warn!("Bookmarks listener lagged and skipped {} messages", skipped);
@@ -249,6 +288,7 @@ impl BookmarksManager {
 
     async fn create(&self, bookmark: BookmarkItem) -> Result<(), sqlx::Error> {
         log::info!("Creating bookmark: {:#?}", bookmark.url);
+
         let pool = self.pool.lock().await;
         sqlx::query(
             r#"
@@ -267,6 +307,22 @@ impl BookmarksManager {
         .bind(Utc::now().to_rfc3339())
         .execute(&*pool)
         .await?;
+
+        sqlx::query(
+            r#"
+            DELETE FROM bookmarks
+            WHERE id NOT IN (
+                SELECT id
+                FROM bookmarks
+                ORDER BY timestamp DESC
+                LIMIT ?
+            )
+            "#,
+        )
+        .bind(self.history_limit)
+        .execute(&*pool)
+        .await?;
+
         Ok(())
     }
 
@@ -304,30 +360,6 @@ impl BookmarksManager {
         .execute(&*pool)
         .await?;
         self.notify_bookmarks_updated();
-        Ok(())
-    }
-
-    pub async fn delete_with_skip(&self, skip: u32) -> Result<(), sqlx::Error> {
-        log::info!("Deleting bookmarks with skip {:#?}", skip);
-        let pool = self.pool.lock().await;
-        let res = sqlx::query(
-            r#"
-            DELETE FROM bookmarks
-            WHERE id NOT IN (
-                SELECT id
-                FROM bookmarks
-                ORDER BY timestamp DESC
-                LIMIT ?
-            )
-            "#,
-        )
-        .bind(skip)
-        .execute(&*pool)
-        .await?;
-        if res.rows_affected() > 0 {
-            self.notify_bookmarks_updated();
-        }
-        log::info!("Cleared number of entries: {:#?}", res.rows_affected());
         Ok(())
     }
 
@@ -480,17 +512,4 @@ pub async fn bookmarks_read_entries(
 ) -> Result<Vec<BookmarkItem>, String> {
     log::info!("CMD:Reading bookmarks");
     state.lock().await.read().await.map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn bookmarks_clean_old_entries(
-    count: u32,
-    state: State<'_, Arc<Mutex<BookmarksManager>>>,
-) -> Result<(), String> {
-    log::info!("CMD:bookmarks_clean_old_entries: {}", count);
-    let bookmarks_manager = state.lock().await;
-    bookmarks_manager
-        .delete_with_skip(count)
-        .await
-        .map_err(|e| e.to_string())
 }

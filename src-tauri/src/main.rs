@@ -8,13 +8,13 @@ mod content_managers;
 mod utils;
 
 use content_managers::bookmarks_manager::{
-    bookmarks_clean_old_entries, bookmarks_delete_all, bookmarks_delete_one,
-    bookmarks_read_entries, bookmarks_update_entry, BookmarksManager,
+    bookmarks_delete_all, bookmarks_delete_one, bookmarks_read_entries, bookmarks_update_entry,
+    BookmarksManager,
 };
 use content_managers::clipboard_watcher::{
-    clipboard_add_entry, clipboard_clean_old_entries, clipboard_delete_all_entries,
-    clipboard_delete_one_entry, clipboard_open_entry, clipboard_pause_watcher,
-    clipboard_read_entries, clipboard_read_status, clipboard_resume_watcher, ClipboardWatcher,
+    clipboard_add_entry, clipboard_delete_all_entries, clipboard_delete_one_entry,
+    clipboard_open_entry, clipboard_pause_watcher, clipboard_read_entries, clipboard_read_status,
+    clipboard_resume_watcher, ClipboardWatcher,
 };
 use content_managers::db::{db_delete_dbfile, db_get_dbfile_path, DbConnection};
 use content_managers::files_manager::{
@@ -109,13 +109,11 @@ async fn main() {
             clipboard_delete_one_entry,
             clipboard_delete_all_entries,
             clipboard_open_entry,
-            clipboard_clean_old_entries,
             clipboard_read_status,
             // bookmarks related
             bookmarks_read_entries,
             bookmarks_delete_one,
             bookmarks_delete_all,
-            bookmarks_clean_old_entries,
             bookmarks_update_entry,
             // window related
             window_hide,
@@ -213,6 +211,9 @@ async fn main() {
 async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
     let bus = content_managers::message_bus::MessageBus::new(100);
     let db = Arc::new(DbConnection::new(app.clone()).await);
+    // register settings service
+    let settings_manager = SettingsManager::new(Arc::clone(&db), bus.clone(), app.clone()).await;
+    app.manage(Arc::clone(&settings_manager));
     // register notes manager
     let notes_manager = NotesManager::new(Arc::clone(&db), app.clone()).await;
     app.manage(notes_manager);
@@ -223,13 +224,22 @@ async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
     let tags_manager = TagsManager::new(Arc::clone(&db), app.clone()).await;
     app.manage(tags_manager);
     // register watcher state
-    let clipboard_watcher = ClipboardWatcher::new(Arc::clone(&db), bus.clone(), app.clone()).await;
+    let clipboard_watcher = ClipboardWatcher::new(
+        Arc::clone(&db),
+        bus.clone(),
+        app.clone(),
+        Arc::clone(&settings_manager),
+    )
+    .await;
     app.manage(clipboard_watcher);
-    // register settings service
-    let settings_manager = SettingsManager::new(Arc::clone(&db), app.clone()).await;
-    app.manage(settings_manager);
     // register bookmarks manager
-    let bookmarks_manager = BookmarksManager::new(Arc::clone(&db), bus.clone(), app.clone()).await;
+    let bookmarks_manager = BookmarksManager::new(
+        Arc::clone(&db),
+        bus.clone(),
+        app.clone(),
+        Arc::clone(&settings_manager),
+    )
+    .await;
     app.manage(bookmarks_manager);
     // register file service
     let files_manager = FilesManager::new(

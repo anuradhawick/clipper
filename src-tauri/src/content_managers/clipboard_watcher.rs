@@ -1,5 +1,6 @@
 use super::db::DbConnection;
 use super::filters_manager::FiltersManager;
+use super::settings::SettingsManager;
 use crate::content_managers::message_bus::AppMessage;
 use crate::content_managers::message_bus::MessageBus;
 use arboard::Clipboard;
@@ -63,6 +64,7 @@ pub struct ClipboardWatcher {
     app_handle: AppHandle,
     last_text: String,
     last_image: u64,
+    history_limit: u32,
     pool: Arc<Mutex<SqlitePool>>,
     filters: Vec<Regex>,
 }
@@ -130,9 +132,11 @@ impl ClipboardWatcher {
         db: Arc<DbConnection>,
         bus: MessageBus,
         app_handle: AppHandle,
+        settings_manager: Arc<Mutex<SettingsManager>>,
     ) -> Arc<Mutex<Self>> {
         let mut last_text = String::from("");
         let mut last_image = 0;
+        let mut history_limit = 100;
         let pool = db.pool.lock().await;
 
         // create table if not exist for clipboard entries
@@ -164,20 +168,36 @@ impl ClipboardWatcher {
             last_image = buffer_hash(&image.bytes);
         }
 
+        match settings_manager.lock().await.read().await {
+            Ok(settings) => {
+                history_limit = settings.clipboard_history_size;
+            }
+            Err(err) => {
+                log::error!(
+                    "Unable to read initial settings for clipboard history limit, using default {}: {}",
+                    history_limit,
+                    err
+                );
+            }
+        }
+
         let filters = Self::load_filters(&app_handle).await;
         log::info!("Clipboard watcher loaded {} filters", filters.len());
+        log::info!("Clipboard watcher history limit set to {}", history_limit);
 
         let state = Arc::new(Mutex::new(Self {
             running: true,
             app_handle: app_handle.clone(),
             last_text,
             last_image,
+            history_limit,
             pool: Arc::clone(&db.pool),
             filters,
         }));
 
         let refresh_state = Arc::clone(&state);
         let refresh_app_handle = app_handle.clone();
+        let refresh_settings_manager = Arc::clone(&settings_manager);
         let refresh_bus = bus.clone();
         async_runtime::spawn(async move {
             let mut receiver = refresh_bus.subscribe();
@@ -192,6 +212,24 @@ impl ClipboardWatcher {
                             "Clipboard watcher refreshed filters: {}",
                             watcher.filters.len()
                         );
+                    }
+                    Ok(AppMessage::SettingsUpdated) => {
+                        match refresh_settings_manager.lock().await.read().await {
+                            Ok(settings) => {
+                                let mut watcher = refresh_state.lock().await;
+                                watcher.history_limit = settings.clipboard_history_size;
+                                log::info!(
+                                    "Clipboard watcher updated history limit: {}",
+                                    watcher.history_limit
+                                );
+                            }
+                            Err(err) => {
+                                log::error!(
+                                    "Unable to refresh clipboard history limit from settings: {}",
+                                    err
+                                );
+                            }
+                        }
                     }
                     Ok(_) => {}
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
@@ -381,32 +419,9 @@ impl ClipboardWatcher {
         Ok(())
     }
 
-    pub async fn delete_with_skip(&self, skip: u32) -> Result<(), sqlx::Error> {
-        log::info!("Deleted clipboard entries with skip: {:#?}", skip);
-        let pool = self.pool.lock().await;
-        let res = sqlx::query(
-            r#"
-            DELETE FROM clipboard
-            WHERE id in 
-                (
-                SELECT id FROM clipboard 
-                ORDER BY timestamp DESC 
-                LIMIT -1 OFFSET ?
-                )
-            "#,
-        )
-        .bind(skip)
-        .execute(&*pool)
-        .await?;
-        if res.rows_affected() > 0 {
-            self.notify_clipboard_updated();
-        }
-        log::info!("Cleared number of entries: {:#?}", res.rows_affected());
-        Ok(())
-    }
-
     async fn save(&self, event: ClipboardEvent) -> Result<(), sqlx::Error> {
         log::info!("Saved clipboard entry: {:#?}", event.id);
+
         let pool = self.pool.lock().await;
         sqlx::query(
             r#"
@@ -420,6 +435,22 @@ impl ClipboardWatcher {
         .bind(event.timestamp)
         .execute(&*pool)
         .await?;
+
+        sqlx::query(
+            r#"
+            DELETE FROM clipboard
+            WHERE id in 
+                (
+                SELECT id FROM clipboard 
+                ORDER BY timestamp DESC 
+                LIMIT -1 OFFSET ?
+                )
+            "#,
+        )
+        .bind(self.history_limit)
+        .execute(&*pool)
+        .await?;
+
         Ok(())
     }
 }
@@ -574,19 +605,6 @@ pub async fn clipboard_open_entry(
         log::info!("Image opened successfully");
     }
     Ok(())
-}
-
-#[tauri::command]
-pub async fn clipboard_clean_old_entries(
-    count: u32,
-    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
-) -> Result<(), String> {
-    log::info!("CMD:clipboard_clean_old_entries: {}", count);
-    let clipboard_watcher = state.lock().await;
-    clipboard_watcher
-        .delete_with_skip(count)
-        .await
-        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
