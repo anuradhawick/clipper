@@ -15,6 +15,7 @@ pub struct FiltersUpdatedPayload {
 #[derive(Clone)]
 pub enum AppMessage {
     AddedToClipboard(String),
+    SetClipboardText(String),
     FiltersUpdated(FiltersUpdatedPayload),
     SettingsUpdated(SettingsUpdatedPayload),
 }

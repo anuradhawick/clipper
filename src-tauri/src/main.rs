@@ -216,7 +216,7 @@ async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
     let settings_manager = SettingsManager::new(Arc::clone(&db), bus.clone(), app.clone()).await;
     app.manage(Arc::clone(&settings_manager));
     // register notes manager
-    let notes_manager = NotesManager::new(Arc::clone(&db), app.clone()).await;
+    let notes_manager = NotesManager::new(Arc::clone(&db), app.clone(), bus.clone()).await;
     app.manage(notes_manager);
     // register filters manager
     let filters_manager = FiltersManager::new(Arc::clone(&db), bus.clone()).await;

@@ -1,5 +1,5 @@
-use super::{clipboard_watcher::ClipboardWatcher, db::DbConnection};
-use arboard::Clipboard;
+use super::db::DbConnection;
+use super::message_bus::{AppMessage, MessageBus};
 use chrono::Utc;
 use serde::Serialize;
 use sqlx::{sqlite::SqlitePool, Row};
@@ -17,11 +17,16 @@ pub struct NoteItem {
 
 pub struct NotesManager {
     app_handle: AppHandle,
+    bus: MessageBus,
     pool: Arc<Mutex<SqlitePool>>,
 }
 
 impl NotesManager {
-    pub async fn new(db: Arc<DbConnection>, app_handle: AppHandle) -> Arc<Mutex<Self>> {
+    pub async fn new(
+        db: Arc<DbConnection>,
+        app_handle: AppHandle,
+        bus: MessageBus,
+    ) -> Arc<Mutex<Self>> {
         let pool = db.pool.lock().await;
 
         sqlx::query(
@@ -40,6 +45,7 @@ impl NotesManager {
         log::info!("Notes manager initialized");
         Arc::new(Mutex::new(Self {
             app_handle,
+            bus,
             pool: Arc::clone(&db.pool),
         }))
     }
@@ -234,17 +240,17 @@ pub async fn read_notes(
 #[tauri::command]
 pub async fn clipboard_add_note(
     id: String,
-    state_clipboard_mgr: State<'_, Arc<Mutex<ClipboardWatcher>>>,
     state_notes_mgr: State<'_, Arc<Mutex<NotesManager>>>,
 ) -> Result<(), String> {
     log::info!("CMD:Note added to clipboard: {:#?}", id);
-    let mut clipboard_watcher = state_clipboard_mgr.lock().await;
-    let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
-    let notes_mgr = state_notes_mgr.lock().await;
-    let entry = notes_mgr.get(&id).await.map_err(|e| e.to_string())?;
-    let text = entry.entry;
-    clipboard_watcher.set_last_text(text.clone());
-    clipboard.set_text(text).map_err(|e| e.to_string())?;
+    let (text, bus) = {
+        let notes_mgr = state_notes_mgr.lock().await;
+        let entry = notes_mgr.get(&id).await.map_err(|e| e.to_string())?;
+        (entry.entry, notes_mgr.bus.clone())
+    };
+
+    bus.send(AppMessage::SetClipboardText(text))
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }

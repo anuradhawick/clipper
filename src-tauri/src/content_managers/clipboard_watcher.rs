@@ -175,6 +175,22 @@ impl ClipboardWatcher {
                             watcher.filters.len()
                         );
                     }
+                    Ok(AppMessage::SetClipboardText(text)) => {
+                        let mut watcher = refresh_state.lock().await;
+                        watcher.last_text.clone_from(&text);
+                        drop(watcher);
+
+                        match Clipboard::new() {
+                            Ok(mut clipboard) => {
+                                if let Err(err) = clipboard.set_text(text) {
+                                    log::error!("Unable to set clipboard text from message bus: {}", err);
+                                }
+                            }
+                            Err(err) => {
+                                log::error!("Unable to access clipboard from message bus: {}", err);
+                            }
+                        }
+                    }
                     Ok(_) => {}
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
                         log::warn!("Clipboard watcher lagged and skipped {} messages", skipped);
@@ -275,10 +291,6 @@ impl ClipboardWatcher {
     pub fn resume(&mut self) {
         self.running = true;
         log::info!("Clipboard watcher resumed");
-    }
-
-    pub fn set_last_text(&mut self, text: String) {
-        self.last_text.clone_from(&text);
     }
 
     pub async fn read(&self, count: u32) -> Result<Vec<ClipboardEvent>, sqlx::Error> {
