@@ -70,7 +70,7 @@ export class NotesService {
           return note;
         }
         return savedItem;
-      }),
+      })
     );
   }
 }

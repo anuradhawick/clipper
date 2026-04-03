@@ -1,55 +1,25 @@
-<div class="flex flex-col h-full min-h-0">
-  <div class="flex items-center gap-1 px-2 py-1 shrink-0">
-    <div class="relative flex-1">
-      <input
-        type="text"
-        class="w-full rounded-md border border-solid border-gray-300 bg-slate-50/50 py-1 pl-3 pr-8 text-sm focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
-        placeholder="Search clipboard…"
-        [ngModel]="searchQuery()"
-        (ngModelChange)="searchQuery.set($event)"
+@if (clipperEntries().length) {
+  <div class="h-full min-h-0 overflow-hidden">
+    <cdk-virtual-scroll-viewport
+      class="clipboard-viewport w-full overflow-x-hidden"
+      [itemSize]="itemHeightPx"
+      [minBufferPx]="minBufferPx"
+      [maxBufferPx]="maxBufferPx"
+    >
+      <app-clipboard-item
+        *cdkVirtualFor="
+          let clipperEntry of clipperEntries();
+          trackBy: trackByEntryId
+        "
+        [clipperEntry]="clipperEntry"
+        (copyClicked)="chs.copy(clipperEntry.id)"
+        (deleteClicked)="chs.delete(clipperEntry.id)"
+        (openClicked)="chs.open(clipperEntry.id)"
       />
-      @if (searchQuery()) {
-        <button
-          class="absolute right-1 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100"
-          mat-icon-button
-          (click)="clearSearch()"
-          aria-label="Clear search"
-        >
-          <mat-icon class="text-base leading-none">close</mat-icon>
-        </button>
-      }
-    </div>
+    </cdk-virtual-scroll-viewport>
   </div>
-
-  @if (filteredEntries().length) {
-    <div class="flex-1 min-h-0 overflow-hidden">
-      <cdk-virtual-scroll-viewport
-        class="clipboard-viewport w-full overflow-x-hidden"
-        [itemSize]="itemHeightPx"
-        [minBufferPx]="minBufferPx"
-        [maxBufferPx]="maxBufferPx"
-      >
-        <app-clipboard-item
-          *cdkVirtualFor="
-            let clipperEntry of filteredEntries();
-            trackBy: trackByEntryId
-          "
-          [clipperEntry]="clipperEntry"
-          (copyClicked)="chs.copy(clipperEntry.id)"
-          (deleteClicked)="chs.delete(clipperEntry.id)"
-          (openClicked)="chs.open(clipperEntry.id)"
-          (pinClicked)="chs.pin(clipperEntry.id)"
-          (unpinClicked)="chs.unpin(clipperEntry.id)"
-        />
-      </cdk-virtual-scroll-viewport>
-    </div>
-  } @else {
-    <div class="px-2 py-1 dark:text-white">
-      @if (searchQuery()) {
-        No entries match your search. 🔍
-      } @else {
-        Your clipboard entries will appear here! 📖
-      }
-    </div>
-  }
-</div>
+} @else {
+  <div class="px-2 py-1 dark:text-white">
+    Your clipboard entries will appear here! 📖
+  </div>
+}

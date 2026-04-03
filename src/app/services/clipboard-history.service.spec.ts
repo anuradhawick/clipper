@@ -1,8 +1,8 @@
-import { TestBed } from "@angular/core/testing";
+import { TestBed } from '@angular/core/testing';
 
-import { ClipboardHistoryService } from "./clipboard-history.service";
+import { ClipboardHistoryService } from './clipboard-history.service';
 
-describe("ClipboardHistoryService", () => {
+describe('ClipboardHistoryService', () => {
   let service: ClipboardHistoryService;
 
   beforeEach(() => {
@@ -10,7 +10,7 @@ describe("ClipboardHistoryService", () => {
     service = TestBed.inject(ClipboardHistoryService);
   });
 
-  it("should be created", () => {
+  it('should be created', () => {
     expect(service).toBeTruthy();
   });
 });

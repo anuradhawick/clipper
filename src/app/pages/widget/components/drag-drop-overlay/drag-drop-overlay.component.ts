@@ -18,7 +18,7 @@ import { DropperService } from "../../../../services/dropper.service";
         "void",
         style({
           opacity: 0,
-        }),
+        })
       ),
       transition(":enter, :leave", [animate(100)]),
     ]),

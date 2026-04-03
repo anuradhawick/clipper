@@ -1,5 +1,5 @@
 export const tauriHotkeyToBrowserHotkey = (
-  hotkeyStr: string,
+  hotkeyStr: string
 ): {
   ctrl: boolean;
   alt: boolean;

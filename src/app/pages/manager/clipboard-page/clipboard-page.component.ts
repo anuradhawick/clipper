@@ -4,13 +4,11 @@ import {
   computed,
   inject,
   Signal,
-  signal,
 } from "@angular/core";
 import { ScrollingModule } from "@angular/cdk/scrolling";
 import {
   ClipboardHistoryService,
   ClipperEntry,
-  ClipperEntryKind,
 } from "../../../services/clipboard-history.service";
 import { ClipboardItemComponent } from "./clipboard-item/clipboard-item.component";
 import { MatIconModule } from "@angular/material/icon";
@@ -18,7 +16,6 @@ import { MatButtonModule } from "@angular/material/button";
 import { MatTooltipModule } from "@angular/material/tooltip";
 import { MatDialog } from "@angular/material/dialog";
 import { ActionConfirmationDialogComponent } from "../../../components/action-confirmation-dialog/action-confirmation-dialog.component";
-import { FormsModule } from "@angular/forms";
 
 const ITEM_HEIGHT_PX = 120;
 const MIN_BUFFER_PX = 240;
@@ -32,7 +29,6 @@ const MAX_BUFFER_PX = 480;
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    FormsModule,
   ],
   templateUrl: "./clipboard-page.component.html",
   styleUrl: "./clipboard-page.component.scss",
@@ -41,30 +37,15 @@ const MAX_BUFFER_PX = 480;
 export class ClipboardPageComponent {
   protected readonly chs = inject(ClipboardHistoryService);
   readonly dialog = inject(MatDialog);
-  protected readonly searchQuery = signal("");
-  protected readonly filteredEntries: Signal<ClipperEntry[]> = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    if (!query) return this.chs.items();
-    return this.chs.items().filter((entry) => {
-      if (entry.kind === ClipperEntryKind.Text) {
-        const text = new TextDecoder()
-          .decode(Uint8Array.from(entry.entry))
-          .toLowerCase();
-        return text.includes(query);
-      }
-      return false;
-    });
-  });
+  protected readonly clipperEntries: Signal<ClipperEntry[]> = computed(() =>
+    this.chs.items(),
+  );
   protected readonly itemHeightPx = ITEM_HEIGHT_PX;
   protected readonly minBufferPx = MIN_BUFFER_PX;
   protected readonly maxBufferPx = MAX_BUFFER_PX;
 
   protected trackByEntryId(_: number, clipperEntry: ClipperEntry): string {
     return clipperEntry.id;
-  }
-
-  protected clearSearch(): void {
-    this.searchQuery.set("");
   }
 
   clearClipboardHistory() {
