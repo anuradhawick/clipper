@@ -176,9 +176,9 @@ impl ClipboardWatcher {
         async_runtime::spawn(async move {
             let mut receiver = refresh_bus.subscribe();
 
-            while let Ok(msg) = receiver.recv().await {
-                match msg {
-                    AppMessage::FiltersUpdated => {
+            loop {
+                match receiver.recv().await {
+                    Ok(AppMessage::FiltersUpdated) => {
                         let filters = Self::load_filters(&refresh_app_handle).await;
                         let mut watcher = refresh_state.lock().await;
                         watcher.filters = filters;
@@ -187,7 +187,14 @@ impl ClipboardWatcher {
                             watcher.filters.len()
                         );
                     }
-                    _ => {}
+                    Ok(_) => {}
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                        log::warn!("Clipboard watcher lagged and skipped {} messages", skipped);
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                        log::error!("Message bus closed for clipboard watcher");
+                        break;
+                    }
                 }
             }
         });

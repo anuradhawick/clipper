@@ -164,9 +164,9 @@ impl BookmarksManager {
         async_runtime::spawn(async move {
             let mut receiver = bus.subscribe();
 
-            while let Ok(msg) = receiver.recv().await {
-                match msg {
-                    AppMessage::AddedToClipboard(text) => {
+            loop {
+                match receiver.recv().await {
+                    Ok(AppMessage::AddedToClipboard(text)) => {
                         let urls = Self::extract_urls(&text);
                         log::info!("Extracted {} URLs from clipboard text", urls.len());
                         for url in urls {
@@ -225,7 +225,14 @@ impl BookmarksManager {
                             }
                         }
                     }
-                    _ => {}
+                    Ok(_) => {}
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                        log::warn!("Bookmarks listener lagged and skipped {} messages", skipped);
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                        log::error!("Message bus closed for bookmarks manager");
+                        break;
+                    }
                 }
             }
         });
