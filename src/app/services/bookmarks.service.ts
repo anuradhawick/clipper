@@ -46,6 +46,14 @@ export class BookmarksService implements OnDestroy {
       );
     }).then((func) => (this.unlistenBookmarkEntry = func));
 
+    listen("bookmarks_updated", async () => {
+      const entries = await invoke<BookmarkEntry[]>(
+        "bookmarks_read_entries",
+        {},
+      );
+      this.items.set(entries);
+    }).then((func) => (this.unlistenBookmarkEvent = func));
+
     invoke<BookmarkEntry[]>("bookmarks_read_entries", {}).then((entries) => {
       this.items.set(entries);
     });

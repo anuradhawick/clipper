@@ -4,7 +4,7 @@ use chrono::Utc;
 use serde::Serialize;
 use sqlx::{sqlite::SqlitePool, Row};
 use std::sync::Arc;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
 
 #[derive(Debug, Serialize, Clone)]
@@ -16,11 +16,12 @@ pub struct NoteItem {
 }
 
 pub struct NotesManager {
+    app_handle: AppHandle,
     pool: Arc<Mutex<SqlitePool>>,
 }
 
 impl NotesManager {
-    pub async fn new(db: Arc<DbConnection>) -> Arc<Mutex<Self>> {
+    pub async fn new(db: Arc<DbConnection>, app_handle: AppHandle) -> Arc<Mutex<Self>> {
         let pool = db.pool.lock().await;
 
         sqlx::query(
@@ -38,8 +39,15 @@ impl NotesManager {
         .unwrap();
         log::info!("Notes manager initialized");
         Arc::new(Mutex::new(Self {
+            app_handle,
             pool: Arc::clone(&db.pool),
         }))
+    }
+
+    fn notify_notes_updated(&self) {
+        if self.app_handle.emit("notes_updated", ()).is_err() {
+            log::error!("Unable to emit: notes_updated");
+        }
     }
 
     pub async fn create(&self, note: NoteItem) -> Result<(), sqlx::Error> {
@@ -75,6 +83,7 @@ impl NotesManager {
         .bind(note.id)
         .execute(&*pool)
         .await?;
+        self.notify_notes_updated();
         Ok(())
     }
 
@@ -90,6 +99,7 @@ impl NotesManager {
         .bind(id)
         .execute(&*pool)
         .await?;
+        self.notify_notes_updated();
         Ok(())
     }
 
@@ -145,6 +155,7 @@ impl NotesManager {
         log::info!("Deleting all notes");
         let pool = self.pool.lock().await;
         sqlx::query("DELETE FROM notes").execute(&*pool).await?;
+        self.notify_notes_updated();
         Ok(())
     }
 }

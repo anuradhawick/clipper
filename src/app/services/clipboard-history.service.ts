@@ -24,6 +24,7 @@ export class ClipboardHistoryService implements OnDestroy {
   public items = signal<ClipperEntry[]>([]);
   public running = signal(false);
   private unlistenClipboardEntry: UnlistenFn | undefined;
+  private unlistenClipboardStatus: UnlistenFn | undefined;
   private unlistenClipboardEvent: UnlistenFn | undefined;
   private settingsSubscription: Subscription | undefined;
   private historyManagementSubscription: Subscription | undefined;
@@ -46,7 +47,14 @@ export class ClipboardHistoryService implements OnDestroy {
 
     listen("clipboard_status_changed", (event: { payload: boolean }) => {
       this.running.set(event.payload);
-    }).then((func) => (this.unlistenClipboardEntry = func));
+    }).then((func) => (this.unlistenClipboardStatus = func));
+
+    listen("clipboard_updated", async () => {
+      const entries = await invoke<ClipperEntry[]>("clipboard_read_entries", {
+        count: this.settings.clipboardHistorySize,
+      });
+      this.items.set(entries);
+    }).then((func) => (this.unlistenClipboardEvent = func));
 
     // get user preference and override if different
     this.settingsSubscription = this.settingsService.settings$.subscribe(
@@ -85,6 +93,10 @@ export class ClipboardHistoryService implements OnDestroy {
     }
     if (this.unlistenClipboardEvent) {
       const unlisten = this.unlistenClipboardEvent;
+      unlisten();
+    }
+    if (this.unlistenClipboardStatus) {
+      const unlisten = this.unlistenClipboardStatus;
       unlisten();
     }
     this.settingsSubscription && this.settingsSubscription.unsubscribe();

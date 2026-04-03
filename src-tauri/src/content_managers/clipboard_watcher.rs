@@ -87,6 +87,12 @@ fn image_to_png(image: ImageData) -> Vec<u8> {
 }
 
 impl ClipboardWatcher {
+    fn notify_clipboard_updated(&self) {
+        if self.app_handle.emit("clipboard_updated", ()).is_err() {
+            log::error!("Unable to emit: clipboard_updated");
+        }
+    }
+
     async fn load_filters(app_handle: &AppHandle) -> Vec<Regex> {
         let filters_manager = app_handle
             .state::<Arc<Mutex<FiltersManager>>>()
@@ -356,6 +362,7 @@ impl ClipboardWatcher {
         .bind(id)
         .execute(&*pool)
         .await?;
+        self.notify_clipboard_updated();
         Ok(())
     }
 
@@ -369,6 +376,7 @@ impl ClipboardWatcher {
         )
         .execute(&*pool)
         .await?;
+        self.notify_clipboard_updated();
         log::info!("Deleted all clipboard entries");
         Ok(())
     }
@@ -390,6 +398,9 @@ impl ClipboardWatcher {
         .bind(skip)
         .execute(&*pool)
         .await?;
+        if res.rows_affected() > 0 {
+            self.notify_clipboard_updated();
+        }
         log::info!("Cleared number of entries: {:#?}", res.rows_affected());
         Ok(())
     }

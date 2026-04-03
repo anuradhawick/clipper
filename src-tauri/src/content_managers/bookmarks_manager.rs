@@ -28,6 +28,12 @@ pub struct BookmarksManager {
 }
 
 impl BookmarksManager {
+    fn notify_bookmarks_updated(&self) {
+        if self.app_handle.emit("bookmarks_updated", ()).is_err() {
+            log::error!("Unable to emit: bookmarks_updated");
+        }
+    }
+
     fn extract_urls(text: &str) -> Vec<String> {
         let url_regex = Regex::new(
             r#"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))"#,
@@ -281,6 +287,7 @@ impl BookmarksManager {
         .bind(bookmark.id)
         .execute(&*pool)
         .await?;
+        self.notify_bookmarks_updated();
         Ok(())
     }
 
@@ -296,6 +303,7 @@ impl BookmarksManager {
         .bind(id)
         .execute(&*pool)
         .await?;
+        self.notify_bookmarks_updated();
         Ok(())
     }
 
@@ -316,6 +324,9 @@ impl BookmarksManager {
         .bind(skip)
         .execute(&*pool)
         .await?;
+        if res.rows_affected() > 0 {
+            self.notify_bookmarks_updated();
+        }
         log::info!("Cleared number of entries: {:#?}", res.rows_affected());
         Ok(())
     }
@@ -374,6 +385,7 @@ impl BookmarksManager {
         log::info!("Deleting all bookmarks");
         let pool = self.pool.lock().await;
         sqlx::query("DELETE FROM bookmarks").execute(&*pool).await?;
+        self.notify_bookmarks_updated();
         Ok(())
     }
 }

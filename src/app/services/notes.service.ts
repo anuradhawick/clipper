@@ -1,4 +1,5 @@
-import { Injectable, signal } from "@angular/core";
+import { Injectable, OnDestroy, signal } from "@angular/core";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { v4 as uuidv4 } from "uuid";
 
@@ -12,12 +13,24 @@ export interface NoteItem {
 @Injectable({
   providedIn: "root",
 })
-export class NotesService {
+export class NotesService implements OnDestroy {
   notes = signal<NoteItem[]>([]);
+  private unlistenNotesEvent: UnlistenFn | undefined;
 
   constructor() {
     console.log("NotesService created");
     this.read();
+
+    listen("notes_updated", async () => {
+      await this.read();
+    }).then((func) => (this.unlistenNotesEvent = func));
+  }
+
+  ngOnDestroy(): void {
+    if (this.unlistenNotesEvent) {
+      const unlisten = this.unlistenNotesEvent;
+      unlisten();
+    }
   }
 
   async read() {
@@ -70,7 +83,7 @@ export class NotesService {
           return note;
         }
         return savedItem;
-      })
+      }),
     );
   }
 }
