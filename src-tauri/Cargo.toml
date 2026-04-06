@@ -15,15 +15,15 @@ tauri-build = { version = "2.0.6", features = [] }
 [dependencies]
 serde_json = "1.0.140"
 serde = { version = "1.0.219", features = ["derive"] }
-tauri = { version = "2.3.1", features = ["macos-private-api", "tray-icon"] }
+tauri = { version = "2.10.3", features = ["macos-private-api", "tray-icon"] }
 arboard = "3.4.1"
-tokio = { version = "1.44.1", features = ["full"] }
-uuid = { version = "1.16.0", features = ["v4"] }
+tokio = { version = "1.51.0", features = ["full"] }
+uuid = { version = "1.23.0", features = ["v4"] }
 sqlx = { version = "0.8.3", features = ["sqlite", "runtime-tokio-rustls"] }
-chrono = "0.4.40"
+chrono = "0.4.44"
 log = "0.4.26"
 tauri-plugin-log = "2.3.1"
-image = "0.25.5"
+image = "0.25.10"
 tauri-plugin-opener = "2.2.6"
 mouse_position = "0.1.4"
 futures = "0.3.31"
@@ -31,7 +31,7 @@ url = "2.5.4"
 tauri-plugin-os = "2.0.0-rc"
 regex = "1.12.2"
 reqwest = { version = "0.13.2", features = ["json"] }
-scraper = "0.25.0"
+scraper = "0.26.0"
 
 # macos dependencies
 [target.'cfg(target_os = "macos")'.dependencies]
