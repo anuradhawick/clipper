@@ -28,20 +28,6 @@ pub struct FiltersManager {
 
 impl FiltersManager {
     pub async fn new(db: Arc<DbConnection>, bus: MessageBus) -> Arc<Mutex<Self>> {
-        let pool = db.pool.lock().await;
-
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS filters (
-                id TEXT PRIMARY KEY,
-                filter_regex TEXT NOT NULL,
-                created_date TEXT
-            );
-            "#,
-        )
-        .execute(&*pool)
-        .await
-        .unwrap();
         log::info!("Filters manager initialized");
 
         Arc::new(Mutex::new(Self {

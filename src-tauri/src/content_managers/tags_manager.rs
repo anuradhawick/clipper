@@ -21,21 +21,6 @@ pub struct TagsManager {
 
 impl TagsManager {
     pub async fn new(db: Arc<DbConnection>, app_handle: AppHandle) -> Arc<Mutex<Self>> {
-        let pool = db.pool.lock().await;
-
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS tags (
-                id TEXT PRIMARY KEY,
-                tag TEXT NOT NULL,
-                kind TEXT NOT NULL,
-                timestamp TEXT
-            );
-            "#,
-        )
-        .execute(&*pool)
-        .await
-        .unwrap();
         log::info!("Tags manager initialized");
 
         Arc::new(Mutex::new(Self {

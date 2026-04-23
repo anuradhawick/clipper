@@ -78,6 +78,16 @@ To build a production version of Clipper, execute:
 pnpm tauri build
 ```
 
+## Database Migrations
+
+Clipper now uses SQLx migrations for database schema changes.
+
+See [MIGRATIONS.md](./MIGRATIONS.md) for:
+
+* creating migrations
+* running migrations manually
+* conventions for safe schema updates
+
 ## Troubleshooting
 
 Compiling in Mac is very easy and can be tricky on Linux. Please follow the guidelines here.
@@ -85,7 +95,7 @@ Compiling in Mac is very easy and can be tricky on Linux. Please follow the guid
 * [https://v2.tauri.app/start/prerequisites/](https://v2.tauri.app/start/prerequisites/)
 * [https://v2.tauri.app/distribute/](https://v2.tauri.app/distribute/)
 
-In rare cases, updates could change database schema needing to reset the database. While I implement migrations for future releases, please delete db file using the settings view. You will loose all you clipboard entries from Clipper. If this does not work, please delete `clipper.db` file located in your home folder and restart the app.
+If you run into local database issues during development, you can reset the app DB by deleting `clipper.db` from your home folder and restarting the app. This clears local Clipper data.
 
 <p align="center" >
   <img src="./assets/settings.png" alt="settings view" width="800">

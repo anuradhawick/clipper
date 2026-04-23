@@ -147,23 +147,6 @@ impl BookmarksManager {
         settings: SettingsEntry,
     ) -> Arc<Mutex<Self>> {
         let history_limit = settings.bookmark_history_size;
-        let pool = db.pool.lock().await;
-
-        // create table if not exist for bookmark entries
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS bookmarks (
-                id TEXT PRIMARY KEY,
-                url TEXT NOT NULL,
-                text TEXT,
-                image BLOB,
-                timestamp TEXT
-            );
-            "#,
-        )
-        .execute(&*pool)
-        .await
-        .expect("Unable to execute SQL!");
 
         let state = Arc::new(Mutex::new(Self {
             app_handle,

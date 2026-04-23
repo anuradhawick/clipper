@@ -1,4 +1,5 @@
-use sqlx::sqlite::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+use std::str::FromStr;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 use tokio::fs;
@@ -10,23 +11,25 @@ pub struct DbConnection {
 
 impl DbConnection {
     pub async fn new(app_handle: AppHandle) -> Self {
-        // Ensure the database file is created if it doesn't exist
         let app_dir = app_handle
             .path()
             .home_dir()
             .expect("failed to get app data dir");
         let db_path = app_dir.join("clipper.db");
-        let db_url = format!("sqlite://{}", db_path.to_string_lossy());
-        log::info!("Clipper db_url: {:?}", &db_url);
-
-        if !db_path.exists() {
-            if let Some(parent) = db_path.parent() {
-                fs::create_dir_all(parent).await.unwrap();
-            }
-            fs::File::create(db_path).await.unwrap();
+        if let Some(parent) = db_path.parent() {
+            fs::create_dir_all(parent).await.unwrap();
         }
 
-        let pool = SqlitePool::connect(&db_url).await.unwrap();
+        let db_url = format!("sqlite://{}", db_path.to_string_lossy());
+        log::info!("Clipper db_url: {:?}", &db_url);
+        let connect_options = SqliteConnectOptions::from_str(&db_url)
+            .unwrap()
+            .create_if_missing(true);
+        let pool = SqlitePoolOptions::new()
+            .connect_with(connect_options)
+            .await
+            .unwrap();
+        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
         log::info!("Clipper db connected");
         Self {
             pool: Arc::new(Mutex::new(pool)),

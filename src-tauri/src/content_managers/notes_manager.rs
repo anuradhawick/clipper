@@ -27,21 +27,6 @@ impl NotesManager {
         app_handle: AppHandle,
         bus: MessageBus,
     ) -> Arc<Mutex<Self>> {
-        let pool = db.pool.lock().await;
-
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS notes (
-                id TEXT PRIMARY KEY,
-                entry TEXT NOT NULL,
-                created_time TEXT,
-                updated_time TEXT
-            );
-            "#,
-        )
-        .execute(&*pool)
-        .await
-        .unwrap();
         log::info!("Notes manager initialized");
         Arc::new(Mutex::new(Self {
             app_handle,

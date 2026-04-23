@@ -108,23 +108,6 @@ impl ClipboardWatcher {
         let mut last_text = String::from("");
         let mut last_image = 0;
         let history_limit = settings.clipboard_history_size;
-        let pool = db.pool.lock().await;
-
-        // create table if not exist for clipboard entries
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS clipboard (
-                id TEXT PRIMARY KEY,
-                entry BLOB NOT NULL,
-                kind TEXT NOT NULL,
-                timestamp TEXT
-            );
-            "#,
-        )
-        .execute(&*pool)
-        .await
-        .expect("Unable to execute SQL!");
-        drop(pool);
 
         // try to assign last text to last clipboard entry
         let mut clipboard = Clipboard::new().expect("Clipboard must be accessible");
@@ -183,7 +166,10 @@ impl ClipboardWatcher {
                         match Clipboard::new() {
                             Ok(mut clipboard) => {
                                 if let Err(err) = clipboard.set_text(text) {
-                                    log::error!("Unable to set clipboard text from message bus: {}", err);
+                                    log::error!(
+                                        "Unable to set clipboard text from message bus: {}",
+                                        err
+                                    );
                                 }
                             }
                             Err(err) => {

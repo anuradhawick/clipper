@@ -38,22 +38,6 @@ impl SettingsManager {
     ) -> Arc<Mutex<Self>> {
         let pool = db.pool.lock().await;
 
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS settings (
-                id INTEGER PRIMARY KEY CHECK (id = 1),
-                color TEXT NOT NULL,
-                lighting TEXT NOT NULL,
-                clipboardHistorySize INTEGER NOT NULL,
-                bookmarkHistorySize INTEGER NOT NULL,
-                globalShortcut TEXT
-            );
-            "#,
-        )
-        .execute(&*pool)
-        .await
-        .unwrap();
-
         #[cfg(target_os = "linux")]
         let global_shortcut_keys =
             Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyC);
