@@ -74,6 +74,17 @@
         <mat-icon>delete</mat-icon>
       </button>
     </div>
+    <div class="flex w-[50px] flex-col space-y-2">
+      <button
+        mat-mini-fab
+        class="w-full"
+        aria-label="Tag note"
+        (click)="openTagDialog()"
+        [disabled]="editable()"
+      >
+        <mat-icon>label</mat-icon>
+      </button>
+    </div>
   </div>
 </div>
 

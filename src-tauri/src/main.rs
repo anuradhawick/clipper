@@ -33,7 +33,8 @@ use content_managers::notes_manager::{
 };
 use content_managers::settings::{settings_read, settings_update, SettingsManager};
 use content_managers::tags_manager::{
-    tags_create_entry, tags_delete_one, tags_read_entries, tags_update_entry, TagsManager,
+    tags_assign_item, tags_create_entry, tags_delete_one, tags_read_entries, tags_read_item_tags,
+    tags_remove_item, tags_set_item_tags, tags_update_entry, TagsManager,
 };
 use regex::Regex;
 use std::env;
@@ -152,6 +153,10 @@ async fn main() {
             tags_update_entry,
             tags_delete_one,
             tags_read_entries,
+            tags_set_item_tags,
+            tags_assign_item,
+            tags_remove_item,
+            tags_read_item_tags,
             // db related
             db_delete_dbfile,
             db_get_dbfile_path,

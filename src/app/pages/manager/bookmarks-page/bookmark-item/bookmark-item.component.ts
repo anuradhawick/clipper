@@ -20,6 +20,11 @@ import {
   BookmarkItemDialogComponent,
   BookmarkItemDialogData,
 } from "./bookmark-item-dialog.component";
+import {
+  TagItemDialogComponent,
+  TagItemDialogData,
+} from "../../../../components/tag-item-dialog/tag-item-dialog.component";
+import { TaggedItemKind } from "../../../../services/tags.service";
 
 const ITEM_HEIGHT_PX = 140;
 
@@ -86,6 +91,19 @@ export class BookmarkItemComponent {
         maxHeight: "100vh",
         autoFocus: false,
         panelClass: "clipper-fullscreen-dialog-panel",
+      },
+    );
+  }
+
+  openTagDialog() {
+    this.dialog.open<TagItemDialogComponent, TagItemDialogData>(
+      TagItemDialogComponent,
+      {
+        data: {
+          itemKind: TaggedItemKind.Bookmark,
+          itemId: this.bookmarkEntry().id,
+        },
+        autoFocus: false,
       },
     );
   }

@@ -16,6 +16,7 @@ import {
 import { BookmarksService } from "./services/bookmarks.service";
 import { GlobalConfig, provideToastr } from "ngx-toastr";
 import { BackendErrorService } from "./services/backend-error.service";
+import { TagsService } from "./services/tags.service";
 
 const toastrConfig: Partial<GlobalConfig> = {
   closeButton: true,
@@ -38,6 +39,7 @@ export const appConfig: ApplicationConfig = {
       inject(ThemeService);
       inject(DropperService);
       inject(BackendErrorService);
+      inject(TagsService);
     }),
     provideToastr(toastrConfig),
     provideClientHydration(withEventReplay()),

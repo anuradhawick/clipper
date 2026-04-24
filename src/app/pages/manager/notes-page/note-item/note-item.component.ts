@@ -22,6 +22,11 @@ import {
   NoteItemDialogComponent,
   NoteItemDialogData,
 } from "./note-item-dialog.component";
+import {
+  TagItemDialogComponent,
+  TagItemDialogData,
+} from "../../../../components/tag-item-dialog/tag-item-dialog.component";
+import { TaggedItemKind } from "../../../../services/tags.service";
 
 const ITEM_HEIGHT_PX = 120;
 
@@ -101,6 +106,19 @@ export class NoteItemComponent {
         maxHeight: "100vh",
         autoFocus: false,
         panelClass: "clipper-fullscreen-dialog-panel",
+      },
+    );
+  }
+
+  openTagDialog() {
+    this.dialog.open<TagItemDialogComponent, TagItemDialogData>(
+      TagItemDialogComponent,
+      {
+        data: {
+          itemKind: TaggedItemKind.Note,
+          itemId: this.note().id,
+        },
+        autoFocus: false,
       },
     );
   }

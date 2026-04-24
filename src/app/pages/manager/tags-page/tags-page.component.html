@@ -1,0 +1,138 @@
+<div class="flex h-full min-h-0 flex-col overflow-hidden">
+  <div class="wrapper items-center">
+    <div class="m-1 flex w-full items-center justify-center text-lg font-bold">
+      Tags
+    </div>
+  </div>
+
+  <div class="min-h-0 flex-1 overflow-auto px-1 pb-1">
+    <div class="wrapper p-3">
+      <div class="flex w-full items-center gap-3">
+        <mat-form-field
+          class="tag-input-field m-0 w-[300px]"
+          subscriptSizing="dynamic"
+          appearance="outline"
+        >
+          <input
+            #newTagInput
+            matInput
+            type="text"
+            placeholder="New tag"
+            [value]="newTag()"
+            (input)="newTag.set(newTagInput.value)"
+            (keydown.enter)="createTag()"
+          />
+        </mat-form-field>
+        <div class="flex flex-wrap items-center justify-start gap-2">
+          @for (color of tagColors; track color.value) {
+            <button
+              type="button"
+              class="tag-swatch tag-swatch-{{ color.value }}"
+              [class.tag-swatch-selected]="newKind() === color.value"
+              [attr.aria-label]="color.label"
+              [matTooltip]="color.label"
+              (click)="setNewKind(color.value)"
+            ></button>
+          }
+        </div>
+        <div class="min-w-0 flex-1"></div>
+        <button
+          mat-mini-fab
+          type="button"
+          (click)="createTag()"
+          [disabled]="!newTag().trim()"
+          matTooltip="Create tag"
+          matTooltipShowDelay="1000"
+        >
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    @if (tagsService.tags().length) {
+      <div class="grid grid-cols-1 gap-1 md:grid-cols-2">
+        @for (tag of tagsService.tags(); track tag.id) {
+          <div class="tag-card">
+            @if (editingId() === tag.id) {
+              <div class="flex min-w-0 flex-1 flex-col gap-2">
+                <mat-form-field
+                  class="tag-input-field m-0 w-full"
+                  subscriptSizing="dynamic"
+                  appearance="outline"
+                >
+                  <input
+                    #editTagInput
+                    matInput
+                    type="text"
+                    [value]="editTag()"
+                    (input)="editTag.set(editTagInput.value)"
+                    (keydown.enter)="saveTag(tag)"
+                  />
+                </mat-form-field>
+                <div class="flex flex-wrap items-center gap-1">
+                  @for (color of tagColors; track color.value) {
+                    <button
+                      type="button"
+                      class="tag-swatch tag-swatch-{{ color.value }}"
+                      [class.tag-swatch-selected]="editKind() === color.value"
+                      [attr.aria-label]="color.label"
+                      [matTooltip]="color.label"
+                      (click)="setEditKind(color.value)"
+                    ></button>
+                  }
+                </div>
+              </div>
+              <div class="flex w-[50px] flex-col gap-2">
+                <button
+                  mat-mini-fab
+                  type="button"
+                  [disabled]="!editTag().trim()"
+                  (click)="saveTag(tag)"
+                  matTooltip="Save tag"
+                >
+                  <mat-icon>save</mat-icon>
+                </button>
+                <button
+                  mat-mini-fab
+                  type="button"
+                  (click)="cancelEditing()"
+                  matTooltip="Cancel edit"
+                >
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            } @else {
+              <div class="flex min-w-0 flex-1 items-center gap-3">
+                <span class="tag-dot tag-dot-{{ tag.kind }}"></span>
+                <div class="min-w-0">
+                  <div class="truncate font-semibold">{{ tag.tag }}</div>
+                  <div class="text-xs text-slate-700">{{ tag.kind }}</div>
+                </div>
+              </div>
+              <div class="flex w-[50px] flex-col gap-2">
+                <button
+                  mat-mini-fab
+                  type="button"
+                  (click)="startEditing(tag)"
+                  matTooltip="Edit tag"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-mini-fab
+                  type="button"
+                  (click)="deleteTag(tag)"
+                  matTooltip="Delete tag"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="m-1 dark:text-white">Create tags to organize your items.</div>
+    }
+  </div>
+</div>

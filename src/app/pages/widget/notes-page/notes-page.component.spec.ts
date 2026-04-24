@@ -1,23 +1,22 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from "@angular/core/testing";
 
-import { NotesPageComponent } from './notes-page.component';
+import { NotesPageComponent } from "./notes-page.component";
 
-describe('NotesPageComponent', () => {
+describe("NotesPageComponent", () => {
   let component: NotesPageComponent;
   let fixture: ComponentFixture<NotesPageComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [NotesPageComponent]
-    })
-    .compileComponents();
+      imports: [NotesPageComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(NotesPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
 
-  it('should create', () => {
+  it("should create", () => {
     expect(component).toBeTruthy();
   });
 });

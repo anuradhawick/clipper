@@ -25,6 +25,11 @@ import {
   ClipboardItemDialogComponent,
   ClipboardItemDialogData,
 } from "./clipboard-item-dialog.component";
+import {
+  TagItemDialogComponent,
+  TagItemDialogData,
+} from "../../../../components/tag-item-dialog/tag-item-dialog.component";
+import { TaggedItemKind } from "../../../../services/tags.service";
 
 const ITEM_HEIGHT_PX = 120;
 
@@ -100,6 +105,19 @@ export class ClipboardItemComponent {
         maxHeight: "100vh",
         autoFocus: false,
         panelClass: "clipper-fullscreen-dialog-panel",
+      },
+    );
+  }
+
+  openTagDialog() {
+    this.dialog.open<TagItemDialogComponent, TagItemDialogData>(
+      TagItemDialogComponent,
+      {
+        data: {
+          itemKind: TaggedItemKind.Clipboard,
+          itemId: this.clipperEntry().id,
+        },
+        autoFocus: false,
       },
     );
   }

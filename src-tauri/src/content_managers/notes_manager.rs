@@ -91,6 +91,15 @@ impl NotesManager {
         .bind(id)
         .execute(&*pool)
         .await?;
+        sqlx::query(
+            r#"
+            DELETE FROM tag_items
+            WHERE item_kind = 'note' AND item_id = ?
+            "#,
+        )
+        .bind(id)
+        .execute(&*pool)
+        .await?;
         self.notify_notes_updated();
         Ok(())
     }
@@ -147,6 +156,9 @@ impl NotesManager {
         log::info!("Deleting all notes");
         let pool = self.pool.lock().await;
         sqlx::query("DELETE FROM notes").execute(&*pool).await?;
+        sqlx::query("DELETE FROM tag_items WHERE item_kind = 'note'")
+            .execute(&*pool)
+            .await?;
         self.notify_notes_updated();
         Ok(())
     }

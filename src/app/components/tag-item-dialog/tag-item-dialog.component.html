@@ -1,0 +1,72 @@
+<h3 mat-dialog-title>Tags</h3>
+<mat-dialog-content>
+  <div class="flex min-w-[320px] flex-col gap-3">
+    <div class="flex items-center gap-2">
+      <mat-form-field
+        class="tag-input-field m-0 w-[300px]"
+        subscriptSizing="dynamic"
+        appearance="outline"
+      >
+        <input
+          #newTagInput
+          matInput
+          type="text"
+          placeholder="Create tag"
+          [value]="newTag()"
+          (input)="newTag.set(newTagInput.value)"
+          (keydown.enter)="createTag()"
+        />
+      </mat-form-field>
+      <button
+        mat-mini-fab
+        type="button"
+        (click)="createTag()"
+        [disabled]="!newTag().trim()"
+        matTooltip="Create tag"
+      >
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+    <div class="flex flex-wrap justify-between">
+      @for (color of tagColors; track color.value) {
+        <button
+          type="button"
+          class="tag-swatch tag-swatch-{{ color.value }}"
+          [class.tag-swatch-selected]="newKind() === color.value"
+          [attr.aria-label]="color.label"
+          [matTooltip]="color.label"
+          (click)="setNewKind(color.value)"
+        ></button>
+      }
+    </div>
+
+    @if (sortedTags().length) {
+      <div
+        class="max-h-[320px] overflow-auto rounded-lg border border-solid border-slate-300/70 bg-white/35 p-2"
+      >
+        @for (tag of sortedTags(); track tag.id) {
+          <mat-checkbox
+            class="tag-row block rounded-md px-1"
+            [checked]="isSelected(tag.id)"
+            (change)="toggleTag(tag)"
+          >
+            <span class="inline-flex items-center gap-2">
+              <span class="tag-dot tag-dot-{{ tag.kind }}"></span>
+              <span>{{ tag.tag }}</span>
+            </span>
+          </mat-checkbox>
+        }
+      </div>
+    } @else {
+      <div
+        class="rounded-lg border border-dashed border-slate-400/70 bg-white/35 p-3 text-sm text-slate-700"
+      >
+        Create a tag to attach it here.
+      </div>
+    }
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button [mat-dialog-close]="false">Cancel</button>
+  <button mat-button (click)="save()" [disabled]="saving()">Save</button>
+</mat-dialog-actions>

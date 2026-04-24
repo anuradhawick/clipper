@@ -341,7 +341,7 @@ impl ClipboardWatcher {
             WHERE id = ?
             "#,
         )
-        .bind(id)
+        .bind(&id)
         .fetch_one(&*pool)
         .await?;
 
@@ -362,6 +362,15 @@ impl ClipboardWatcher {
             WHERE id = ?
             "#,
         )
+        .bind(&id)
+        .execute(&*pool)
+        .await?;
+        sqlx::query(
+            r#"
+            DELETE FROM tag_items
+            WHERE item_kind = 'clipboard' AND item_id = ?
+            "#,
+        )
         .bind(id)
         .execute(&*pool)
         .await?;
@@ -375,6 +384,14 @@ impl ClipboardWatcher {
         sqlx::query(
             r#"
             DELETE FROM clipboard
+            "#,
+        )
+        .execute(&*pool)
+        .await?;
+        sqlx::query(
+            r#"
+            DELETE FROM tag_items
+            WHERE item_kind = 'clipboard'
             "#,
         )
         .execute(&*pool)
@@ -413,6 +430,16 @@ impl ClipboardWatcher {
             "#,
         )
         .bind(self.history_limit)
+        .execute(&*pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            DELETE FROM tag_items
+            WHERE item_kind = 'clipboard'
+              AND item_id NOT IN (SELECT id FROM clipboard)
+            "#,
+        )
         .execute(&*pool)
         .await?;
 

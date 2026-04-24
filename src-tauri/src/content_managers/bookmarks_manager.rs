@@ -305,6 +305,16 @@ impl BookmarksManager {
         .execute(&*pool)
         .await?;
 
+        sqlx::query(
+            r#"
+            DELETE FROM tag_items
+            WHERE item_kind = 'bookmark'
+              AND item_id NOT IN (SELECT id FROM bookmarks)
+            "#,
+        )
+        .execute(&*pool)
+        .await?;
+
         Ok(())
     }
 
@@ -336,6 +346,15 @@ impl BookmarksManager {
             r#"
             DELETE FROM bookmarks
             WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .execute(&*pool)
+        .await?;
+        sqlx::query(
+            r#"
+            DELETE FROM tag_items
+            WHERE item_kind = 'bookmark' AND item_id = ?
             "#,
         )
         .bind(id)
@@ -399,6 +418,9 @@ impl BookmarksManager {
         log::info!("Deleting all bookmarks");
         let pool = self.pool.lock().await;
         sqlx::query("DELETE FROM bookmarks").execute(&*pool).await?;
+        sqlx::query("DELETE FROM tag_items WHERE item_kind = 'bookmark'")
+            .execute(&*pool)
+            .await?;
         self.notify_bookmarks_updated();
         Ok(())
     }

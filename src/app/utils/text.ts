@@ -1,5 +1,5 @@
 export const processBytes = (
-  bytes: Array<number>
+  bytes: Array<number>,
 ): { content: string; type: string }[] => {
   let text = new TextDecoder().decode(Uint8Array.from(bytes));
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -22,7 +22,7 @@ export const asPlainText = (bytes: Array<number>): string => {
 };
 
 export const processText = (
-  text: string
+  text: string,
 ): { content: string; type: string }[] => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
