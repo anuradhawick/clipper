@@ -14,6 +14,9 @@ import {
   withEventReplay,
 } from "@angular/platform-browser";
 import { BookmarksService } from "./services/bookmarks.service";
+import { provideAnimationsAsync } from "@angular/platform-browser/animations/async";
+import { provideToastr } from "ngx-toastr";
+import { BackendErrorService } from "./services/backend-error.service";
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -24,6 +27,15 @@ export const appConfig: ApplicationConfig = {
       inject(BookmarksService);
       inject(ThemeService);
       inject(DropperService);
+      inject(BackendErrorService);
+    }),
+    provideAnimationsAsync(),
+    provideToastr({
+      closeButton: true,
+      progressBar: true,
+      positionClass: "toast-bottom-right",
+      preventDuplicates: true,
+      timeOut: 7000,
     }),
     provideClientHydration(withEventReplay()),
   ],

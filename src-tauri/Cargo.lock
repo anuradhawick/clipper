@@ -103,6 +103,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 name = "app"
 version = "1.3.0"
 dependencies = [
+ "anyhow",
  "arboard",
  "chrono",
  "cocoa",
@@ -126,6 +127,7 @@ dependencies = [
  "tauri-plugin-log",
  "tauri-plugin-opener",
  "tauri-plugin-os",
+ "thiserror 2.0.18",
  "tokio",
  "url",
  "uuid",

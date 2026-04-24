@@ -1,4 +1,5 @@
 use super::db::DbConnection;
+use crate::error::{with_error_event, AppError, AppResult};
 use chrono::Utc;
 use serde::Serialize;
 use sqlx::{sqlite::SqlitePool, Row};
@@ -141,60 +142,73 @@ impl TagsManager {
 
 #[tauri::command]
 pub async fn tags_create_entry(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<TagsManager>>>,
     id: String,
     tag: String,
     kind: String,
-) -> Result<TagItem, String> {
-    log::info!("CMD:Creating tag: {:#?} {:#?} {:#?}", id, tag, kind);
-    let item = TagItem {
-        id: id.clone(),
-        tag,
-        kind,
-        timestamp: String::new(),
-    };
-    let mgr = state.lock().await;
-    mgr.create(item).await.map_err(|e| e.to_string())?;
-    mgr.get(&id).await.map_err(|e| e.to_string())
+) -> AppResult<TagItem> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Creating tag: {:#?} {:#?} {:#?}", id, tag, kind);
+        let item = TagItem {
+            id: id.clone(),
+            tag,
+            kind,
+            timestamp: String::new(),
+        };
+        let mgr = state.lock().await;
+        mgr.create(item).await?;
+        mgr.get(&id).await.map_err(AppError::from)
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn tags_update_entry(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<TagsManager>>>,
     id: String,
     tag: String,
     kind: String,
-) -> Result<TagItem, String> {
-    log::info!("CMD:Updating tag: {:#?} {:#?} {:#?}", id, tag, kind);
-    let item = TagItem {
-        id: id.clone(),
-        tag,
-        kind,
-        timestamp: String::new(),
-    };
-    let mgr = state.lock().await;
-    mgr.update(item).await.map_err(|e| e.to_string())?;
-    mgr.get(&id).await.map_err(|e| e.to_string())
+) -> AppResult<TagItem> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Updating tag: {:#?} {:#?} {:#?}", id, tag, kind);
+        let item = TagItem {
+            id: id.clone(),
+            tag,
+            kind,
+            timestamp: String::new(),
+        };
+        let mgr = state.lock().await;
+        mgr.update(item).await?;
+        mgr.get(&id).await.map_err(AppError::from)
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn tags_delete_one(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<TagsManager>>>,
     id: String,
-) -> Result<(), String> {
-    log::info!("CMD:Deleting tag: {:#?}", id);
-    state
-        .lock()
-        .await
-        .delete(&id)
-        .await
-        .map_err(|e| e.to_string())
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Deleting tag: {:#?}", id);
+        state.lock().await.delete(&id).await?;
+        Ok(())
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn tags_read_entries(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<TagsManager>>>,
-) -> Result<Vec<TagItem>, String> {
-    log::info!("CMD:Reading tags");
-    state.lock().await.read().await.map_err(|e| e.to_string())
+) -> AppResult<Vec<TagItem>> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Reading tags");
+        let tags = state.lock().await.read().await?;
+        Ok(tags)
+    })
+    .await
 }

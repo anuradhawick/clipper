@@ -2,6 +2,8 @@ use super::db::DbConnection;
 use super::settings::SettingsEntry;
 use crate::content_managers::message_bus::AppMessage;
 use crate::content_managers::message_bus::MessageBus;
+use crate::error::{with_error_event, AppError, AppResult};
+use anyhow::Context;
 use arboard::Clipboard;
 use arboard::ImageData;
 use chrono::Utc;
@@ -41,11 +43,14 @@ impl ClipboardEventKind {
         }
     }
 
-    fn from_str(s: &str) -> Result<Self, ()> {
+    fn from_str(s: &str) -> AppResult<Self> {
         match s {
             "text" => Ok(ClipboardEventKind::Text),
             "image" => Ok(ClipboardEventKind::Image),
-            _ => Err(()),
+            _ => Err(AppError::DBERROR(format!(
+                "Unexpected clipboard event kind in database: {}",
+                s
+            ))),
         }
     }
 }
@@ -74,7 +79,7 @@ fn buffer_hash(buffer: &[u8]) -> u64 {
     hasher.finish()
 }
 
-fn image_to_png(image: ImageData) -> Vec<u8> {
+fn image_to_png(image: ImageData) -> AppResult<Vec<u8>> {
     let mut buffer: Vec<u8> = Vec::new();
     PngEncoder::new(&mut buffer)
         .write_image(
@@ -83,8 +88,8 @@ fn image_to_png(image: ImageData) -> Vec<u8> {
             image.height as u32,
             image::ExtendedColorType::Rgba8,
         )
-        .expect("Unable to encode image to PNG");
-    buffer
+        .context("Unable to encode image to PNG")?;
+    Ok(buffer)
 }
 
 impl ClipboardWatcher {
@@ -110,16 +115,22 @@ impl ClipboardWatcher {
         let history_limit = settings.clipboard_history_size;
 
         // try to assign last text to last clipboard entry
-        let mut clipboard = Clipboard::new().expect("Clipboard must be accessible");
-        let text_value = clipboard.get_text();
-        let image_value = clipboard.get_image();
+        match Clipboard::new() {
+            Ok(mut clipboard) => {
+                let text_value = clipboard.get_text();
+                let image_value = clipboard.get_image();
 
-        if let Ok(text) = text_value {
-            last_text = text;
-        }
+                if let Ok(text) = text_value {
+                    last_text = text;
+                }
 
-        if let Ok(image) = image_value {
-            last_image = buffer_hash(&image.bytes);
+                if let Ok(image) = image_value {
+                    last_image = buffer_hash(&image.bytes);
+                }
+            }
+            Err(error) => {
+                log::warn!("Clipboard unavailable during watcher bootstrap: {}", error);
+            }
         }
 
         log::info!("Clipboard watcher loaded {} filters", initial_filters.len());
@@ -192,7 +203,15 @@ impl ClipboardWatcher {
         // watcher
         let cloned_state = Arc::clone(&state);
         async_runtime::spawn(async move {
-            let mut clipboard = Clipboard::new().expect("Clipboard must be accessible");
+            let mut clipboard = loop {
+                match Clipboard::new() {
+                    Ok(clipboard) => break clipboard,
+                    Err(error) => {
+                        log::error!("Clipboard access failed, retrying: {}", error);
+                        tokio::time::sleep(Duration::from_millis(1000)).await;
+                    }
+                }
+            };
             log::info!("Clipboard watcher started");
 
             loop {
@@ -245,7 +264,13 @@ impl ClipboardWatcher {
 
                         let entry = ClipboardEvent {
                             id: Uuid::new_v4().to_string(),
-                            entry: image_to_png(image),
+                            entry: match image_to_png(image) {
+                                Ok(png) => png,
+                                Err(error) => {
+                                    log::error!("Unable to encode clipboard image: {}", error);
+                                    continue;
+                                }
+                            },
                             kind: ClipboardEventKind::Image,
                             timestamp: Utc::now().to_rfc3339(),
                         };
@@ -279,7 +304,7 @@ impl ClipboardWatcher {
         log::info!("Clipboard watcher resumed");
     }
 
-    pub async fn read(&self, count: u32) -> Result<Vec<ClipboardEvent>, sqlx::Error> {
+    pub async fn read(&self, count: u32) -> AppResult<Vec<ClipboardEvent>> {
         let pool: tokio::sync::MutexGuard<'_, sqlx::Pool<sqlx::Sqlite>> = self.pool.lock().await;
         let rows = sqlx::query(
             r#"
@@ -298,8 +323,7 @@ impl ClipboardWatcher {
             events.push(ClipboardEvent {
                 id: row.get("id"),
                 entry: row.get("entry"),
-                kind: ClipboardEventKind::from_str(row.get("kind"))
-                    .expect("Unexpected ClipboardEventKind"),
+                kind: ClipboardEventKind::from_str(row.get("kind"))?,
                 timestamp: row.get("timestamp"),
             });
         }
@@ -307,7 +331,7 @@ impl ClipboardWatcher {
         Ok(events)
     }
 
-    pub async fn read_one(&self, id: String) -> Result<ClipboardEvent, sqlx::Error> {
+    pub async fn read_one(&self, id: String) -> AppResult<ClipboardEvent> {
         log::info!("Read clipboard entry: {:#?}", id);
         let pool = self.pool.lock().await;
         let row = sqlx::query(
@@ -324,8 +348,7 @@ impl ClipboardWatcher {
         Ok(ClipboardEvent {
             id: row.get("id"),
             entry: row.get("entry"),
-            kind: ClipboardEventKind::from_str(row.get("kind"))
-                .expect("Unexpected ClipboardEventKind"),
+            kind: ClipboardEventKind::from_str(row.get("kind"))?,
             timestamp: row.get("timestamp"),
         })
     }
@@ -401,159 +424,165 @@ impl ClipboardWatcher {
 pub async fn clipboard_pause_watcher(
     app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
-) -> Result<(), String> {
-    let mut clipboard_watcher = state.lock().await;
-    clipboard_watcher.pause();
-    log::info!("CMD:clipboard_pause_watcher");
-    app_handle
-        .emit("clipboard_status_changed", false)
-        .map_err(|e| e.to_string())?;
-    Ok(())
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        let mut clipboard_watcher = state.lock().await;
+        clipboard_watcher.pause();
+        log::info!("CMD:clipboard_pause_watcher");
+        app_handle.emit("clipboard_status_changed", false)?;
+        Ok(())
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn clipboard_resume_watcher(
     app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
-) -> Result<(), String> {
-    // reset last text to prevent reading previous clipboard entry
-    let mut clipboard_watcher = state.lock().await;
-    let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
-    if let Ok(value) = clipboard.get_text() {
-        clipboard_watcher.last_text.clone_from(&value);
-    } else {
-        clipboard_watcher.last_text.clear();
-    }
-    clipboard_watcher.resume();
-    log::info!("CMD:clipboard_resume_watcher");
-    app_handle
-        .emit("clipboard_status_changed", true)
-        .map_err(|e| e.to_string())?;
-    Ok(())
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        // reset last text to prevent reading previous clipboard entry
+        let mut clipboard_watcher = state.lock().await;
+        let mut clipboard = Clipboard::new()?;
+        if let Ok(value) = clipboard.get_text() {
+            clipboard_watcher.last_text.clone_from(&value);
+        } else {
+            clipboard_watcher.last_text.clear();
+        }
+        clipboard_watcher.resume();
+        log::info!("CMD:clipboard_resume_watcher");
+        app_handle.emit("clipboard_status_changed", true)?;
+        Ok(())
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn clipboard_add_entry(
+    app_handle: tauri::AppHandle,
     id: String,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
-) -> Result<(), String> {
-    log::info!("CMD:clipboard_add_entry: {:#?}", id);
-    let mut clipboard_watcher = state.lock().await;
-    let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
-    let entry = clipboard_watcher
-        .read_one(id)
-        .await
-        .map_err(|e| e.to_string())?;
-    match entry.kind {
-        ClipboardEventKind::Text => {
-            let text = String::from_utf8(entry.entry).map_err(|e| e.to_string())?;
-            clipboard_watcher.last_text.clone_from(&text);
-            clipboard.set_text(text).map_err(|e| e.to_string())?;
-        }
-        ClipboardEventKind::Image => {
-            let decoder = PngDecoder::new(BufReader::new(Cursor::new(entry.entry))).unwrap();
-            let (width, height) = decoder.dimensions();
-            let mut buffer = vec![0; (width * height * 4) as usize]; // Assuming RGBA8 format
-            decoder.read_image(&mut buffer).unwrap();
-            let hash = buffer_hash(&buffer);
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:clipboard_add_entry: {:#?}", id);
+        let mut clipboard_watcher = state.lock().await;
+        let mut clipboard = Clipboard::new()?;
+        let entry = clipboard_watcher.read_one(id).await?;
+        match entry.kind {
+            ClipboardEventKind::Text => {
+                let text = String::from_utf8(entry.entry)?;
+                clipboard_watcher.last_text.clone_from(&text);
+                clipboard.set_text(text)?;
+            }
+            ClipboardEventKind::Image => {
+                let decoder = PngDecoder::new(BufReader::new(Cursor::new(entry.entry)))
+                    .context("Unable to decode PNG clipboard entry")?;
+                let (width, height) = decoder.dimensions();
+                let mut buffer = vec![0; (width * height * 4) as usize];
+                decoder
+                    .read_image(&mut buffer)
+                    .context("Unable to read decoded PNG image")?;
+                let hash = buffer_hash(&buffer);
 
-            clipboard
-                .set_image(arboard::ImageData {
+                clipboard.set_image(arboard::ImageData {
                     width: width as usize,
                     height: height as usize,
                     bytes: std::borrow::Cow::from(buffer),
-                })
-                .map_err(|e| e.to_string())?;
-            clipboard_watcher.last_image = hash;
+                })?;
+                clipboard_watcher.last_image = hash;
+            }
         }
-    }
-    Ok(())
+        Ok(())
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn clipboard_read_entries(
+    app_handle: tauri::AppHandle,
     count: u32,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
-) -> Result<Vec<ClipboardEvent>, String> {
-    log::info!("CMD:clipboard_read_entries: {}", count);
-    state
-        .lock()
-        .await
-        .read(count)
-        .await
-        .map_err(|e| e.to_string())
+) -> AppResult<Vec<ClipboardEvent>> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:clipboard_read_entries: {}", count);
+        let entries = state.lock().await.read(count).await?;
+        Ok(entries)
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn clipboard_delete_one_entry(
+    app_handle: tauri::AppHandle,
     id: String,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
-) -> Result<(), String> {
-    log::info!("CMD:clipboard_delete_one_entry: {:#?}", id);
-    state
-        .lock()
-        .await
-        .delete_one(id)
-        .await
-        .map_err(|e| e.to_string())
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:clipboard_delete_one_entry: {:#?}", id);
+        state.lock().await.delete_one(id).await?;
+        Ok(())
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn clipboard_delete_all_entries(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
-) -> Result<(), String> {
-    log::info!("CMD:clipboard_delete_all_entries");
-    state
-        .lock()
-        .await
-        .delete_all()
-        .await
-        .map_err(|e| e.to_string())
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:clipboard_delete_all_entries");
+        state.lock().await.delete_all().await?;
+        Ok(())
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn clipboard_open_entry(
+    app_handle: tauri::AppHandle,
     id: String,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
-    app_handle: tauri::AppHandle,
-) -> Result<(), String> {
-    log::info!("CMD:clipboard_open_entry: {:#?}", id);
-    let clipboard_watcher = state.lock().await;
-    let entry = clipboard_watcher
-        .read_one(id.clone())
-        .await
-        .map_err(|e| e.to_string())?;
-    if let ClipboardEventKind::Image = entry.kind {
-        let image = entry.entry;
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:clipboard_open_entry: {:#?}", id);
+        let clipboard_watcher = state.lock().await;
+        let entry = clipboard_watcher.read_one(id.clone()).await?;
+        if let ClipboardEventKind::Image = entry.kind {
+            let image = entry.entry;
 
-        let mut temp_file_path = temp_dir();
-        temp_file_path.push(format!("{}.png", id));
+            let mut temp_file_path = temp_dir();
+            temp_file_path.push(format!("{}.png", id));
 
-        let mut temp_file = File::create(&temp_file_path).map_err(|e| e.to_string())?;
-        temp_file.write_all(&image).map_err(|e| e.to_string())?;
-        temp_file.flush().map_err(|e| e.to_string())?;
+            let mut temp_file = File::create(&temp_file_path)?;
+            temp_file.write_all(&image)?;
+            temp_file.flush()?;
 
-        let image_path_str = temp_file_path.to_str().ok_or("Invalid path".to_string())?;
+            let image_path_str = temp_file_path
+                .to_str()
+                .ok_or_else(|| AppError::IOERROR("Invalid temp file path".to_string()))?;
 
-        if let Err(e) = app_handle
-            .opener()
-            .open_path(image_path_str, None::<&str>)
-            .map_err(|e| e.to_string())
-        {
-            log::error!("Failed to open image: {}", e);
-            return Err(e.to_string());
+            app_handle
+                .opener()
+                .open_path(image_path_str, None::<&str>)
+                .map_err(|error| AppError::RUNTIMEERROR(error.to_string()))?;
+
+            log::info!("Image opened successfully");
         }
-
-        log::info!("Image opened successfully");
-    }
-    Ok(())
+        Ok(())
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn clipboard_read_status(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
-) -> Result<bool, String> {
-    log::info!("CMD:clipboard_read_status");
-    let clipboard_watcher = state.lock().await;
-    Ok(clipboard_watcher.running)
+) -> AppResult<bool> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:clipboard_read_status");
+        let clipboard_watcher = state.lock().await;
+        Ok(clipboard_watcher.running)
+    })
+    .await
 }

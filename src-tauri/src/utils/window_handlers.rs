@@ -34,7 +34,9 @@ pub fn handle_window_event(window: &Window, event: &WindowEvent) {
                         paths: None,
                     },
                 )
-                .expect("Events must be emittable");
+                .unwrap_or_else(|error| {
+                    log::error!("Unable to emit window_dragdrop(started): {}", error)
+                });
             log::info!("Hovering: started with paths: {:#?}", paths);
         }
         WindowEvent::DragDrop(DragDropEvent::Drop { paths, position: _ }) => {
@@ -64,7 +66,9 @@ pub fn handle_window_event(window: &Window, event: &WindowEvent) {
                         ),
                     },
                 )
-                .expect("Events must be emittable");
+                .unwrap_or_else(|error| {
+                    log::error!("Unable to emit window_dragdrop(dropped): {}", error)
+                });
             log::info!("Hovering: dropped files: {:#?}", paths);
         }
         WindowEvent::DragDrop(DragDropEvent::Leave) => {
@@ -76,7 +80,9 @@ pub fn handle_window_event(window: &Window, event: &WindowEvent) {
                         paths: None,
                     },
                 )
-                .expect("Events must be emittable");
+                .unwrap_or_else(|error| {
+                    log::error!("Unable to emit window_dragdrop(ended): {}", error)
+                });
             log::info!("Hovering: ended");
         }
 

@@ -5,8 +5,10 @@
 extern crate objc;
 
 mod content_managers;
+mod error;
 mod utils;
 
+use crate::error::{emit_backend_error, AppResult};
 use content_managers::bookmarks_manager::{
     bookmarks_delete_all, bookmarks_delete_one, bookmarks_read_entries, bookmarks_update_entry,
     BookmarksManager,
@@ -40,6 +42,7 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::{async_runtime, AppHandle, Manager};
 use tauri_plugin_autostart::MacosLauncher;
+use utils::monitor_utils::default_primary_monitor;
 use utils::monitor_utils::move_to_active_monitor;
 use utils::tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
 use utils::window_commands::{window_hide, window_show_manager, window_show_qrviewer};
@@ -74,8 +77,11 @@ fn apply_macos_specifics(window: &WebviewWindow) {
     app_handle.listen_workspace(
         "NSWorkspaceDidActivateApplicationNotification",
         |app_handle| {
-            let panel = app_handle.get_webview_panel("main").unwrap();
-            panel.set_level(OVERLAYED_NORMAL_LEVEL);
+            if let Some(panel) = app_handle.get_webview_panel("main") {
+                panel.set_level(OVERLAYED_NORMAL_LEVEL);
+            } else {
+                log::warn!("Unable to resolve main panel while applying macOS level");
+            }
         },
     );
 }
@@ -157,17 +163,16 @@ async fn main() {
                 .ok_or("Unable to load window")?;
             window.set_document_title("Clipper - Main");
             // reposition
-            let primary_monitor = app
-                .primary_monitor()
-                .expect("There must be a monitor")
-                .expect("There must be a monitor");
-            move_to_active_monitor(
+            let primary_monitor = default_primary_monitor(app.app_handle())?;
+            if let Err(error) = move_to_active_monitor(
                 app.app_handle(),
                 &window,
                 primary_monitor.position().x.into(),
                 primary_monitor.position().y.into(),
                 false,
-            );
+            ) {
+                log::error!("Unable to move main window during setup: {}", error);
+            }
             // mac specific settings
             #[cfg(target_os = "macos")]
             {
@@ -184,18 +189,28 @@ async fn main() {
             let menu = MenuBuilder::new(app)
                 .items(&[&toggle, &about, &quit])
                 .build()?;
-            let tray = TrayIconBuilder::new()
+            let mut tray_builder = TrayIconBuilder::new()
                 .menu(&menu)
                 .show_menu_on_left_click(true)
                 .on_menu_event(handle_system_tray_menu_event)
                 .on_tray_icon_event(handle_system_tray_icon_event)
-                .icon(app.default_window_icon().unwrap().clone())
-                .icon_as_template(true)
-                .build(app)?;
+                .icon_as_template(true);
+            if let Some(icon) = app.default_window_icon() {
+                tray_builder = tray_builder.icon(icon.clone());
+            } else {
+                log::warn!("Default window icon unavailable. Tray icon fallback will be used");
+            }
+            let tray = tray_builder.build(app)?;
             // hide menu on left click
             tray.set_show_menu_on_left_click(false)?;
 
-            async_runtime::spawn(setup(app.handle().clone()));
+            let setup_handle = app.handle().clone();
+            async_runtime::spawn(async move {
+                if let Err(error) = setup(setup_handle.clone()).await {
+                    emit_backend_error(&setup_handle, &error);
+                    log::error!("Application setup failed: {}", error);
+                }
+            });
             Ok(())
         });
 
@@ -204,16 +219,16 @@ async fn main() {
         builder = builder.plugin(tauri_nspanel::init());
     }
 
-    builder
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+    if let Err(error) = builder.run(tauri::generate_context!()) {
+        log::error!("Error while running tauri application: {}", error);
+    }
 }
 
-async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
+async fn setup(app: AppHandle) -> AppResult<()> {
     let bus = content_managers::message_bus::MessageBus::new(100);
-    let db = Arc::new(DbConnection::new(app.clone()).await);
+    let db = Arc::new(DbConnection::new(app.clone()).await?);
     // register settings service
-    let settings_manager = SettingsManager::new(Arc::clone(&db), bus.clone(), app.clone()).await;
+    let settings_manager = SettingsManager::new(Arc::clone(&db), bus.clone(), app.clone()).await?;
     app.manage(Arc::clone(&settings_manager));
     // register notes manager
     let notes_manager = NotesManager::new(Arc::clone(&db), app.clone(), bus.clone()).await;
@@ -222,12 +237,7 @@ async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
     let filters_manager = FiltersManager::new(Arc::clone(&db), bus.clone()).await;
     app.manage(Arc::clone(&filters_manager));
     // preload initial settings/filters once and pass them into managers
-    let initial_settings = settings_manager
-        .lock()
-        .await
-        .read()
-        .await
-        .expect("Unable to read initial settings for managers");
+    let initial_settings = settings_manager.lock().await.read().await?;
     let initial_filters = match filters_manager.lock().await.read().await {
         Ok(filters) => filters,
         Err(err) => {
@@ -273,7 +283,7 @@ async fn setup(app: AppHandle) -> Result<(), tauri::Error> {
         // Arc::clone(&db),
         app.clone(),
     )
-    .await;
+    .await?;
     app.manage(files_manager);
     Ok(())
 }

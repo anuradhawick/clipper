@@ -1,9 +1,9 @@
+use crate::error::{with_error_event, AppError, AppResult};
 use futures::{future::BoxFuture, FutureExt};
 use serde::Serialize;
 use std::{
     io,
     path::{Path, PathBuf},
-    str::FromStr,
 };
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::fs::{self};
@@ -55,31 +55,38 @@ pub struct FilesManager {
 }
 
 impl FilesManager {
-    pub async fn new(app_handle: AppHandle) -> Self {
-        let app_dir = app_handle.path().home_dir().expect("Home path failed");
+    pub async fn new(app_handle: AppHandle) -> AppResult<Self> {
+        let app_dir = app_handle
+            .path()
+            .home_dir()
+            .map_err(|error| AppError::IOERROR(format!("Home path failed: {error}")))?;
         let clipper_path = app_dir.join("clipper/");
-        fs::create_dir_all(&clipper_path)
-            .await
-            .expect("Clipper path creation failed");
+        fs::create_dir_all(&clipper_path).await?;
         log::info!("files manager initialized");
-        Self { app_handle }
+        Ok(Self { app_handle })
     }
 
-    pub async fn get_files(&self) -> Result<Vec<FileEntry>, String> {
+    pub async fn get_files(&self) -> AppResult<Vec<FileEntry>> {
         let app_dir = self
             .app_handle
             .path()
             .home_dir()
-            .map_err(|e| e.to_string())?;
+            .map_err(|error| AppError::IOERROR(format!("Home path failed: {error}")))?;
         let clipper_path = app_dir.join("clipper/");
         let mut files = vec![];
-        let mut entries = fs::read_dir(clipper_path)
-            .await
-            .map_err(|e| e.to_string())?;
+        let mut entries = fs::read_dir(clipper_path).await?;
 
-        while let Some(entry) = entries.next_entry().await.map_err(|e| e.to_string())? {
+        while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            let file = path.file_name().unwrap().to_str().unwrap().to_string();
+            let file_name = path.file_name().ok_or_else(|| {
+                AppError::IOERROR(format!("Invalid file entry without filename: {path:?}"))
+            })?;
+            let file = file_name
+                .to_str()
+                .ok_or_else(|| {
+                    AppError::VALIDATIONERROR(format!("Invalid UTF-8 filename: {file_name:?}"))
+                })?
+                .to_string();
 
             // Skip hidden files and directories
             if file.starts_with(".") {
@@ -103,67 +110,64 @@ impl FilesManager {
         Ok(files)
     }
 
-    pub fn get_files_path(&self) -> Result<String, String> {
+    pub fn get_files_path(&self) -> AppResult<String> {
         let app_dir = self
             .app_handle
             .path()
             .home_dir()
-            .map_err(|e| e.to_string())?;
+            .map_err(|error| AppError::IOERROR(format!("Home path failed: {error}")))?;
         let clipper_path = app_dir.join("clipper/");
         Ok(clipper_path.to_string_lossy().to_string())
     }
 
-    pub async fn delete_all_files(&self) -> Result<(), String> {
+    pub async fn delete_all_files(&self) -> AppResult<()> {
         let app_dir = self
             .app_handle
             .path()
             .home_dir()
-            .map_err(|e| e.to_string())?;
+            .map_err(|error| AppError::IOERROR(format!("Home path failed: {error}")))?;
         let clipper_path = app_dir.join("clipper/");
-        fs::remove_dir_all(&clipper_path)
-            .await
-            .map_err(|e| e.to_string())?;
-        fs::create_dir_all(&clipper_path)
-            .await
-            .map_err(|e| e.to_string())?;
+        fs::remove_dir_all(&clipper_path).await?;
+        fs::create_dir_all(&clipper_path).await?;
         Ok(())
     }
 
-    pub async fn delete_file(&self, file: String) -> Result<(), String> {
+    pub async fn delete_file(&self, file: String) -> AppResult<()> {
         let app_dir = self
             .app_handle
             .path()
             .home_dir()
-            .map_err(|e| e.to_string())?;
+            .map_err(|error| AppError::IOERROR(format!("Home path failed: {error}")))?;
         let clipper_path = app_dir.join("clipper/").join(file);
 
         if clipper_path.is_dir() {
-            fs::remove_dir_all(&clipper_path)
-                .await
-                .map_err(|e| e.to_string())?;
+            fs::remove_dir_all(&clipper_path).await?;
         } else {
-            fs::remove_file(&clipper_path)
-                .await
-                .map_err(|e| e.to_string())?;
+            fs::remove_file(&clipper_path).await?;
         }
 
         Ok(())
     }
 
-    pub async fn handle_drop(&self, paths: Vec<PathBuf>) -> Result<(), String> {
+    pub async fn handle_drop(&self, paths: Vec<PathBuf>) -> AppResult<()> {
         log::info!("Dropped some files: {:#?}", paths);
-        let files_path = PathBuf::from_str(&self.get_files_path()?).map_err(|e| e.to_string())?;
+        let files_path = PathBuf::from(self.get_files_path()?);
 
         if !files_path.exists() {
-            fs::create_dir_all(&files_path)
-                .await
-                .map_err(|e| e.to_string())?;
+            fs::create_dir_all(&files_path).await?;
         }
 
         let mut added_paths: Vec<FileEntry> = vec![];
 
         for file in paths.into_iter() {
-            let file_name = file.file_name().unwrap().to_str().unwrap();
+            let file_name_os = file.file_name().ok_or_else(|| {
+                AppError::IOERROR(format!(
+                    "Unable to read dropped file name for path: {file:?}"
+                ))
+            })?;
+            let file_name = file_name_os.to_str().ok_or_else(|| {
+                AppError::VALIDATIONERROR(format!("Dropped file path is not valid UTF-8: {file:?}"))
+            })?;
             let file_path = files_path.join(file_name);
 
             println!("Copying file: {:#?} to {:#?}", file, file_path);
@@ -171,7 +175,7 @@ impl FilesManager {
             if file.is_dir() {
                 copy_dir_recursive(file.clone(), file_path.clone())
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(AppError::from)?;
                 added_paths.push(FileEntry {
                     file: file_name.to_string(),
                     clipper_path: file_path.to_string_lossy().to_string(),
@@ -180,7 +184,7 @@ impl FilesManager {
             } else {
                 fs::copy(file.clone(), file_path.clone())
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(AppError::from)?;
                 added_paths.push(FileEntry {
                     file: file_name.to_string(),
                     clipper_path: file_path.to_string_lossy().to_string(),
@@ -191,7 +195,7 @@ impl FilesManager {
 
         self.app_handle
             .emit("files_added_paths", added_paths)
-            .map_err(|e| e.to_string())?;
+            .map_err(AppError::from)?;
 
         Ok(())
     }
@@ -199,29 +203,36 @@ impl FilesManager {
 
 #[tauri::command]
 pub async fn files_get_entries(
+    app_handle: tauri::AppHandle,
     files_manager: State<'_, FilesManager>,
-) -> Result<Vec<FileEntry>, String> {
-    files_manager.get_files().await
+) -> AppResult<Vec<FileEntry>> {
+    with_error_event(&app_handle, async { files_manager.get_files().await }).await
 }
 
 #[tauri::command]
 pub async fn files_get_storage_path(
+    app_handle: tauri::AppHandle,
     files_manager: State<'_, FilesManager>,
-) -> Result<String, String> {
-    files_manager.get_files_path()
+) -> AppResult<String> {
+    with_error_event(&app_handle, async { files_manager.get_files_path() }).await
 }
 
 #[tauri::command]
 pub async fn files_delete_storage_path(
+    app_handle: tauri::AppHandle,
     files_manager: State<'_, FilesManager>,
-) -> Result<(), String> {
-    files_manager.delete_all_files().await
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        files_manager.delete_all_files().await
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn files_delete_one_file(
+    app_handle: tauri::AppHandle,
     files_manager: State<'_, FilesManager>,
     file: String,
-) -> Result<(), String> {
-    files_manager.delete_file(file).await
+) -> AppResult<()> {
+    with_error_event(&app_handle, async { files_manager.delete_file(file).await }).await
 }

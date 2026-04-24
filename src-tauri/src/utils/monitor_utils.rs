@@ -1,3 +1,4 @@
+use crate::error::{AppError, AppResult};
 use tauri::{AppHandle, LogicalPosition, Monitor, Position, WebviewWindow};
 
 fn get_monitor_for_point(window: &WebviewWindow, x: f64, y: f64, logical: bool) -> Option<Monitor> {
@@ -34,13 +35,20 @@ fn get_monitor_for_point(window: &WebviewWindow, x: f64, y: f64, logical: bool) 
     None
 }
 
+pub fn default_primary_monitor(app: &AppHandle) -> AppResult<Monitor> {
+    let primary_monitor = app
+        .primary_monitor()
+        .map_err(|error| AppError::runtime(format!("Unable to query primary monitor: {error}")))?;
+    primary_monitor.ok_or_else(|| AppError::runtime("No primary monitor available".to_string()))
+}
+
 pub fn move_to_active_monitor(
     app: &AppHandle,
     window: &WebviewWindow,
     x: f64,
     y: f64,
     logical: bool,
-) {
+) -> AppResult<()> {
     if let Some(monitor) = get_monitor_for_point(window, x, y, logical) {
         let window_width = app
             .config()
@@ -48,7 +56,7 @@ pub fn move_to_active_monitor(
             .windows
             .iter()
             .find(|w| w.label.eq("main"))
-            .unwrap()
+            .ok_or_else(|| AppError::runtime("Main window config not found".to_string()))?
             .width;
         let screen_width = monitor.size().width as f64 / monitor.scale_factor();
         let new_x = monitor.position().x as f64 / monitor.scale_factor() + screen_width / 2.0
@@ -57,6 +65,7 @@ pub fn move_to_active_monitor(
 
         window
             .set_position(Position::Logical(LogicalPosition { x: new_x, y: new_y }))
-            .expect("Unable to set position");
+            .map_err(|error| AppError::runtime(format!("Unable to set position: {error}")))?;
     }
+    Ok(())
 }

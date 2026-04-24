@@ -3,6 +3,7 @@ use super::global_shortcut::{register_global_shortcut, unregister_global_shortcu
 use crate::content_managers::message_bus::AppMessage;
 use crate::content_managers::message_bus::MessageBus;
 use crate::content_managers::message_bus::SettingsUpdatedPayload;
+use crate::error::{with_error_event, AppError, AppResult};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{sqlite::SqlitePool, Row};
@@ -35,7 +36,7 @@ impl SettingsManager {
         db: Arc<DbConnection>,
         bus: MessageBus,
         app_handle: AppHandle,
-    ) -> Arc<Mutex<Self>> {
+    ) -> AppResult<Arc<Mutex<Self>>> {
         let pool = db.pool.lock().await;
 
         #[cfg(target_os = "linux")]
@@ -54,8 +55,7 @@ impl SettingsManager {
         )
         .bind(global_shortcut_keys.to_string())
         .execute(&*pool)
-        .await
-        .unwrap();
+        .await?;
         log::info!("Settings manager initialized");
 
         if initial_settings.rows_affected() > 0 {
@@ -75,13 +75,17 @@ impl SettingsManager {
                 "#,
             )
             .fetch_one(&*pool)
-            .await
-            .unwrap();
+            .await?;
             let global_shortcut_keys = settings.get::<Option<String>, _>("globalShortcut");
 
             if let Some(global_shortcut_keys) = global_shortcut_keys {
-                let global_shortcut_keys =
-                    Shortcut::from_str(global_shortcut_keys.as_str()).unwrap();
+                let global_shortcut_keys = Shortcut::from_str(global_shortcut_keys.as_str())
+                    .map_err(|error| {
+                        AppError::validation(format!(
+                            "Invalid saved shortcut '{}': {}",
+                            global_shortcut_keys, error
+                        ))
+                    })?;
 
                 log::info!("Creating global shortcut: {:#?}", global_shortcut_keys);
 
@@ -91,14 +95,14 @@ impl SettingsManager {
             }
         }
 
-        Arc::new(Mutex::new(Self {
+        Ok(Arc::new(Mutex::new(Self {
             pool: Arc::clone(&db.pool),
             app_handle,
             bus,
-        }))
+        })))
     }
 
-    pub async fn update(&self, settings: SettingsEntry) -> Result<(), String> {
+    pub async fn update(&self, settings: SettingsEntry) -> AppResult<()> {
         log::info!("Updating settings: {:#?}", settings);
         let settings_for_event = settings.clone();
         let pool = self.pool.lock().await;
@@ -115,36 +119,39 @@ impl SettingsManager {
         .bind(settings.bookmark_history_size)
         .bind(settings.global_shortcut.clone())
         .execute(&*pool)
-        .await
-        .map_err(|e| e.to_string())?;
+        .await?;
 
         if settings.autolaunch {
-            self.app_handle
-                .autolaunch()
-                .enable()
-                .map_err(|e| e.to_string())?;
+            self.app_handle.autolaunch().enable().map_err(|error| {
+                AppError::RUNTIMEERROR(format!("Failed to enable autolaunch: {error}"))
+            })?;
         } else {
-            self.app_handle
-                .autolaunch()
-                .disable()
-                .map_err(|e| e.to_string())?;
+            self.app_handle.autolaunch().disable().map_err(|error| {
+                AppError::RUNTIMEERROR(format!("Failed to disable autolaunch: {error}"))
+            })?;
         }
 
         match settings.global_shortcut {
             Some(global_shortcut) => {
-                let global_shortcut_keys = Shortcut::from_str(global_shortcut.as_str()).unwrap();
+                let global_shortcut_keys =
+                    Shortcut::from_str(global_shortcut.as_str()).map_err(|error| {
+                        AppError::validation(format!(
+                            "Invalid shortcut '{}': {}",
+                            global_shortcut, error
+                        ))
+                    })?;
                 log::info!("Creating global shortcut: {:#?}", global_shortcut_keys);
 
                 register_global_shortcut(&self.app_handle, global_shortcut_keys).map_err(|e| {
                     log::error!("Error registering global shortcut: {}", e);
-                    e.to_string()
+                    e
                 })?;
             }
             None => {
                 log::info!("Unregistering global shortcut");
                 unregister_global_shortcut(&self.app_handle).map_err(|e| {
                     log::error!("Error unregistering global shortcut: {}", e);
-                    e.to_string()
+                    e
                 })?;
             }
         }
@@ -161,7 +168,7 @@ impl SettingsManager {
         Ok(())
     }
 
-    pub async fn read(&self) -> Result<SettingsEntry, sqlx::Error> {
+    pub async fn read(&self) -> AppResult<SettingsEntry> {
         log::info!("Reading settings");
         let pool = self.pool.lock().await;
         let result = sqlx::query(
@@ -179,7 +186,9 @@ impl SettingsManager {
             lighting: result.get("lighting"),
             clipboard_history_size: result.get("clipboardHistorySize"),
             bookmark_history_size: result.get("bookmarkHistorySize"),
-            autolaunch: self.app_handle.autolaunch().is_enabled().unwrap(),
+            autolaunch: self.app_handle.autolaunch().is_enabled().map_err(|error| {
+                AppError::RUNTIMEERROR(format!("Unable to read autolaunch state: {error}"))
+            })?,
             global_shortcut: result.get("globalShortcut"),
         })
     }
@@ -187,31 +196,39 @@ impl SettingsManager {
 
 #[tauri::command]
 pub async fn settings_update(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<SettingsManager>>>,
     settings: Value,
-) -> Result<(), String> {
-    let settings: SettingsEntry = serde_json::from_value(settings).map_err(|e| e.to_string())?;
-    log::info!("CMD:Updating settings: {:#?}", settings);
-    let mgr = state.lock().await;
-    mgr.update(settings.clone()).await?;
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        let settings: SettingsEntry = serde_json::from_value(settings)?;
+        log::info!("CMD:Updating settings: {:#?}", settings);
+        let mgr = state.lock().await;
+        mgr.update(settings.clone()).await?;
 
-    // Emit settings_changed event globally to all windows (main, manager, qrviewer)
-    // This ensures that theme changes and other settings updates are immediately
-    // reflected across all windows, regardless of which window initiated the change
-    // If emission fails, we log the error but don't fail the operation since
-    // the settings have already been successfully persisted
-    if let Err(e) = mgr.app_handle.emit("settings_changed", settings) {
-        log::error!("Error emitting settings_changed event: {}", e);
-    }
+        // Emit settings_changed event globally to all windows (main, manager, qrviewer)
+        // This ensures that theme changes and other settings updates are immediately
+        // reflected across all windows, regardless of which window initiated the change
+        // If emission fails, we log the error but don't fail the operation since
+        // the settings have already been successfully persisted
+        if let Err(e) = mgr.app_handle.emit("settings_changed", settings) {
+            log::error!("Error emitting settings_changed event: {}", e);
+        }
 
-    Ok(())
+        Ok(())
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn settings_read(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<SettingsManager>>>,
-) -> Result<SettingsEntry, String> {
-    let settings = state.lock().await.read().await.map_err(|e| e.to_string())?;
-    log::info!("CMD:Reading settings: {:#?}", settings);
-    Ok(settings)
+) -> AppResult<SettingsEntry> {
+    with_error_event(&app_handle, async {
+        let settings = state.lock().await.read().await?;
+        log::info!("CMD:Reading settings: {:#?}", settings);
+        Ok(settings)
+    })
+    .await
 }

@@ -13,7 +13,11 @@ pub mod macos {
     impl<R: Runtime> WebviewWindowExtMacos for WebviewWindow<R> {
         fn remove_shadow(&self) {
             unsafe {
-                let id = self.ns_window().unwrap() as cocoa::base::id;
+                let Some(raw_window) = self.ns_window() else {
+                    log::error!("Unable to access NSWindow handle to remove shadow");
+                    return;
+                };
+                let id = raw_window as cocoa::base::id;
 
                 #[cfg(target_arch = "aarch64")]
                 id.setHasShadow_(false);
@@ -24,7 +28,10 @@ pub mod macos {
         }
 
         fn set_float_panel(&self, level: i32) {
-            let panel = self.to_panel().unwrap();
+            let Some(panel) = self.to_panel() else {
+                log::error!("Unable to access macOS panel handle");
+                return;
+            };
 
             panel.set_level(level);
 
@@ -53,6 +60,8 @@ pub trait WebviewWindowExt {
 impl<R: Runtime> WebviewWindowExt for WebviewWindow<R> {
     fn set_document_title(&self, title: &str) {
         let str = format!("document.title = '{:}'", title);
-        self.eval(&str).unwrap();
+        if let Err(error) = self.eval(&str) {
+            log::error!("Unable to set window title: {}", error);
+        }
     }
 }

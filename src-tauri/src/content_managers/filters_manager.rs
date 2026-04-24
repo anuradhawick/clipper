@@ -1,5 +1,6 @@
 use super::db::DbConnection;
 use super::message_bus::{AppMessage, FiltersUpdatedPayload, MessageBus};
+use crate::error::{with_error_event, AppError, AppResult};
 use chrono::Utc;
 use regex::Regex;
 use serde::Serialize;
@@ -177,69 +178,82 @@ impl FiltersManager {
 
 #[tauri::command]
 pub async fn filters_create_entry(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<FiltersManager>>>,
     id: String,
     filter_regex: String,
-) -> Result<FilterItem, String> {
-    log::info!("CMD:Creating filter: {:#?} {:#?}", id, filter_regex);
-    let filter = FilterItem {
-        id: id.clone(),
-        filter_regex,
-        created_date: String::new(),
-    };
-    let mgr = state.lock().await;
-    mgr.create(filter).await.map_err(|e| e.to_string())?;
-    mgr.get(&id).await.map_err(|e| e.to_string())
+) -> AppResult<FilterItem> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Creating filter: {:#?} {:#?}", id, filter_regex);
+        let filter = FilterItem {
+            id: id.clone(),
+            filter_regex,
+            created_date: String::new(),
+        };
+        let mgr = state.lock().await;
+        mgr.create(filter).await?;
+        mgr.get(&id).await.map_err(AppError::from)
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn filters_update_entry(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<FiltersManager>>>,
     id: String,
     filter_regex: String,
-) -> Result<FilterItem, String> {
-    log::info!("CMD:Updating filter: {:#?} {:#?}", id, filter_regex);
-    let filter = FilterItem {
-        id: id.clone(),
-        filter_regex,
-        created_date: String::new(),
-    };
-    let mgr = state.lock().await;
-    mgr.update(filter).await.map_err(|e| e.to_string())?;
-    mgr.get(&id).await.map_err(|e| e.to_string())
+) -> AppResult<FilterItem> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Updating filter: {:#?} {:#?}", id, filter_regex);
+        let filter = FilterItem {
+            id: id.clone(),
+            filter_regex,
+            created_date: String::new(),
+        };
+        let mgr = state.lock().await;
+        mgr.update(filter).await?;
+        mgr.get(&id).await.map_err(AppError::from)
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn filters_delete_one(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<FiltersManager>>>,
     id: String,
-) -> Result<(), String> {
-    log::info!("CMD:Deleting filter: {:#?}", id);
-    state
-        .lock()
-        .await
-        .delete(&id)
-        .await
-        .map_err(|e| e.to_string())
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Deleting filter: {:#?}", id);
+        state.lock().await.delete(&id).await?;
+        Ok(())
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn filters_delete_all(
+    app_handle: tauri::AppHandle,
     state_filters_mgr: State<'_, Arc<Mutex<FiltersManager>>>,
-) -> Result<(), String> {
-    log::info!("CMD:Deleting all filters");
-    state_filters_mgr
-        .lock()
-        .await
-        .delete_all_filters()
-        .await
-        .map_err(|e| e.to_string())
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Deleting all filters");
+        state_filters_mgr.lock().await.delete_all_filters().await?;
+        Ok(())
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn filters_read_entries(
+    app_handle: tauri::AppHandle,
     state: State<'_, Arc<Mutex<FiltersManager>>>,
-) -> Result<Vec<FilterItem>, String> {
-    log::info!("CMD:Reading filters");
-    state.lock().await.read().await.map_err(|e| e.to_string())
+) -> AppResult<Vec<FilterItem>> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Reading filters");
+        let filters = state.lock().await.read().await?;
+        Ok(filters)
+    })
+    .await
 }

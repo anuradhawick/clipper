@@ -1,12 +1,13 @@
 use crate::utils::monitor_utils::move_to_active_monitor;
+use crate::{
+    error::{emit_backend_error, AppError, AppResult},
+    utils::monitor_utils::default_primary_monitor,
+};
 use mouse_position::mouse_position::Mouse;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-pub fn register_global_shortcut(
-    app: &AppHandle,
-    global_shortcut_keys: Shortcut,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn register_global_shortcut(app: &AppHandle, global_shortcut_keys: Shortcut) -> AppResult<()> {
     // check if the global shortcut is already registered, avoid duplicate registration - which fails understandably
     if app.global_shortcut().is_registered(global_shortcut_keys) {
         return Ok(());
@@ -23,42 +24,80 @@ pub fn register_global_shortcut(
                     }
                     ShortcutState::Released => {
                         if let Some(window) = app.get_webview_window("main") {
-                            if window
-                                .is_visible()
-                                .expect("Window visibility must be available")
-                            {
-                                window.hide().expect("Window cannot be hidden");
+                            let is_visible = match window.is_visible() {
+                                Ok(value) => value,
+                                Err(error) => {
+                                    let app_error = AppError::runtime(format!(
+                                        "Window visibility check failed: {}",
+                                        error
+                                    ));
+                                    emit_backend_error(app, &app_error);
+                                    log::error!("{}", app_error);
+                                    return;
+                                }
+                            };
+
+                            if is_visible {
+                                if let Err(error) = window.hide() {
+                                    let app_error = AppError::runtime(format!(
+                                        "Window cannot be hidden: {error}"
+                                    ));
+                                    emit_backend_error(app, &app_error);
+                                    log::error!("{}", app_error);
+                                }
                             } else {
                                 let position = Mouse::get_mouse_position();
                                 match position {
                                     Mouse::Position { x, y } => {
-                                        move_to_active_monitor(
+                                        if let Err(error) = move_to_active_monitor(
                                             app,
                                             &window,
                                             x.into(),
                                             y.into(),
                                             true,
-                                        );
+                                        ) {
+                                            emit_backend_error(app, &error);
+                                            log::error!("{}", error);
+                                        }
                                     }
                                     Mouse::Error => {
                                         log::error!(
                                         "Error getting mouse position. Moving to primary monitor"
                                     );
-                                        let primary_monitor = app
-                                            .primary_monitor()
-                                            .expect("There must be a monitor")
-                                            .expect("There must be a monitor");
-                                        move_to_active_monitor(
+                                        let primary_monitor = match default_primary_monitor(app) {
+                                            Ok(monitor) => monitor,
+                                            Err(error) => {
+                                                emit_backend_error(app, &error);
+                                                log::error!("{}", error);
+                                                return;
+                                            }
+                                        };
+                                        if let Err(error) = move_to_active_monitor(
                                             app,
                                             &window,
                                             primary_monitor.position().x.into(),
                                             primary_monitor.position().y.into(),
                                             false,
-                                        );
+                                        ) {
+                                            emit_backend_error(app, &error);
+                                            log::error!("{}", error);
+                                        }
                                     }
                                 }
-                                window.show().expect("Window cannot be displayed");
-                                window.set_focus().expect("Window cannot be focused");
+                                if let Err(error) = window.show() {
+                                    let app_error = AppError::runtime(format!(
+                                        "Window cannot be displayed: {error}"
+                                    ));
+                                    emit_backend_error(app, &app_error);
+                                    log::error!("{}", app_error);
+                                }
+                                if let Err(error) = window.set_focus() {
+                                    let app_error = AppError::runtime(format!(
+                                        "Window cannot be focused: {error}"
+                                    ));
+                                    emit_backend_error(app, &app_error);
+                                    log::error!("{}", app_error);
+                                }
                             }
                         }
                     }
@@ -69,7 +108,7 @@ pub fn register_global_shortcut(
     Ok(())
 }
 
-pub fn unregister_global_shortcut(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+pub fn unregister_global_shortcut(app: &AppHandle) -> AppResult<()> {
     app.global_shortcut().unregister_all()?;
 
     Ok(())

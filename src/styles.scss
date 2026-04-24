@@ -1,5 +1,6 @@
 @use "@angular/material" as mat;
 @use "material-icons/iconfont/material-icons.scss";
+@use "ngx-toastr/toastr";
 @include mat.core();
 
 @layer theme, base, components, utilities;
