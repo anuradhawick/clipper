@@ -46,6 +46,7 @@
   "identifier": "com.anuradhawick.clipper",
   "plugins": {},
   "app": {
+    "withGlobalTauri": true,
     "macOSPrivateApi": true,
     "windows": [
       {

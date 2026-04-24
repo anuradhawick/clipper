@@ -14,9 +14,19 @@ import {
   withEventReplay,
 } from "@angular/platform-browser";
 import { BookmarksService } from "./services/bookmarks.service";
-import { provideAnimationsAsync } from "@angular/platform-browser/animations/async";
-import { provideToastr } from "ngx-toastr";
+import { GlobalConfig, provideToastr } from "ngx-toastr";
 import { BackendErrorService } from "./services/backend-error.service";
+
+const toastrConfig: Partial<GlobalConfig> = {
+  closeButton: true,
+  progressBar: true,
+  positionClass: "toast-bottom-right",
+  preventDuplicates: true,
+  timeOut: 7000,
+  toastClass: "ngx-toastr clipper-toast",
+  titleClass: "clipper-toast-title",
+  messageClass: "clipper-toast-message",
+};
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -29,14 +39,7 @@ export const appConfig: ApplicationConfig = {
       inject(DropperService);
       inject(BackendErrorService);
     }),
-    provideAnimationsAsync(),
-    provideToastr({
-      closeButton: true,
-      progressBar: true,
-      positionClass: "toast-bottom-right",
-      preventDuplicates: true,
-      timeOut: 7000,
-    }),
+    provideToastr(toastrConfig),
     provideClientHydration(withEventReplay()),
   ],
 };

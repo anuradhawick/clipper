@@ -5,7 +5,7 @@ use url::form_urlencoded;
 #[tauri::command]
 pub fn window_hide(window: tauri::Window) -> AppResult<()> {
     let app_handle = window.app_handle();
-    with_error_event_sync(&app_handle, || {
+    with_error_event_sync(app_handle, || {
         window.hide()?;
         Ok(())
     })
