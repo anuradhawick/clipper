@@ -5,6 +5,7 @@ use crate::error::{with_error_event, AppError, AppResult};
 use crate::{content_managers::message_bus::MessageBus, AppHandle};
 use anyhow::Context;
 use chrono::Utc;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Serialize;
 use sqlx::{sqlite::SqlitePool, Row};
@@ -15,6 +16,13 @@ use tauri::async_runtime;
 use tauri::Emitter;
 use tauri::State;
 use tokio::sync::Mutex;
+
+static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+        r#"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»""'']))"#,
+    )
+    .expect("Failed to compile URL regex")
+});
 
 #[derive(Debug, Serialize, Clone)]
 pub struct BookmarkItem {
@@ -40,16 +48,7 @@ impl BookmarksManager {
     }
 
     fn extract_urls(text: &str) -> Vec<String> {
-        let url_regex = match Regex::new(
-            r#"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))"#,
-        ) {
-            Ok(regex) => regex,
-            Err(error) => {
-                log::error!("Failed to compile URL regex: {}", error);
-                return Vec::new();
-            }
-        };
-        url_regex
+        URL_REGEX
             .find_iter(text)
             .map(|mat| mat.as_str().to_string())
             .collect::<HashSet<_>>()
