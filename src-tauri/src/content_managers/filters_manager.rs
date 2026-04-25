@@ -51,7 +51,6 @@ impl FiltersManager {
         .bind(Utc::now().to_rfc3339())
         .execute(&*pool)
         .await?;
-        drop(pool);
         self.notify_filters_updated().await;
         Ok(())
     }
@@ -70,7 +69,6 @@ impl FiltersManager {
         .bind(filter.id)
         .execute(&*pool)
         .await?;
-        drop(pool);
         self.notify_filters_updated().await;
         Ok(())
     }
@@ -87,7 +85,6 @@ impl FiltersManager {
         .bind(id)
         .execute(&*pool)
         .await?;
-        drop(pool);
         self.notify_filters_updated().await;
         Ok(())
     }
@@ -142,7 +139,6 @@ impl FiltersManager {
         log::info!("Deleting all filters");
         let pool = self.pool.lock().await;
         sqlx::query("DELETE FROM filters").execute(&*pool).await?;
-        drop(pool);
         self.notify_filters_updated().await;
         Ok(())
     }
