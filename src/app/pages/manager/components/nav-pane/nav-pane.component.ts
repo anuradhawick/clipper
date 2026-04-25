@@ -4,10 +4,11 @@ import { ThemeService } from "../../../../services/theme.service";
 import { RouterLink } from "@angular/router";
 import { MatBadgeModule } from "@angular/material/badge";
 import { ClipboardHistoryService } from "../../../../services/clipboard-history.service";
+import { MatIconModule } from "@angular/material/icon";
 
 @Component({
   selector: "app-nav-pane",
-  imports: [MatRippleModule, RouterLink, MatBadgeModule],
+  imports: [MatRippleModule, RouterLink, MatBadgeModule, MatIconModule],
   templateUrl: "./nav-pane.component.html",
   styleUrl: "./nav-pane.component.scss",
 })

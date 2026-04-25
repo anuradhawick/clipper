@@ -43,6 +43,7 @@ export const TAG_COLORS: TagColorOption[] = [
 })
 export class TagsService implements OnDestroy {
   readonly tags = signal<TagEntry[]>([]);
+  readonly taggedItems = signal<TaggedItem[]>([]);
   // Incremented when tag-item assignments change; components use it to refetch.
   readonly tagItemsVersion = signal(0);
   readonly tagColors = TAG_COLORS;
@@ -52,6 +53,7 @@ export class TagsService implements OnDestroy {
   constructor() {
     console.log("TagsService created");
     this.read();
+    this.readTaggedItems();
 
     listen("tags_updated", async () => {
       await this.read();
@@ -60,6 +62,7 @@ export class TagsService implements OnDestroy {
     // The event has no payload: it only invalidates visible item tag queries.
     listen("tag_items_updated", () => {
       this.tagItemsVersion.update((version) => version + 1);
+      this.readTaggedItems();
     }).then((func) => (this.unlistenTagItemsEvent = func));
   }
 
@@ -77,6 +80,11 @@ export class TagsService implements OnDestroy {
   async read() {
     const tags = await invoke<TagEntry[]>("tags_read_entries", {});
     this.tags.set(tags);
+  }
+
+  async readTaggedItems() {
+    const taggedItems = await invoke<TaggedItem[]>("tags_read_items", {});
+    this.taggedItems.set(taggedItems);
   }
 
   async create(tag: string, kind = "slate") {

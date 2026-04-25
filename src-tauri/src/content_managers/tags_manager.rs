@@ -267,6 +267,33 @@ impl TagsManager {
         Ok(items)
     }
 
+    pub async fn read_tagged_items(&self) -> Result<Vec<TaggedItem>, sqlx::Error> {
+        log::info!("Reading tagged items");
+        let pool = self.pool.lock().await;
+        let rows = sqlx::query(
+            r#"
+            SELECT *
+            FROM tag_items
+            ORDER BY timestamp DESC
+            "#,
+        )
+        .fetch_all(&*pool)
+        .await?;
+
+        let mut items = Vec::new();
+        for row in rows {
+            items.push(TaggedItem {
+                id: row.get("id"),
+                tag_id: row.get("tag_id"),
+                item_kind: row.get("item_kind"),
+                item_id: row.get("item_id"),
+                timestamp: row.get("timestamp"),
+            });
+        }
+
+        Ok(items)
+    }
+
     pub async fn read(&self) -> Result<Vec<TagItem>, sqlx::Error> {
         log::info!("Reading tags");
         let pool = self.pool.lock().await;
@@ -409,6 +436,19 @@ pub async fn tags_read_entries(
         log::info!("CMD:Reading tags");
         let tags = state.lock().await.read().await?;
         Ok(tags)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn tags_read_items(
+    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<Mutex<TagsManager>>>,
+) -> AppResult<Vec<TaggedItem>> {
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Reading tagged items");
+        let items = state.lock().await.read_tagged_items().await?;
+        Ok(items)
     })
     .await
 }

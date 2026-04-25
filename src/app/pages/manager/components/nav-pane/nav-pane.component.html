@@ -2,36 +2,48 @@
   <div class="manager-nav-wrapper flex flex-col space-y-1 h-full">
     <div
       matRipple
-      class="cursor-pointer clipper-bg rounded-lg p-2 m-1"
+      class="clipper-bg m-1 flex cursor-pointer items-center gap-2 rounded-lg p-2"
       routerLink="/manager/clipboard"
     >
-      <span
+      <mat-icon
         matBadge="-"
         matBadgeSize="small"
         [matBadgeHidden]="clipboardHistoryService.running()"
-      ></span>
-      Clipboard
+        >attach_file</mat-icon
+      >
+      <span>Clipboard</span>
     </div>
     <div
       matRipple
-      class="cursor-pointer clipper-bg rounded-lg p-2 m-1"
+      class="clipper-bg m-1 flex cursor-pointer items-center gap-2 rounded-lg p-2"
       routerLink="/manager/notes"
     >
-      Notes
+      <mat-icon>notes</mat-icon>
+      <span>Notes</span>
     </div>
     <div
       matRipple
-      class="cursor-pointer clipper-bg rounded-lg p-2 m-1"
+      class="clipper-bg m-1 flex cursor-pointer items-center gap-2 rounded-lg p-2"
       routerLink="/manager/bookmarks"
     >
-      Bookmarks
+      <mat-icon>bookmark</mat-icon>
+      <span>Bookmarks</span>
     </div>
     <div
       matRipple
-      class="cursor-pointer clipper-bg rounded-lg p-2 m-1"
+      class="clipper-bg m-1 flex cursor-pointer items-center gap-2 rounded-lg p-2"
+      routerLink="/manager/tagged-items"
+    >
+      <mat-icon>sell</mat-icon>
+      <span>Tagged Items</span>
+    </div>
+    <div
+      matRipple
+      class="clipper-bg m-1 mt-auto flex cursor-pointer items-center gap-2 rounded-lg p-2"
       routerLink="/manager/tags"
     >
-      Tags
+      <mat-icon>settings</mat-icon>
+      <span>Manage Tags</span>
     </div>
   </div>
 </div>

@@ -1,0 +1,136 @@
+<div class="flex h-full min-h-0 flex-col overflow-hidden">
+  <div class="wrapper items-center">
+    <div class="m-1 flex w-full justify-between">
+      <button
+        mat-mini-fab
+        (click)="toggleSearch()"
+        matTooltip="Toggle search bar"
+        matTooltipShowDelay="1000"
+      >
+        @if (showSearch()) {
+          <mat-icon>search_off</mat-icon>
+        } @else {
+          <mat-icon>search</mat-icon>
+        }
+      </button>
+    </div>
+    <div
+      class="absolute mx-auto w-full items-center text-center text-lg font-bold"
+    >
+      @if (showSearch()) {
+        <mat-form-field
+          class="search-field m-0 w-[600px]"
+          subscriptSizing="dynamic"
+          appearance="outline"
+        >
+          <input
+            #searchInput
+            matInput
+            type="text"
+            placeholder="Search tagged items"
+            [value]="searchQuery()"
+            (input)="searchQuery.set(searchInput.value)"
+          />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            aria-label="Cancel search"
+            (click)="clearSearch(searchInput)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-form-field>
+      } @else {
+        Tagged Items
+      }
+    </div>
+  </div>
+
+  <div class="wrapper items-center p-3">
+    <div class="flex w-full min-w-0 flex-wrap items-center gap-3">
+      <div class="flex flex-wrap items-center justify-start gap-2">
+        @for (color of tagColors; track color.value) {
+          <button
+            type="button"
+            class="tag-filter-swatch tag-filter-swatch-{{ color.value }}"
+            [class.tag-filter-swatch-selected]="isColorSelected(color.value)"
+            [attr.aria-label]="color.label"
+            [matTooltip]="color.label"
+            (click)="toggleColor(color.value)"
+          ></button>
+        }
+      </div>
+
+      <div class="min-w-0 flex-1"></div>
+      <div
+        class="max-w-full truncate text-xs font-medium text-slate-700 dark:text-slate-200"
+      >
+        {{ filterSummary() }}
+      </div>
+    </div>
+  </div>
+
+  @if (taggedItems().length) {
+    <div class="min-h-0 flex-1 overflow-auto">
+      <div class="py-1">
+        @for (
+          taggedItem of taggedItems();
+          track trackByTaggedItem($index, taggedItem)
+        ) {
+          @switch (taggedItem.kind) {
+            @case (TaggedItemKind.Clipboard) {
+              <app-clipboard-item
+                [clipperEntry]="asClipboardItem(taggedItem)"
+                (copyClicked)="
+                  clipboardHistoryService.copy(asClipboardItem(taggedItem).id)
+                "
+                (deleteClicked)="
+                  clipboardHistoryService.delete(asClipboardItem(taggedItem).id)
+                "
+                (openClicked)="
+                  clipboardHistoryService.open(asClipboardItem(taggedItem).id)
+                "
+              />
+            }
+            @case (TaggedItemKind.Bookmark) {
+              <app-bookmark-item
+                [bookmarkEntry]="asBookmarkItem(taggedItem)"
+                (copyClicked)="
+                  bookmarksService.copy(asBookmarkItem(taggedItem).id)
+                "
+                (deleteClicked)="
+                  bookmarksService.delete(asBookmarkItem(taggedItem).id)
+                "
+                (openClicked)="
+                  bookmarksService.open(asBookmarkItem(taggedItem).id)
+                "
+                (refreshClicked)="
+                  bookmarksService.update(asBookmarkItem(taggedItem).id)
+                "
+              />
+            }
+            @case (TaggedItemKind.Note) {
+              <app-note-item
+                [note]="asNoteItem(taggedItem)"
+                (copyClicked)="notesService.copy(asNoteItem(taggedItem).id)"
+                (deleteClicked)="notesService.delete(asNoteItem(taggedItem).id)"
+                (contentUpdated)="
+                  notesService.update(asNoteItem(taggedItem).id, $event)
+                "
+              />
+            }
+          }
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="m-1 dark:text-white">
+      @if (hasTaggedAssignments()) {
+        No tagged items match the current filters.
+      } @else {
+        Tagged clipboard entries, notes, and bookmarks will appear here.
+      }
+    </div>
+  }
+</div>

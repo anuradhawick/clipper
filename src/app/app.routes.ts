@@ -12,6 +12,7 @@ import { NotesPageComponent as ManagerNotesPageComponent } from "./pages/manager
 import { NewNoteComponent as ManagerNewNoteComponent } from "./pages/manager/notes-page/new-note/new-note.component";
 import { BookmarksPageComponent } from "./pages/manager/bookmarks-page/bookmarks-page.component";
 import { TagsPageComponent } from "./pages/manager/tags-page/tags-page.component";
+import { TaggedItemsPageComponent } from "./pages/manager/tagged-items-page/tagged-items-page.component";
 
 export const routes: Routes = [
   {
@@ -73,6 +74,10 @@ export const routes: Routes = [
       {
         path: "bookmarks",
         component: BookmarksPageComponent,
+      },
+      {
+        path: "tagged-items",
+        component: TaggedItemsPageComponent,
       },
       {
         path: "tags",
