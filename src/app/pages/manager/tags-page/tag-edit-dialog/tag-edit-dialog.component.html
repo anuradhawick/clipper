@@ -1,0 +1,49 @@
+<h3 mat-dialog-title>Edit Tag</h3>
+<mat-dialog-content>
+  <form
+    class="flex flex-col px-2 space-y-1"
+    [formGroup]="form"
+    (ngSubmit)="saveTag()"
+  >
+    <mat-form-field
+      class="tag-input-field w-full flex"
+      subscriptSizing="dynamic"
+      appearance="outline"
+    >
+      <input
+        matInput
+        type="text"
+        formControlName="tag"
+        aria-label="Tag name"
+        required
+      />
+      @if (tagControl.touched && tagControl.invalid) {
+        <mat-error>Tag name is required.</mat-error>
+      }
+    </mat-form-field>
+
+    <div class="tag-swatch-list my-2" aria-label="Tag color">
+      @for (color of tagColors; track color.value) {
+        <button
+          type="button"
+          class="tag-swatch tag-swatch-{{ color.value }}"
+          [class.tag-swatch-selected]="form.controls.kind.value === color.value"
+          [attr.aria-label]="color.label"
+          [matTooltip]="color.label"
+          (click)="setEditKind(color.value)"
+        ></button>
+      }
+    </div>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button mat-button type="button" [mat-dialog-close]="false">Cancel</button>
+  <button
+    mat-button
+    type="button"
+    (click)="saveTag()"
+    [disabled]="form.invalid || saving()"
+  >
+    Save
+  </button>
+</mat-dialog-actions>

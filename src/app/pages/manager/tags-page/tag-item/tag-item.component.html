@@ -1,0 +1,32 @@
+<div class="tag-card">
+  <div class="flex min-w-0 flex-1 items-center gap-3">
+    <span
+      class="tag-dot tag-dot-{{ tag().kind }}"
+      [attr.aria-label]="colorLabel()"
+    ></span>
+    <div class="min-w-0">
+      <div class="truncate font-semibold">{{ tag().tag }}</div>
+      <div class="text-xs text-slate-700">{{ colorLabel() }}</div>
+    </div>
+  </div>
+  <div class="flex shrink-0 items-center gap-2">
+    <button
+      mat-mini-fab
+      type="button"
+      (click)="editTag()"
+      matTooltip="Edit tag"
+      aria-label="Edit tag"
+    >
+      <mat-icon>edit</mat-icon>
+    </button>
+    <button
+      mat-mini-fab
+      type="button"
+      (click)="deleteTag()"
+      matTooltip="Delete tag"
+      aria-label="Delete tag"
+    >
+      <mat-icon>delete</mat-icon>
+    </button>
+  </div>
+</div>
