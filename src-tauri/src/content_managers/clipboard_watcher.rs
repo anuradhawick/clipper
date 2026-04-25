@@ -308,7 +308,7 @@ impl ClipboardWatcher {
     }
 
     pub async fn read(&self, count: u32) -> AppResult<Vec<ClipboardEvent>> {
-        let pool: tokio::sync::MutexGuard<'_, sqlx::Pool<sqlx::Sqlite>> = self.pool.lock().await;
+        let pool = self.pool.lock().await;
         let rows = sqlx::query(
             r#"
             SELECT *
