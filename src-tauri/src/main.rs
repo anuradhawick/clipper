@@ -285,11 +285,7 @@ async fn setup(app: AppHandle) -> AppResult<()> {
         BookmarksManager::new(Arc::clone(&db), bus.clone(), app.clone(), initial_settings).await;
     app.manage(bookmarks_manager);
     // register file service
-    let files_manager = FilesManager::new(
-        // Arc::clone(&db),
-        app.clone(),
-    )
-    .await?;
+    let files_manager = FilesManager::new(app.clone()).await?;
     app.manage(files_manager);
     Ok(())
 }
