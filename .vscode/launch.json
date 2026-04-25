@@ -1,0 +1,36 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Rust Backend (Tauri)",
+      "type": "lldb",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/src-tauri",
+      "program": "${workspaceFolder}/src-tauri/target/debug/clipper",
+      "preLaunchTask": "build rust backend",
+      "args": [],
+      "env": {
+        "RUST_BACKTRACE": "1",
+        "LD_LIBRARY_PATH": "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu",
+        "GTK_PATH": "",
+        "GIO_EXTRA_MODULES": "",
+        "SNAP": "",
+        "SNAP_NAME": "",
+        "SNAP_REVISION": "",
+        "SNAP_LIBRARY_PATH": ""
+      },
+      "sourceLanguages": [
+        "rust"
+      ]
+    },
+    {
+      "name": "Attach Rust Backend (Running Tauri Dev)",
+      "type": "lldb",
+      "request": "attach",
+      "pid": "${command:pickMyProcess}",
+      "sourceLanguages": [
+        "rust"
+      ]
+    }
+  ]
+}
