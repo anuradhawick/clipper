@@ -30,6 +30,7 @@ import { Location, TitleCasePipe } from "@angular/common";
 import { MatTooltipModule } from "@angular/material/tooltip";
 import { MatFormField } from "@angular/material/select";
 import { MatInputModule } from "@angular/material/input";
+import { NotesService } from "../../../../services/notes.service";
 
 @Component({
   selector: "app-nav-bar",
@@ -57,6 +58,7 @@ export class NavBarComponent implements OnDestroy {
   activeMenu = signal<MatMenu | null>(null);
   pageTitle = signal<string>("");
   readonly clipboardHistoryService = inject(ClipboardHistoryService);
+  readonly notesService = inject(NotesService);
   readonly windowActionsService = inject(WindowActionsService);
   readonly changeDetectorRef = inject(ChangeDetectorRef);
   readonly dialog = inject(MatDialog);
@@ -139,6 +141,20 @@ export class NavBarComponent implements OnDestroy {
     dialogRef.afterClosed().subscribe((result) => {
       if (result) {
         this.clipboardHistoryService.clear();
+      }
+    });
+  }
+
+  deleteAllNotes(): void {
+    const dialogRef = this.dialog.open(ActionConfirmationDialogComponent, {
+      data: {
+        title: `Delete All Notes`,
+        message: `Are you sure you want to delete all notes?`,
+      },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.notesService.deleteAll();
       }
     });
   }
