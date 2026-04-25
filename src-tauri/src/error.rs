@@ -1,24 +1,49 @@
-use serde::Serialize;
+use serde::{ser::SerializeStruct, Serialize, Serializer};
 use std::future::Future;
 use tauri::{AppHandle, Emitter};
 use thiserror::Error;
 
 pub type AppResult<T> = Result<T, AppError>;
 
-#[derive(Debug, Error, Serialize, Clone)]
-#[allow(clippy::upper_case_acronyms)]
-#[serde(tag = "type", content = "description")]
+#[derive(Debug, Error)]
 pub enum AppError {
     #[error("{0}")]
-    DBERROR(String),
+    DbError(String),
     #[error("{0}")]
-    IOERROR(String),
+    IoError(String),
     #[error("{0}")]
-    VALIDATIONERROR(String),
+    ValidationError(String),
     #[error("{0}")]
-    NETWORKERROR(String),
+    NetworkError(String),
     #[error("{0}")]
-    RUNTIMEERROR(String),
+    RuntimeError(String),
+
+    #[error("{0}")]
+    Sqlx(#[from] sqlx::Error),
+    #[error("{0}")]
+    SqlxMigrate(#[from] sqlx::migrate::MigrateError),
+    #[error("{0}")]
+    Io(#[from] std::io::Error),
+    #[error("{0}")]
+    Tauri(#[from] tauri::Error),
+    #[error("{0}")]
+    SerdeJson(#[from] serde_json::Error),
+    #[error("{0}")]
+    Regex(#[from] regex::Error),
+    #[error("{0}")]
+    Reqwest(#[from] reqwest::Error),
+    #[error("{0}")]
+    Image(#[from] image::ImageError),
+    #[error("{0}")]
+    UrlParse(#[from] url::ParseError),
+    #[error("{0}")]
+    Utf8(#[from] std::string::FromUtf8Error),
+    #[error("{0}")]
+    GlobalShortcut(#[from] tauri_plugin_global_shortcut::Error),
+    #[error("{0}")]
+    Clipboard(#[from] arboard::Error),
+    #[error("{0}")]
+    Anyhow(#[from] anyhow::Error),
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -31,30 +56,34 @@ pub struct BackendErrorPayload {
 impl AppError {
     pub fn code(&self) -> &'static str {
         match self {
-            AppError::DBERROR(_) => "DBERROR",
-            AppError::IOERROR(_) => "IOERROR",
-            AppError::VALIDATIONERROR(_) => "VALIDATIONERROR",
-            AppError::NETWORKERROR(_) => "NETWORKERROR",
-            AppError::RUNTIMEERROR(_) => "RUNTIMEERROR",
+            AppError::DbError(_) | AppError::Sqlx(_) | AppError::SqlxMigrate(_) => "DBERROR",
+            AppError::IoError(_)
+            | AppError::Io(_)
+            | AppError::Image(_)
+            | AppError::Clipboard(_) => "IOERROR",
+            AppError::ValidationError(_)
+            | AppError::SerdeJson(_)
+            | AppError::Regex(_)
+            | AppError::UrlParse(_)
+            | AppError::Utf8(_) => "VALIDATIONERROR",
+            AppError::NetworkError(_) | AppError::Reqwest(_) => "NETWORKERROR",
+            AppError::RuntimeError(_)
+            | AppError::Tauri(_)
+            | AppError::GlobalShortcut(_)
+            | AppError::Anyhow(_) => "RUNTIMEERROR",
         }
     }
 
-    pub fn message(&self) -> &str {
-        match self {
-            AppError::DBERROR(message)
-            | AppError::IOERROR(message)
-            | AppError::VALIDATIONERROR(message)
-            | AppError::NETWORKERROR(message)
-            | AppError::RUNTIMEERROR(message) => message,
-        }
+    pub fn message(&self) -> String {
+        self.to_string()
     }
 
     pub fn runtime(message: impl Into<String>) -> Self {
-        Self::RUNTIMEERROR(message.into())
+        Self::RuntimeError(message.into())
     }
 
     pub fn validation(message: impl Into<String>) -> Self {
-        Self::VALIDATIONERROR(message.into())
+        Self::ValidationError(message.into())
     }
 }
 
@@ -62,90 +91,25 @@ impl From<&AppError> for BackendErrorPayload {
     fn from(value: &AppError) -> Self {
         Self {
             code: value.code().to_string(),
-            message: value.message().to_string(),
+            message: value.message(),
         }
     }
 }
 
-impl From<anyhow::Error> for AppError {
-    fn from(value: anyhow::Error) -> Self {
-        AppError::RUNTIMEERROR(value.to_string())
-    }
-}
-
-impl From<sqlx::Error> for AppError {
-    fn from(value: sqlx::Error) -> Self {
-        AppError::DBERROR(value.to_string())
-    }
-}
-
-impl From<sqlx::migrate::MigrateError> for AppError {
-    fn from(value: sqlx::migrate::MigrateError) -> Self {
-        AppError::DBERROR(value.to_string())
-    }
-}
-
-impl From<std::io::Error> for AppError {
-    fn from(value: std::io::Error) -> Self {
-        AppError::IOERROR(value.to_string())
-    }
-}
-
-impl From<tauri::Error> for AppError {
-    fn from(value: tauri::Error) -> Self {
-        AppError::RUNTIMEERROR(value.to_string())
-    }
-}
-
-impl From<serde_json::Error> for AppError {
-    fn from(value: serde_json::Error) -> Self {
-        AppError::VALIDATIONERROR(value.to_string())
-    }
-}
-
-impl From<regex::Error> for AppError {
-    fn from(value: regex::Error) -> Self {
-        AppError::VALIDATIONERROR(value.to_string())
-    }
-}
-
-impl From<reqwest::Error> for AppError {
-    fn from(value: reqwest::Error) -> Self {
-        AppError::NETWORKERROR(value.to_string())
-    }
-}
-
-impl From<image::ImageError> for AppError {
-    fn from(value: image::ImageError) -> Self {
-        AppError::IOERROR(value.to_string())
-    }
-}
-
-impl From<url::ParseError> for AppError {
-    fn from(value: url::ParseError) -> Self {
-        AppError::VALIDATIONERROR(value.to_string())
-    }
-}
-
-impl From<std::string::FromUtf8Error> for AppError {
-    fn from(value: std::string::FromUtf8Error) -> Self {
-        AppError::VALIDATIONERROR(value.to_string())
-    }
-}
-
-impl From<tauri_plugin_global_shortcut::Error> for AppError {
-    fn from(value: tauri_plugin_global_shortcut::Error) -> Self {
-        AppError::RUNTIMEERROR(value.to_string())
-    }
-}
-
-impl From<arboard::Error> for AppError {
-    fn from(value: arboard::Error) -> Self {
-        AppError::IOERROR(value.to_string())
+impl Serialize for AppError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("AppError", 2)?;
+        state.serialize_field("type", self.code())?;
+        state.serialize_field("description", &self.message())?;
+        state.end()
     }
 }
 
 pub fn emit_backend_error(app_handle: &AppHandle, error: &AppError) {
+    // Surface backend failures to the UI error/toast channel.
     if let Err(emit_err) = app_handle.emit("backend_error", BackendErrorPayload::from(error)) {
         log::error!(
             "Failed to emit backend_error event. original={}, emit={}",

@@ -37,6 +37,7 @@ impl NotesManager {
     }
 
     fn notify_notes_updated(&self) {
+        // Notify note lists to refetch after note mutations.
         if self.app_handle.emit("notes_updated", ()).is_err() {
             log::error!("Unable to emit: notes_updated");
         }
@@ -263,7 +264,7 @@ pub async fn clipboard_add_note(
         };
 
         bus.send(AppMessage::SetClipboardText(text))
-            .map_err(|error| AppError::RUNTIMEERROR(error.to_string()))?;
+            .map_err(|error| AppError::RuntimeError(error.to_string()))?;
 
         Ok(())
     })

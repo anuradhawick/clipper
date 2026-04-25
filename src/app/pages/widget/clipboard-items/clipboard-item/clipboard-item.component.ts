@@ -26,6 +26,12 @@ import {
   ClipboardItemDialogComponent,
   ClipboardItemDialogData,
 } from "./clipboard-item-dialog.component";
+import {
+  TagItemDialogComponent,
+  TagItemDialogData,
+} from "../../../../components/tag-item-dialog/tag-item-dialog.component";
+import { TaggedItemKind } from "../../../../services/tags.service";
+import { TagSwatchesComponent } from "../../../../components/tag-swatches/tag-swatches.component";
 
 @Component({
   selector: "app-clipboard-item",
@@ -40,6 +46,7 @@ import {
     RouterLink,
     DatePipe,
     MatMenuModule,
+    TagSwatchesComponent,
   ],
   templateUrl: "./clipboard-item.component.html",
   styleUrl: "./clipboard-item.component.scss",
@@ -52,7 +59,8 @@ export class ClipboardItemComponent {
   openClicked = output();
   clickedUrl = signal("");
   ClipperEntryKind = ClipperEntryKind;
-  menu = viewChild.required<MatMenuTrigger>(MatMenuTrigger);
+  readonly TaggedItemKind = TaggedItemKind;
+  menu = viewChild.required<MatMenuTrigger>("linkMenuTrigger");
   contextMenuPosition = { x: "0px", y: "0px" };
   processBytes = processBytes;
   asPlainText = asPlainText;
@@ -99,6 +107,19 @@ export class ClipboardItemComponent {
         maxHeight: "100vh",
         autoFocus: false,
         panelClass: "clipper-fullscreen-dialog-panel",
+      },
+    );
+  }
+
+  openTagDialog() {
+    this.dialog.open<TagItemDialogComponent, TagItemDialogData>(
+      TagItemDialogComponent,
+      {
+        data: {
+          itemKind: TaggedItemKind.Clipboard,
+          itemId: this.clipperEntry().id,
+        },
+        autoFocus: false,
       },
     );
   }

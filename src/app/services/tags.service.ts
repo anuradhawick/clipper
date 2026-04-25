@@ -43,8 +43,11 @@ export const TAG_COLORS: TagColorOption[] = [
 })
 export class TagsService implements OnDestroy {
   readonly tags = signal<TagEntry[]>([]);
+  // Incremented when tag-item assignments change; components use it to refetch.
+  readonly tagItemsVersion = signal(0);
   readonly tagColors = TAG_COLORS;
   private unlistenTagsEvent: UnlistenFn | undefined;
+  private unlistenTagItemsEvent: UnlistenFn | undefined;
 
   constructor() {
     console.log("TagsService created");
@@ -53,11 +56,20 @@ export class TagsService implements OnDestroy {
     listen("tags_updated", async () => {
       await this.read();
     }).then((func) => (this.unlistenTagsEvent = func));
+
+    // The event has no payload: it only invalidates visible item tag queries.
+    listen("tag_items_updated", () => {
+      this.tagItemsVersion.update((version) => version + 1);
+    }).then((func) => (this.unlistenTagItemsEvent = func));
   }
 
   ngOnDestroy(): void {
     if (this.unlistenTagsEvent) {
       const unlisten = this.unlistenTagsEvent;
+      unlisten();
+    }
+    if (this.unlistenTagItemsEvent) {
+      const unlisten = this.unlistenTagItemsEvent;
       unlisten();
     }
   }

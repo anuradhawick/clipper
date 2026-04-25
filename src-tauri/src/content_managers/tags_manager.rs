@@ -316,12 +316,14 @@ impl TagsManager {
     }
 
     fn notify_tags_updated(&self) {
+        // Invalidate cached tag metadata after tags are created, edited, or deleted.
         if self.app_handle.emit("tags_updated", ()).is_err() {
             log::error!("Unable to emit: tags_updated");
         }
     }
 
     fn notify_tag_items_updated(&self) {
+        // Invalidate per-item tag queries after tag assignments change.
         if self.app_handle.emit("tag_items_updated", ()).is_err() {
             log::error!("Unable to emit: tag_items_updated");
         }

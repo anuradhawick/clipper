@@ -16,7 +16,7 @@ impl DbConnection {
         let app_dir = app_handle
             .path()
             .home_dir()
-            .map_err(|error| AppError::IOERROR(format!("failed to get home dir: {error}")))?;
+            .map_err(|error| AppError::IoError(format!("failed to get home dir: {error}")))?;
         let db_path = app_dir.join("clipper.db");
         if let Some(parent) = db_path.parent() {
             fs::create_dir_all(parent)
@@ -47,7 +47,7 @@ pub async fn db_delete_dbfile(app_handle: tauri::AppHandle) -> AppResult<()> {
         let app_dir = app_handle
             .path()
             .home_dir()
-            .map_err(|error| AppError::IOERROR(format!("failed to get home dir: {error}")))?;
+            .map_err(|error| AppError::IoError(format!("failed to get home dir: {error}")))?;
         let db_path = app_dir.join("clipper.db");
         if db_path.exists() {
             fs::remove_file(db_path).await?;
@@ -65,7 +65,7 @@ pub async fn db_get_dbfile_path(app_handle: tauri::AppHandle) -> AppResult<Strin
         let app_dir = app_handle
             .path()
             .home_dir()
-            .map_err(|error| AppError::IOERROR(format!("failed to get home dir: {error}")))?;
+            .map_err(|error| AppError::IoError(format!("failed to get home dir: {error}")))?;
         let db_path = app_dir.join("clipper.db");
         Ok(db_path.to_string_lossy().to_string())
     })

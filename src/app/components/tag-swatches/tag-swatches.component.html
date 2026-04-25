@@ -1,0 +1,11 @@
+@if (assignedTags().length) {
+  <span class="tag-swatches" aria-label="Assigned tags">
+    @for (tag of assignedTags(); track tag.id) {
+      <span
+        class="tag-swatch tag-swatch-{{ tag.kind }}"
+        [attr.aria-label]="tag.tag"
+        [matTooltip]="tag.tag"
+      ></span>
+    }
+  </span>
+}

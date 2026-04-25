@@ -33,6 +33,7 @@ pub struct BookmarksManager {
 
 impl BookmarksManager {
     fn notify_bookmarks_updated(&self) {
+        // Notify bookmark lists to refetch after bookmark mutations.
         if self.app_handle.emit("bookmarks_updated", ()).is_err() {
             log::error!("Unable to emit: bookmarks_updated");
         }
@@ -228,6 +229,7 @@ impl BookmarksManager {
 
                                 match app_state.create(bookmark.clone()).await {
                                     Ok(_) => {
+                                        // Push newly discovered bookmark metadata to open windows.
                                         app_state
                                             .app_handle
                                             .emit("bookmark_entry_added", bookmark)
@@ -442,7 +444,7 @@ pub async fn bookmarks_update_entry(
 
         let (title, description, image) = BookmarksManager::fetch_meta(&existing.url)
             .await
-            .map_err(|error| AppError::NETWORKERROR(error.to_string()))?;
+            .map_err(|error| AppError::NetworkError(error.to_string()))?;
 
         let updated_bookmark = BookmarkItem {
             id: existing.id,
@@ -458,6 +460,7 @@ pub async fn bookmarks_update_entry(
             mgr.app_handle.clone()
         };
 
+        // Push refreshed bookmark metadata to open windows.
         app_handle.emit("bookmark_entry_added", updated_bookmark.clone())?;
 
         Ok(updated_bookmark)

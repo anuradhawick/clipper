@@ -25,6 +25,7 @@ import {
   TagItemDialogData,
 } from "../../../../components/tag-item-dialog/tag-item-dialog.component";
 import { TaggedItemKind } from "../../../../services/tags.service";
+import { TagSwatchesComponent } from "../../../../components/tag-swatches/tag-swatches.component";
 
 const ITEM_HEIGHT_PX = 140;
 
@@ -35,7 +36,13 @@ const ITEM_HEIGHT_PX = 140;
     class: "relative block w-full min-w-0 pb-1",
     "[style.height.px]": "itemHeightPx",
   },
-  imports: [MatButtonModule, MatIconModule, DatePipe, MatMenuModule],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    DatePipe,
+    MatMenuModule,
+    TagSwatchesComponent,
+  ],
   templateUrl: "./bookmark-item.component.html",
   styleUrl: "./bookmark-item.component.scss",
   providers: [],
@@ -47,7 +54,8 @@ export class BookmarkItemComponent {
   openClicked = output();
   refreshClicked = output();
   clickedUrl = signal("");
-  menu = viewChild.required<MatMenuTrigger>(MatMenuTrigger);
+  readonly TaggedItemKind = TaggedItemKind;
+  menu = viewChild.required<MatMenuTrigger>("linkMenuTrigger");
   contextMenuPosition = { x: "0px", y: "0px" };
   openUrl = openUrl;
   readonly itemHeightPx = ITEM_HEIGHT_PX;

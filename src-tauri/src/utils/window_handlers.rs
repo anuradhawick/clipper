@@ -26,6 +26,7 @@ pub fn handle_window_event(window: &Window, event: &WindowEvent) {
             if paths.is_empty() {
                 return;
             }
+            // Mirror native drag start state to frontend drop overlays.
             app_handle
                 .emit(
                     "window_dragdrop",
@@ -53,6 +54,7 @@ pub fn handle_window_event(window: &Window, event: &WindowEvent) {
                 })
             });
 
+            // Mirror the completed native drop and accepted paths to the frontend.
             app_handle
                 .emit(
                     "window_dragdrop",
@@ -72,6 +74,7 @@ pub fn handle_window_event(window: &Window, event: &WindowEvent) {
             log::info!("Hovering: dropped files: {:#?}", paths);
         }
         WindowEvent::DragDrop(DragDropEvent::Leave) => {
+            // Mirror native drag leave state so frontend drop overlays can clear.
             app_handle
                 .emit(
                     "window_dragdrop",

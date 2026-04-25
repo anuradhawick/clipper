@@ -59,7 +59,7 @@ impl FilesManager {
         let app_dir = app_handle
             .path()
             .home_dir()
-            .map_err(|error| AppError::IOERROR(format!("Home path failed: {error}")))?;
+            .map_err(|error| AppError::IoError(format!("Home path failed: {error}")))?;
         let clipper_path = app_dir.join("clipper/");
         fs::create_dir_all(&clipper_path).await?;
         log::info!("files manager initialized");
@@ -71,7 +71,7 @@ impl FilesManager {
             .app_handle
             .path()
             .home_dir()
-            .map_err(|error| AppError::IOERROR(format!("Home path failed: {error}")))?;
+            .map_err(|error| AppError::IoError(format!("Home path failed: {error}")))?;
         let clipper_path = app_dir.join("clipper/");
         let mut files = vec![];
         let mut entries = fs::read_dir(clipper_path).await?;
@@ -79,12 +79,12 @@ impl FilesManager {
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
             let file_name = path.file_name().ok_or_else(|| {
-                AppError::IOERROR(format!("Invalid file entry without filename: {path:?}"))
+                AppError::IoError(format!("Invalid file entry without filename: {path:?}"))
             })?;
             let file = file_name
                 .to_str()
                 .ok_or_else(|| {
-                    AppError::VALIDATIONERROR(format!("Invalid UTF-8 filename: {file_name:?}"))
+                    AppError::ValidationError(format!("Invalid UTF-8 filename: {file_name:?}"))
                 })?
                 .to_string();
 
@@ -115,7 +115,7 @@ impl FilesManager {
             .app_handle
             .path()
             .home_dir()
-            .map_err(|error| AppError::IOERROR(format!("Home path failed: {error}")))?;
+            .map_err(|error| AppError::IoError(format!("Home path failed: {error}")))?;
         let clipper_path = app_dir.join("clipper/");
         Ok(clipper_path.to_string_lossy().to_string())
     }
@@ -125,7 +125,7 @@ impl FilesManager {
             .app_handle
             .path()
             .home_dir()
-            .map_err(|error| AppError::IOERROR(format!("Home path failed: {error}")))?;
+            .map_err(|error| AppError::IoError(format!("Home path failed: {error}")))?;
         let clipper_path = app_dir.join("clipper/");
         fs::remove_dir_all(&clipper_path).await?;
         fs::create_dir_all(&clipper_path).await?;
@@ -137,7 +137,7 @@ impl FilesManager {
             .app_handle
             .path()
             .home_dir()
-            .map_err(|error| AppError::IOERROR(format!("Home path failed: {error}")))?;
+            .map_err(|error| AppError::IoError(format!("Home path failed: {error}")))?;
         let clipper_path = app_dir.join("clipper/").join(file);
 
         if clipper_path.is_dir() {
@@ -161,12 +161,12 @@ impl FilesManager {
 
         for file in paths.into_iter() {
             let file_name_os = file.file_name().ok_or_else(|| {
-                AppError::IOERROR(format!(
+                AppError::IoError(format!(
                     "Unable to read dropped file name for path: {file:?}"
                 ))
             })?;
             let file_name = file_name_os.to_str().ok_or_else(|| {
-                AppError::VALIDATIONERROR(format!("Dropped file path is not valid UTF-8: {file:?}"))
+                AppError::ValidationError(format!("Dropped file path is not valid UTF-8: {file:?}"))
             })?;
             let file_path = files_path.join(file_name);
 
@@ -193,6 +193,7 @@ impl FilesManager {
             }
         }
 
+        // Tell the frontend which dropped paths were copied into managed storage.
         self.app_handle
             .emit("files_added_paths", added_paths)
             .map_err(AppError::from)?;

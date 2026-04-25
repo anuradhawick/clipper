@@ -1,0 +1,10 @@
+@use "@angular/material" as mat;
+
+:host {
+  @include mat.badge-overrides(
+    (
+      background-color: red,
+      text-color: red,
+    )
+  );
+}

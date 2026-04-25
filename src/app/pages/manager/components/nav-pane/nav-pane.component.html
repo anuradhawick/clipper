@@ -5,6 +5,11 @@
       class="cursor-pointer clipper-bg rounded-lg p-2 m-1"
       routerLink="/manager/clipboard"
     >
+      <span
+        matBadge="-"
+        matBadgeSize="small"
+        [matBadgeHidden]="clipboardHistoryService.running()"
+      ></span>
       Clipboard
     </div>
     <div

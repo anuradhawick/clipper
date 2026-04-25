@@ -3,13 +3,22 @@
   style="visibility: hidden; position: absolute; pointer-events: none"
   [style.left]="contextMenuPosition.x"
   [style.top]="contextMenuPosition.y"
+  #linkMenuTrigger="matMenuTrigger"
   [matMenuTriggerFor]="linkMenu"
 ></div>
 <div
   class="relative m-1 mt-0 flex h-full min-w-0 overflow-hidden rounded-lg border border-solid bg-slate-50/30 shadow-lg"
 >
-  <div class="absolute bottom-0 text-xs text-slate-700 px-3">
-    Added: {{ bookmarkEntry().timestamp | date: "yyyy-MM-dd HH:mm" }}
+  <div
+    class="absolute bottom-0 left-0 right-[6.75rem] flex items-center gap-2 overflow-hidden px-3 text-xs text-slate-700"
+  >
+    <span class="shrink-0">
+      Added: {{ bookmarkEntry().timestamp | date: "yyyy-MM-dd HH:mm" }}
+    </span>
+    <app-tag-swatches
+      [itemKind]="TaggedItemKind.Bookmark"
+      [itemId]="bookmarkEntry().id"
+    />
   </div>
   <div class="mb-4 flex min-h-0 flex-1 overflow-hidden rounded-lg p-2">
     <div class="h-full min-w-0 overflow-auto">
@@ -67,24 +76,25 @@
       <button
         mat-mini-fab
         class="w-full"
-        aria-label="Delete bookmark"
-        (click)="deleteClicked.emit()"
+        aria-label="More bookmark actions"
+        [matMenuTriggerFor]="actionsMenu"
       >
-        <mat-icon>delete</mat-icon>
-      </button>
-    </div>
-    <div class="flex w-[50px] flex-col space-y-2">
-      <button
-        mat-mini-fab
-        class="w-full"
-        aria-label="Tag bookmark"
-        (click)="openTagDialog()"
-      >
-        <mat-icon>label</mat-icon>
+        <mat-icon>more_vert</mat-icon>
       </button>
     </div>
   </div>
 </div>
+
+<mat-menu #actionsMenu="matMenu">
+  <button mat-menu-item (click)="openTagDialog()">
+    <mat-icon>label</mat-icon>
+    <span>Tags</span>
+  </button>
+  <button mat-menu-item (click)="deleteClicked.emit()">
+    <mat-icon>delete</mat-icon>
+    <span>Delete</span>
+  </button>
+</mat-menu>
 
 <mat-menu #linkMenu="matMenu">
   <button mat-menu-item (click)="openUrl(clickedUrl())">

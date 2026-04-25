@@ -22,6 +22,12 @@ import {
   NoteItemDialogComponent,
   NoteItemDialogData,
 } from "./note-item-dialog.component";
+import {
+  TagItemDialogComponent,
+  TagItemDialogData,
+} from "../../../../components/tag-item-dialog/tag-item-dialog.component";
+import { TaggedItemKind } from "../../../../services/tags.service";
+import { TagSwatchesComponent } from "../../../../components/tag-swatches/tag-swatches.component";
 
 const ITEM_HEIGHT_PX = 120;
 
@@ -32,7 +38,13 @@ const ITEM_HEIGHT_PX = 120;
     class: "block w-full min-w-0 pb-1",
     "[style.height.px]": "itemHeightPx",
   },
-  imports: [MatButtonModule, MatIconModule, DatePipe, MatMenuModule],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    DatePipe,
+    MatMenuModule,
+    TagSwatchesComponent,
+  ],
   templateUrl: "./note-item.component.html",
   styleUrl: "./note-item.component.scss",
   providers: [],
@@ -43,7 +55,8 @@ export class NoteItemComponent {
   copyClicked = output();
   clickedUrl = signal("");
   contentUpdated = output<string>();
-  menu = viewChild.required<MatMenuTrigger>(MatMenuTrigger);
+  readonly TaggedItemKind = TaggedItemKind;
+  menu = viewChild.required<MatMenuTrigger>("linkMenuTrigger");
   editable = signal(false);
   editor = viewChild<ElementRef>("editor");
   contextMenuPosition = { x: "0px", y: "0px" };
@@ -101,6 +114,19 @@ export class NoteItemComponent {
         maxHeight: "100vh",
         autoFocus: false,
         panelClass: "clipper-fullscreen-dialog-panel",
+      },
+    );
+  }
+
+  openTagDialog() {
+    this.dialog.open<TagItemDialogComponent, TagItemDialogData>(
+      TagItemDialogComponent,
+      {
+        data: {
+          itemKind: TaggedItemKind.Note,
+          itemId: this.note().id,
+        },
+        autoFocus: false,
       },
     );
   }

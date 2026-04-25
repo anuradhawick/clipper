@@ -2,16 +2,24 @@
   style="visibility: hidden; position: fixed"
   [style.left]="contextMenuPosition.x"
   [style.top]="contextMenuPosition.y"
+  #linkMenuTrigger="matMenuTrigger"
   [matMenuTriggerFor]="linkMenu"
 ></div>
 <div
   class="relative m-1 mt-0 flex h-full min-w-0 overflow-hidden rounded-lg border border-solid bg-slate-50/30 shadow-lg"
 >
-  <div class="absolute bottom-0 text-xs text-slate-700 px-3">
+  <div
+    class="absolute bottom-0 left-0 right-[6.75rem] flex items-center gap-2 overflow-hidden px-3 text-xs text-slate-700"
+  >
     @if (note().updated_time) {
-      Updated: {{ note().updated_time | date: "yyyy-MM-dd HH:mm" }}
+      <span class="shrink-0">
+        Updated: {{ note().updated_time | date: "yyyy-MM-dd HH:mm" }}
+      </span>
     }
-    Created: {{ note().created_time | date: "yyyy-MM-dd HH:mm" }}
+    <span class="shrink-0">
+      Created: {{ note().created_time | date: "yyyy-MM-dd HH:mm" }}
+    </span>
+    <app-tag-swatches [itemKind]="TaggedItemKind.Note" [itemId]="note().id" />
   </div>
   <div class="mb-4 flex min-h-0 flex-1 overflow-hidden rounded-lg p-2">
     @if (editable()) {
@@ -70,12 +78,28 @@
       >
         <mat-icon>content_copy</mat-icon>
       </button>
-      <button mat-mini-fab class="w-full" (click)="deleteClicked.emit()">
-        <mat-icon>delete</mat-icon>
+      <button
+        mat-mini-fab
+        class="w-full"
+        aria-label="More note actions"
+        [matMenuTriggerFor]="actionsMenu"
+      >
+        <mat-icon>more_vert</mat-icon>
       </button>
     </div>
   </div>
 </div>
+
+<mat-menu #actionsMenu="matMenu">
+  <button mat-menu-item (click)="openTagDialog()" [disabled]="editable()">
+    <mat-icon>label</mat-icon>
+    <span>Tags</span>
+  </button>
+  <button mat-menu-item (click)="deleteClicked.emit()">
+    <mat-icon>delete</mat-icon>
+    <span>Delete</span>
+  </button>
+</mat-menu>
 
 <mat-menu #linkMenu="matMenu">
   <button mat-menu-item (click)="openUrl(clickedUrl())">

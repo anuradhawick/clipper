@@ -123,11 +123,11 @@ impl SettingsManager {
 
         if settings.autolaunch {
             self.app_handle.autolaunch().enable().map_err(|error| {
-                AppError::RUNTIMEERROR(format!("Failed to enable autolaunch: {error}"))
+                AppError::RuntimeError(format!("Failed to enable autolaunch: {error}"))
             })?;
         } else {
             self.app_handle.autolaunch().disable().map_err(|error| {
-                AppError::RUNTIMEERROR(format!("Failed to disable autolaunch: {error}"))
+                AppError::RuntimeError(format!("Failed to disable autolaunch: {error}"))
             })?;
         }
 
@@ -187,7 +187,7 @@ impl SettingsManager {
             clipboard_history_size: result.get("clipboardHistorySize"),
             bookmark_history_size: result.get("bookmarkHistorySize"),
             autolaunch: self.app_handle.autolaunch().is_enabled().map_err(|error| {
-                AppError::RUNTIMEERROR(format!("Unable to read autolaunch state: {error}"))
+                AppError::RuntimeError(format!("Unable to read autolaunch state: {error}"))
             })?,
             global_shortcut: result.get("globalShortcut"),
         })
@@ -206,11 +206,7 @@ pub async fn settings_update(
         let mgr = state.lock().await;
         mgr.update(settings.clone()).await?;
 
-        // Emit settings_changed event globally to all windows (main, manager, qrviewer)
-        // This ensures that theme changes and other settings updates are immediately
-        // reflected across all windows, regardless of which window initiated the change
-        // If emission fails, we log the error but don't fail the operation since
-        // the settings have already been successfully persisted
+        // Broadcast saved settings so every window applies theme/preference changes immediately.
         if let Err(e) = mgr.app_handle.emit("settings_changed", settings) {
             log::error!("Error emitting settings_changed event: {}", e);
         }

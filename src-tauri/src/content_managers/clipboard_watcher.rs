@@ -47,7 +47,7 @@ impl ClipboardEventKind {
         match s {
             "text" => Ok(ClipboardEventKind::Text),
             "image" => Ok(ClipboardEventKind::Image),
-            _ => Err(AppError::DBERROR(format!(
+            _ => Err(AppError::DbError(format!(
                 "Unexpected clipboard event kind in database: {}",
                 s
             ))),
@@ -94,6 +94,7 @@ fn image_to_png(image: ImageData) -> AppResult<Vec<u8>> {
 
 impl ClipboardWatcher {
     fn notify_clipboard_updated(&self) {
+        // Notify list views to refetch when persisted clipboard history changes.
         if self.app_handle.emit("clipboard_updated", ()).is_err() {
             log::error!("Unable to emit: clipboard_updated");
         }
@@ -235,6 +236,7 @@ impl ClipboardWatcher {
                             timestamp: Utc::now().to_rfc3339(),
                         };
                         log::info!("Clipboard text changed: {:#?}", entry.id);
+                        // Push the new clipboard entry to open windows without waiting for a poll.
                         if app_state
                             .app_handle
                             .emit("clipboard_entry_added", entry.clone())
@@ -275,6 +277,7 @@ impl ClipboardWatcher {
                             timestamp: Utc::now().to_rfc3339(),
                         };
                         log::info!("Clipboard image changed: Image hash - {:#?}", hash);
+                        // Push the new clipboard entry to open windows without waiting for a poll.
                         if app_state
                             .app_handle
                             .emit("clipboard_entry_added", entry.clone())
@@ -456,6 +459,7 @@ pub async fn clipboard_pause_watcher(
         let mut clipboard_watcher = state.lock().await;
         clipboard_watcher.pause();
         log::info!("CMD:clipboard_pause_watcher");
+        // Keep UI controls in sync with the paused watcher state.
         app_handle.emit("clipboard_status_changed", false)?;
         Ok(())
     })
@@ -478,6 +482,7 @@ pub async fn clipboard_resume_watcher(
         }
         clipboard_watcher.resume();
         log::info!("CMD:clipboard_resume_watcher");
+        // Keep UI controls in sync with the running watcher state.
         app_handle.emit("clipboard_status_changed", true)?;
         Ok(())
     })
@@ -587,12 +592,12 @@ pub async fn clipboard_open_entry(
 
             let image_path_str = temp_file_path
                 .to_str()
-                .ok_or_else(|| AppError::IOERROR("Invalid temp file path".to_string()))?;
+                .ok_or_else(|| AppError::IoError("Invalid temp file path".to_string()))?;
 
             app_handle
                 .opener()
                 .open_path(image_path_str, None::<&str>)
-                .map_err(|error| AppError::RUNTIMEERROR(error.to_string()))?;
+                .map_err(|error| AppError::RuntimeError(error.to_string()))?;
 
             log::info!("Image opened successfully");
         }
