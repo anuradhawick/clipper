@@ -147,7 +147,6 @@ impl TagsManager {
             .await?;
         }
 
-        drop(pool);
         self.notify_tag_items_updated();
         self.read_item_tags(item_kind, item_id).await
     }
