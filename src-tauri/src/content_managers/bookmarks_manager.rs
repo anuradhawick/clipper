@@ -207,7 +207,7 @@ impl BookmarksManager {
                                     BookmarkItem {
                                         id: id.to_string(),
                                         url: url.clone(),
-                                        text: format!("{}\\n{}", title, description),
+                                        text: format!("{}\n{}", title, description),
                                         image,
                                         timestamp: Utc::now().to_rfc3339(),
                                     }
