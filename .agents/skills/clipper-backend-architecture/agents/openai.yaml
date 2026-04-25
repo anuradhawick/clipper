@@ -1,0 +1,7 @@
+interface:
+  display_name: "Clipper Backend Architecture"
+  short_description: "Keep Clipper backend docs and events current"
+  default_prompt: "Use $clipper-backend-architecture to update backend code and keep the architecture/event documentation current."
+
+policy:
+  allow_implicit_invocation: true

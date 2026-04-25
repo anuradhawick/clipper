@@ -88,6 +88,11 @@ See [MIGRATIONS.md](./MIGRATIONS.md) for:
 * running migrations manually
 * conventions for safe schema updates
 
+## Backend Architecture
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the Tauri backend component map,
+command surface, emitted frontend events, and internal backend message bus.
+
 ## Troubleshooting
 
 Compiling in Mac is very easy and can be tricky on Linux. Please follow the guidelines here.
