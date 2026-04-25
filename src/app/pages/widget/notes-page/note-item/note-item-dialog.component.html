@@ -6,11 +6,19 @@
   >
     <div class="min-w-0">
       <div class="text-lg font-semibold">Note</div>
-      <div class="pt-1 text-sm text-slate-600">
-        @if (data.note.updated_time) {
-          Updated: {{ data.note.updated_time | date: "yyyy-MM-dd HH:mm" }}
-        }
-        Created: {{ data.note.created_time | date: "yyyy-MM-dd HH:mm" }}
+      <div
+        class="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1 text-sm text-slate-600"
+      >
+        <span>
+          @if (data.note.updated_time) {
+            Updated: {{ data.note.updated_time | date: "yyyy-MM-dd HH:mm" }}
+          }
+          Created: {{ data.note.created_time | date: "yyyy-MM-dd HH:mm" }}
+        </span>
+        <app-tag-swatches
+          [itemKind]="TaggedItemKind.Note"
+          [itemId]="data.note.id"
+        />
       </div>
     </div>
     <button mat-mini-fab mat-dialog-close aria-label="Close expanded note">

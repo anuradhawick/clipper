@@ -78,7 +78,12 @@
   </div>
   <div class="flex items-center justify-end gap-1">
     @if (searchable()) {
-      <button mat-mini-fab (click)="toggleSearch()">
+      <button
+        mat-mini-fab
+        (click)="toggleSearch()"
+        matTooltip="Toggle search bar"
+        matTooltipShowDelay="1000"
+      >
         @if (showSearch()) {
           <mat-icon>search_off</mat-icon>
         } @else {
@@ -86,10 +91,20 @@
         }
       </button>
     }
-    <button mat-mini-fab (click)="windowActionsService.openManagerWindow()">
+    <button
+      mat-mini-fab
+      (click)="windowActionsService.openManagerWindow()"
+      matTooltip="Open manager"
+      matTooltipShowDelay="1000"
+    >
       <mat-icon>more_vert</mat-icon>
     </button>
-    <button mat-mini-fab (click)="windowActionsService.hideWindow()">
+    <button
+      mat-mini-fab
+      (click)="windowActionsService.hideWindow()"
+      matTooltip="Hide widget"
+      matTooltipShowDelay="1000"
+    >
       <mat-icon>visibility_off</mat-icon>
     </button>
   </div>

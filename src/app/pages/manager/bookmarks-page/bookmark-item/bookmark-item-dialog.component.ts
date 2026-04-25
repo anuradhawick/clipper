@@ -9,7 +9,9 @@ import { MatButtonModule } from "@angular/material/button";
 import { MatDialogClose, MAT_DIALOG_DATA } from "@angular/material/dialog";
 import { MatIconModule } from "@angular/material/icon";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { TagSwatchesComponent } from "../../../../components/tag-swatches/tag-swatches.component";
 import { BookmarkEntry } from "../../../../services/bookmarks.service";
+import { TaggedItemKind } from "../../../../services/tags.service";
 
 export interface BookmarkItemDialogData {
   bookmarkEntry: BookmarkEntry;
@@ -19,12 +21,19 @@ export interface BookmarkItemDialogData {
   selector: "app-bookmark-item-dialog",
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
-  imports: [DatePipe, MatButtonModule, MatDialogClose, MatIconModule],
+  imports: [
+    DatePipe,
+    MatButtonModule,
+    MatDialogClose,
+    MatIconModule,
+    TagSwatchesComponent,
+  ],
   templateUrl: "./bookmark-item-dialog.component.html",
   styleUrl: "./bookmark-item-dialog.component.scss",
 })
 export class BookmarkItemDialogComponent {
   readonly data = inject<BookmarkItemDialogData>(MAT_DIALOG_DATA);
+  readonly TaggedItemKind = TaggedItemKind;
   readonly openUrl = openUrl;
 
   processImage(image: Array<number>): string {

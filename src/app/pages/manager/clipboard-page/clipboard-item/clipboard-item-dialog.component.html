@@ -6,8 +6,16 @@
   >
     <div class="min-w-0">
       <div class="text-lg font-semibold">Clipboard item</div>
-      <div class="pt-1 text-sm text-slate-600">
-        Added: {{ data.clipperEntry.timestamp | date: "yyyy-MM-dd HH:mm" }}
+      <div
+        class="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1 text-sm text-slate-600"
+      >
+        <span>
+          Added: {{ data.clipperEntry.timestamp | date: "yyyy-MM-dd HH:mm" }}
+        </span>
+        <app-tag-swatches
+          [itemKind]="TaggedItemKind.Clipboard"
+          [itemId]="data.clipperEntry.id"
+        />
       </div>
     </div>
     <button

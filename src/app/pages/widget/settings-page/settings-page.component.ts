@@ -36,6 +36,7 @@ import {
   isValidHotkey,
   browserKeyCodesToTauriHotkey,
 } from "./key-map";
+import { TitleCasePipe } from "@angular/common";
 
 @Component({
   selector: "app-settings-page",
@@ -50,6 +51,7 @@ import {
     FormsModule,
     MatInputModule,
     MatTooltipModule,
+    TitleCasePipe,
   ],
   templateUrl: "./settings-page.component.html",
   styleUrl: "./settings-page.component.scss",

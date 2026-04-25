@@ -10,6 +10,8 @@
           class="w-[180px] h-[100px] rounded-lg flex flex-row overflow-hidden"
           [class.selected]="themeService.selectedColor == color.name"
           (click)="changeColor(color.name)"
+          [matTooltip]="(color.name | titlecase) + ' theme'"
+          matTooltipShowDelay="1000"
         >
           <div
             class="w-1/2 h-full flex items-center bg-gradient-to-br"
@@ -47,6 +49,8 @@
           themeService.userLightingPreference == 'light' ? 'selected' : ''
         "
         (click)="changeLighting($any('light'))"
+        matTooltip="Light theme"
+        matTooltipShowDelay="1000"
       >
         <div class="w-full h-full flex items-center bg-gradient-to-br">
           <mat-icon class="block mx-auto scale-150">light_mode</mat-icon>
@@ -59,6 +63,8 @@
           themeService.userLightingPreference == 'system' ? 'selected' : ''
         "
         (click)="changeLighting($any('system'))"
+        matTooltip="System default"
+        matTooltipShowDelay="1000"
       >
         <div class="w-full h-full flex items-center bg-gradient-to-br">
           <mat-icon class="block mx-auto scale-150">computer</mat-icon>
@@ -71,6 +77,8 @@
           themeService.userLightingPreference == 'dark' ? 'selected' : ''
         "
         (click)="changeLighting($any('dark'))"
+        matTooltip="Dark theme"
+        matTooltipShowDelay="1000"
       >
         <div class="w-full h-full flex items-center bg-gradient-to-br">
           <mat-icon class="block mx-auto scale-150">dark_mode</mat-icon>
@@ -295,6 +303,8 @@
             mat-mini-fab
             color="primary"
             (click)="promptedDBDelete.set(true)"
+            matTooltip="Delete database"
+            matTooltipShowDelay="1000"
           >
             <mat-icon>delete</mat-icon>
           </button>
@@ -327,6 +337,8 @@
             mat-mini-fab
             color="primary"
             (click)="promptedFilesDelete.set(true)"
+            matTooltip="Delete files"
+            matTooltipShowDelay="1000"
           >
             <mat-icon>delete</mat-icon>
           </button>

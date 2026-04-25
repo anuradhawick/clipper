@@ -58,6 +58,7 @@ impl NotesManager {
         .bind(String::new())
         .execute(&*pool)
         .await?;
+        self.notify_notes_updated();
         Ok(())
     }
 

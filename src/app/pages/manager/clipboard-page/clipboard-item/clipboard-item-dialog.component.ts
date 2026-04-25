@@ -13,6 +13,8 @@ import {
   ClipperEntry,
   ClipperEntryKind,
 } from "../../../../services/clipboard-history.service";
+import { TagSwatchesComponent } from "../../../../components/tag-swatches/tag-swatches.component";
+import { TaggedItemKind } from "../../../../services/tags.service";
 import { processBytes } from "../../../../utils/text";
 
 export interface ClipboardItemDialogData {
@@ -23,13 +25,20 @@ export interface ClipboardItemDialogData {
   selector: "app-manager-clipboard-item-dialog",
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
-  imports: [DatePipe, MatButtonModule, MatDialogClose, MatIconModule],
+  imports: [
+    DatePipe,
+    MatButtonModule,
+    MatDialogClose,
+    MatIconModule,
+    TagSwatchesComponent,
+  ],
   templateUrl: "./clipboard-item-dialog.component.html",
   styleUrl: "./clipboard-item-dialog.component.scss",
 })
 export class ClipboardItemDialogComponent {
   readonly data = inject<ClipboardItemDialogData>(MAT_DIALOG_DATA);
   readonly ClipperEntryKind = ClipperEntryKind;
+  readonly TaggedItemKind = TaggedItemKind;
   readonly processBytes = processBytes;
   readonly openUrl = openUrl;
 

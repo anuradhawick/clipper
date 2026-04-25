@@ -408,6 +408,7 @@ impl ClipboardWatcher {
         log::info!("Saved clipboard entry: {:#?}", event.id);
 
         let pool = self.pool.lock().await;
+        // Insert new clipboard entry.
         sqlx::query(
             r#"
             INSERT INTO clipboard (id, entry, kind, timestamp)
@@ -421,6 +422,7 @@ impl ClipboardWatcher {
         .execute(&*pool)
         .await?;
 
+        // Enforce history limit by deleting oldest entries exceeding the limit.
         sqlx::query(
             r#"
             DELETE FROM clipboard
@@ -436,6 +438,7 @@ impl ClipboardWatcher {
         .execute(&*pool)
         .await?;
 
+        // Clean up tag items for deleted clipboard entries.
         sqlx::query(
             r#"
             DELETE FROM tag_items

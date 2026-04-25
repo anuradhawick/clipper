@@ -274,6 +274,8 @@ impl BookmarksManager {
         log::info!("Creating bookmark: {:#?}", bookmark.url);
 
         let pool = self.pool.lock().await;
+
+        // Insert new bookmark or update existing one with same ID (URL hash).
         sqlx::query(
             r#"
             INSERT INTO bookmarks (id, url, text, image, timestamp)
@@ -292,6 +294,7 @@ impl BookmarksManager {
         .execute(&*pool)
         .await?;
 
+        // Enforce history limit by deleting oldest entries exceeding the limit.
         sqlx::query(
             r#"
             DELETE FROM bookmarks
@@ -307,6 +310,7 @@ impl BookmarksManager {
         .execute(&*pool)
         .await?;
 
+        // Clean up tag items for deleted bookmarks.
         sqlx::query(
             r#"
             DELETE FROM tag_items
