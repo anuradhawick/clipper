@@ -400,6 +400,7 @@ impl ClipboardWatcher {
 
     pub async fn delete_one(&self, id: String) -> Result<(), sqlx::Error> {
         log::info!("Deleted clipboard entry: {:#?}", id);
+        let mut transaction = self.pool.begin().await?;
         sqlx::query(
             r#"
             DELETE FROM clipboard
@@ -407,7 +408,7 @@ impl ClipboardWatcher {
             "#,
         )
         .bind(&id)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
         sqlx::query(
             r#"
@@ -416,20 +417,22 @@ impl ClipboardWatcher {
             "#,
         )
         .bind(id)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
+        transaction.commit().await?;
         self.notify_clipboard_updated();
         Ok(())
     }
 
     pub async fn delete_all(&self) -> Result<(), sqlx::Error> {
         log::info!("Deleted all clipboard entries");
+        let mut transaction = self.pool.begin().await?;
         sqlx::query(
             r#"
             DELETE FROM clipboard
             "#,
         )
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
         sqlx::query(
             r#"
@@ -437,8 +440,9 @@ impl ClipboardWatcher {
             WHERE item_kind = 'clipboard'
             "#,
         )
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
+        transaction.commit().await?;
         self.notify_clipboard_updated();
         log::info!("Deleted all clipboard entries");
         Ok(())

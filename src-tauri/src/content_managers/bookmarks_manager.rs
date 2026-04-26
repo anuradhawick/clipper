@@ -353,6 +353,7 @@ impl BookmarksManager {
 
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
         log::info!("Deleting bookmark: {:#?}", id);
+        let mut transaction = self.pool.begin().await?;
         sqlx::query(
             r#"
             DELETE FROM bookmarks
@@ -360,7 +361,7 @@ impl BookmarksManager {
             "#,
         )
         .bind(id)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
         sqlx::query(
             r#"
@@ -369,8 +370,9 @@ impl BookmarksManager {
             "#,
         )
         .bind(id)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
+        transaction.commit().await?;
         self.notify_bookmarks_updated();
         Ok(())
     }
@@ -425,12 +427,14 @@ impl BookmarksManager {
 
     pub async fn delete_all_bookmarks(&self) -> Result<(), sqlx::Error> {
         log::info!("Deleting all bookmarks");
+        let mut transaction = self.pool.begin().await?;
         sqlx::query("DELETE FROM bookmarks")
-            .execute(&self.pool)
+            .execute(&mut *transaction)
             .await?;
         sqlx::query("DELETE FROM tag_items WHERE item_kind = 'bookmark'")
-            .execute(&self.pool)
+            .execute(&mut *transaction)
             .await?;
+        transaction.commit().await?;
         self.notify_bookmarks_updated();
         Ok(())
     }

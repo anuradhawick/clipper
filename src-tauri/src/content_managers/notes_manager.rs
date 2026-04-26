@@ -76,6 +76,7 @@ impl NotesManager {
 
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
         log::info!("Deleting note: {:#?}", id);
+        let mut transaction = self.pool.begin().await?;
         sqlx::query(
             r#"
             DELETE FROM notes
@@ -83,7 +84,7 @@ impl NotesManager {
             "#,
         )
         .bind(id)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
         sqlx::query(
             r#"
@@ -92,8 +93,9 @@ impl NotesManager {
             "#,
         )
         .bind(id)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
+        transaction.commit().await?;
         self.notify_notes_updated();
         Ok(())
     }
@@ -146,10 +148,14 @@ impl NotesManager {
 
     pub async fn delete_all_notes(&self) -> Result<(), sqlx::Error> {
         log::info!("Deleting all notes");
-        sqlx::query("DELETE FROM notes").execute(&self.pool).await?;
-        sqlx::query("DELETE FROM tag_items WHERE item_kind = 'note'")
-            .execute(&self.pool)
+        let mut transaction = self.pool.begin().await?;
+        sqlx::query("DELETE FROM notes")
+            .execute(&mut *transaction)
             .await?;
+        sqlx::query("DELETE FROM tag_items WHERE item_kind = 'note'")
+            .execute(&mut *transaction)
+            .await?;
+        transaction.commit().await?;
         self.notify_notes_updated();
         Ok(())
     }

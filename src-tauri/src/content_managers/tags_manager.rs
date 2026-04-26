@@ -78,6 +78,7 @@ impl TagsManager {
 
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
         log::info!("Deleting tag: {:#?}", id);
+        let mut transaction = self.pool.begin().await?;
         sqlx::query(
             r#"
             DELETE FROM tag_items
@@ -85,7 +86,7 @@ impl TagsManager {
             "#,
         )
         .bind(id)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
         sqlx::query(
             r#"
@@ -94,8 +95,9 @@ impl TagsManager {
             "#,
         )
         .bind(id)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
+        transaction.commit().await?;
         self.notify_tags_updated();
         self.notify_tag_items_updated();
         Ok(())
