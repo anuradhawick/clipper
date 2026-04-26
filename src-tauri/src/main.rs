@@ -241,7 +241,7 @@ async fn setup(app: AppHandle) -> AppResult<()> {
     // register filters manager
     let filters_manager = FiltersManager::new(Arc::clone(&db), bus.clone()).await;
     // preload initial settings/filters once and pass them into managers
-    let initial_settings = settings_manager.lock().await.read().await?;
+    let initial_settings = settings_manager.read().await?;
     let initial_filters = match filters_manager.read().await {
         Ok(filters) => filters,
         Err(err) => {

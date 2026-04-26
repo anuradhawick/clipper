@@ -12,7 +12,6 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
-use tokio::sync::Mutex;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -36,7 +35,7 @@ impl SettingsManager {
         db: Arc<DbConnection>,
         bus: MessageBus,
         app_handle: AppHandle,
-    ) -> AppResult<Arc<Mutex<Self>>> {
+    ) -> AppResult<Arc<Self>> {
         let pool = db.pool.clone();
 
         #[cfg(target_os = "linux")]
@@ -95,11 +94,11 @@ impl SettingsManager {
             }
         }
 
-        Ok(Arc::new(Mutex::new(Self {
+        Ok(Arc::new(Self {
             pool: db.pool.clone(),
             app_handle,
             bus,
-        })))
+        }))
     }
 
     pub async fn update(&self, settings: SettingsEntry) -> AppResult<()> {
@@ -195,17 +194,16 @@ impl SettingsManager {
 #[tauri::command]
 pub async fn settings_update(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<SettingsManager>>>,
+    state: State<'_, Arc<SettingsManager>>,
     settings: Value,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         let settings: SettingsEntry = serde_json::from_value(settings)?;
         log::info!("CMD:Updating settings: {:#?}", settings);
-        let mgr = state.lock().await;
-        mgr.update(settings.clone()).await?;
+        state.update(settings.clone()).await?;
 
         // Broadcast saved settings so every window applies theme/preference changes immediately.
-        if let Err(e) = mgr.app_handle.emit("settings_changed", settings) {
+        if let Err(e) = state.app_handle.emit("settings_changed", settings) {
             log::error!("Error emitting settings_changed event: {}", e);
         }
 
@@ -217,10 +215,10 @@ pub async fn settings_update(
 #[tauri::command]
 pub async fn settings_read(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<SettingsManager>>>,
+    state: State<'_, Arc<SettingsManager>>,
 ) -> AppResult<SettingsEntry> {
     with_error_event(&app_handle, async {
-        let settings = state.lock().await.read().await?;
+        let settings = state.read().await?;
         log::info!("CMD:Reading settings: {:#?}", settings);
         Ok(settings)
     })
