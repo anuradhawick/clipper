@@ -174,7 +174,7 @@ impl BookmarksManager {
         let state = Arc::new(Mutex::new(Self {
             app_handle,
             settings,
-            pool: Arc::clone(&db.pool),
+            pool: Arc::new(Mutex::new(db.pool.clone())),
         }));
 
         log::info!("Bookmarks manager history limit set to {}", history_limit);

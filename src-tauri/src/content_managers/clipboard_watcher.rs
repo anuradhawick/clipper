@@ -144,7 +144,7 @@ impl ClipboardWatcher {
             last_image,
             filters: initial_filters.clone(),
             history_limit,
-            pool: Arc::clone(&db.pool),
+            pool: Arc::new(Mutex::new(db.pool.clone())),
         }));
 
         let refresh_state = Arc::clone(&state);

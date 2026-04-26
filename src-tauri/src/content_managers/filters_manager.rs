@@ -33,7 +33,7 @@ impl FiltersManager {
 
         Arc::new(Mutex::new(Self {
             bus,
-            pool: Arc::clone(&db.pool),
+            pool: Arc::new(Mutex::new(db.pool.clone())),
         }))
     }
 

@@ -32,7 +32,7 @@ impl NotesManager {
         Arc::new(Mutex::new(Self {
             app_handle,
             bus,
-            pool: Arc::clone(&db.pool),
+            pool: Arc::new(Mutex::new(db.pool.clone())),
         }))
     }
 

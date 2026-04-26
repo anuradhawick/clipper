@@ -37,7 +37,7 @@ impl SettingsManager {
         bus: MessageBus,
         app_handle: AppHandle,
     ) -> AppResult<Arc<Mutex<Self>>> {
-        let pool = db.pool.lock().await;
+        let pool = db.pool.clone();
 
         #[cfg(target_os = "linux")]
         let global_shortcut_keys =
@@ -54,7 +54,7 @@ impl SettingsManager {
             "#,
         )
         .bind(global_shortcut_keys.to_string())
-        .execute(&*pool)
+        .execute(&pool)
         .await?;
         log::info!("Settings manager initialized");
 
@@ -74,7 +74,7 @@ impl SettingsManager {
                 WHERE id = 1
                 "#,
             )
-            .fetch_one(&*pool)
+            .fetch_one(&pool)
             .await?;
             let global_shortcut_keys = settings.get::<Option<String>, _>("globalShortcut");
 
@@ -96,7 +96,7 @@ impl SettingsManager {
         }
 
         Ok(Arc::new(Mutex::new(Self {
-            pool: Arc::clone(&db.pool),
+            pool: Arc::new(Mutex::new(db.pool.clone())),
             app_handle,
             bus,
         })))

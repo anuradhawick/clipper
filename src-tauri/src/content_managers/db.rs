@@ -2,13 +2,11 @@ use crate::error::{with_error_event, AppError, AppResult};
 use anyhow::Context;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 use std::str::FromStr;
-use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 use tokio::fs;
-use tokio::sync::Mutex;
 
 pub struct DbConnection {
-    pub pool: Arc<Mutex<SqlitePool>>,
+    pub pool: SqlitePool,
 }
 
 impl DbConnection {
@@ -34,9 +32,7 @@ impl DbConnection {
             .await?;
         sqlx::migrate!("./migrations").run(&pool).await?;
         log::info!("Clipper db connected");
-        Ok(Self {
-            pool: Arc::new(Mutex::new(pool)),
-        })
+        Ok(Self { pool })
     }
 }
 

@@ -36,7 +36,7 @@ impl TagsManager {
 
         Arc::new(Mutex::new(Self {
             app_handle,
-            pool: Arc::clone(&db.pool),
+            pool: Arc::new(Mutex::new(db.pool.clone())),
         }))
     }
 
