@@ -451,6 +451,7 @@ impl ClipboardWatcher {
     async fn save(&self, event: ClipboardEvent) -> Result<(), sqlx::Error> {
         log::info!("Saved clipboard entry: {:#?}", event.id);
         let history_limit = self.history_limit().await;
+        let mut transaction = self.pool.begin().await?;
 
         // Insert new clipboard entry.
         sqlx::query(
@@ -463,7 +464,7 @@ impl ClipboardWatcher {
         .bind(event.entry)
         .bind(event.kind.as_str())
         .bind(event.timestamp)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
 
         // Enforce history limit by deleting oldest entries exceeding the limit.
@@ -479,7 +480,7 @@ impl ClipboardWatcher {
             "#,
         )
         .bind(history_limit)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
 
         // Clean up tag items for deleted clipboard entries.
@@ -490,8 +491,10 @@ impl ClipboardWatcher {
               AND item_id NOT IN (SELECT id FROM clipboard)
             "#,
         )
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
+
+        transaction.commit().await?;
 
         Ok(())
     }

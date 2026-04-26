@@ -281,6 +281,7 @@ impl BookmarksManager {
     async fn create(&self, bookmark: BookmarkItem) -> Result<(), sqlx::Error> {
         log::info!("Creating bookmark: {:#?}", bookmark.url);
         let history_limit = self.bookmark_history_size().await;
+        let mut transaction = self.pool.begin().await?;
 
         // Insert new bookmark or update existing one with same ID (URL hash).
         sqlx::query(
@@ -298,7 +299,7 @@ impl BookmarksManager {
         .bind(bookmark.text)
         .bind(bookmark.image)
         .bind(Utc::now().to_rfc3339())
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
 
         // Enforce history limit by deleting oldest entries exceeding the limit.
@@ -314,7 +315,7 @@ impl BookmarksManager {
             "#,
         )
         .bind(history_limit)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
 
         // Clean up tag items for deleted bookmarks.
@@ -325,8 +326,10 @@ impl BookmarksManager {
               AND item_id NOT IN (SELECT id FROM bookmarks)
             "#,
         )
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
+
+        transaction.commit().await?;
 
         Ok(())
     }

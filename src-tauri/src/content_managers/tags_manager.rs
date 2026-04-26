@@ -115,6 +115,7 @@ impl TagsManager {
             item_id,
             tag_ids
         );
+        let mut transaction = self.pool.begin().await?;
         sqlx::query(
             r#"
             DELETE FROM tag_items
@@ -123,7 +124,7 @@ impl TagsManager {
         )
         .bind(item_kind)
         .bind(item_id)
-        .execute(&self.pool)
+        .execute(&mut *transaction)
         .await?;
 
         for tag_id in tag_ids {
@@ -140,9 +141,11 @@ impl TagsManager {
             .bind(item_kind)
             .bind(item_id)
             .bind(Utc::now().to_rfc3339())
-            .execute(&self.pool)
+            .execute(&mut *transaction)
             .await?;
         }
+
+        transaction.commit().await?;
 
         self.notify_tag_items_updated();
         self.read_item_tags(item_kind, item_id).await
