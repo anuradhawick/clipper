@@ -138,23 +138,27 @@ impl FiltersManager {
         Ok(())
     }
 
+    pub fn compile_filter_regexes(filters: Vec<FilterItem>) -> Vec<Regex> {
+        filters
+            .into_iter()
+            .filter_map(|filter| match Regex::new(filter.regex()) {
+                Ok(regex) => Some(regex),
+                Err(err) => {
+                    log::warn!(
+                        "Skipping invalid filter regex '{}': {}",
+                        filter.regex(),
+                        err
+                    );
+                    None
+                }
+            })
+            .collect()
+    }
+
     async fn notify_filters_updated(&self) {
         match self.read().await {
             Ok(filters) => {
-                let filter_regexes = filters
-                    .into_iter()
-                    .filter_map(|filter| match Regex::new(filter.regex()) {
-                        Ok(regex) => Some(regex),
-                        Err(err) => {
-                            log::warn!(
-                                "Skipping invalid filter regex '{}': {}",
-                                filter.regex(),
-                                err
-                            );
-                            None
-                        }
-                    })
-                    .collect();
+                let filter_regexes = Self::compile_filter_regexes(filters);
                 let payload = FiltersUpdatedPayload { filter_regexes };
                 if self.bus.send(AppMessage::FiltersUpdated(payload)).is_err() {
                     log::warn!("Unable to send message: FiltersUpdated");

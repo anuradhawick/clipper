@@ -36,7 +36,6 @@ use content_managers::tags_manager::{
     tags_assign_item, tags_create_entry, tags_delete_one, tags_read_entries, tags_read_item_tags,
     tags_read_items, tags_remove_item, tags_set_item_tags, tags_update_entry, TagsManager,
 };
-use regex::Regex;
 use std::env;
 use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
@@ -263,20 +262,7 @@ async fn setup(app: AppHandle) -> AppResult<()> {
         bus.clone(),
         app.clone(),
         initial_settings.clone(),
-        initial_filters
-            .into_iter()
-            .filter_map(|filter| match Regex::new(filter.regex()) {
-                Ok(regex) => Some(regex),
-                Err(err) => {
-                    log::warn!(
-                        "Skipping invalid filter regex '{}': {}",
-                        filter.regex(),
-                        err
-                    );
-                    None
-                }
-            })
-            .collect(),
+        FiltersManager::compile_filter_regexes(initial_filters),
     )
     .await;
     app.manage(clipboard_watcher);
