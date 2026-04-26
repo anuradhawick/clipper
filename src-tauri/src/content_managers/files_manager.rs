@@ -170,7 +170,7 @@ impl FilesManager {
             })?;
             let file_path = files_path.join(file_name);
 
-            println!("Copying file: {:#?} to {:#?}", file, file_path);
+            log::info!("Copying file: {:#?} to {:#?}", file, file_path);
 
             if file.is_dir() {
                 copy_dir_recursive(file.clone(), file_path.clone())
