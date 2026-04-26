@@ -42,6 +42,14 @@ static BOOKMARK_URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     .expect("bookmark URL regex must compile")
 });
 
+static BOOKMARK_HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Clipper Bookmark Metadata Fetcher)")
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .expect("bookmark metadata HTTP client must build")
+});
+
 impl BookmarksManager {
     fn notify_bookmarks_updated(&self) {
         // Notify bookmark lists to refetch after bookmark mutations.
@@ -69,14 +77,8 @@ impl BookmarksManager {
             normalized = format!("https://{}", normalized);
         }
 
-        let client = reqwest::Client::builder()
-            .user_agent("Mozilla/5.0 (Clipper Bookmark Metadata Fetcher)")
-            .timeout(std::time::Duration::from_secs(10))
-            .build()
-            .context("Failed to create HTTP client for metadata fetch")?;
-
         // Fetch page (awaits happen before creating non-Send DOM)
-        let resp = client
+        let resp = BOOKMARK_HTTP_CLIENT
             .get(&normalized)
             .send()
             .await
@@ -152,7 +154,7 @@ impl BookmarksManager {
         let mut image_bytes = Vec::new();
         if let Some(raw) = image_url_opt {
             if let Ok(parsed) = reqwest::Url::parse(&raw).or_else(|_| base_url.join(&raw)) {
-                if let Ok(img_resp) = client.get(parsed).send().await {
+                if let Ok(img_resp) = BOOKMARK_HTTP_CLIENT.get(parsed).send().await {
                     if img_resp.status().is_success() {
                         if let Ok(bytes) = img_resp.bytes().await {
                             image_bytes = bytes.to_vec();
