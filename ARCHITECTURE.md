@@ -19,8 +19,8 @@ Startup flow:
    opening URLs/files, logging, autostart, and the system tray.
 2. `setup()` creates a `MessageBus`, opens the SQLite connection, runs SQLx
   migrations, constructs all managers, and registers them with `app.manage`.
-  Pure service managers are registered directly; long-lived mutable workers
-  keep shared synchronized state.
+  Pure service managers are registered directly; long-lived workers keep only
+  their mutable runtime state synchronized internally.
 3. The main widget window is positioned on the active monitor, made floating or
    always-on-top depending on platform, and wired to drag/drop and tray events.
 4. Background tasks start for clipboard polling and internal bus subscribers.

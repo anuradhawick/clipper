@@ -63,14 +63,18 @@ pub struct ClipboardEvent {
     timestamp: String,
 }
 
-pub struct ClipboardWatcher {
+struct ClipboardWatcherState {
     running: bool,
-    app_handle: AppHandle,
     last_text: String,
     last_image: u64,
     filters: Vec<Regex>,
     history_limit: u32,
+}
+
+pub struct ClipboardWatcher {
+    app_handle: AppHandle,
     pool: SqlitePool,
+    state: Mutex<ClipboardWatcherState>,
 }
 
 fn buffer_hash(buffer: &[u8]) -> u64 {
@@ -110,7 +114,7 @@ impl ClipboardWatcher {
         app_handle: AppHandle,
         settings: SettingsEntry,
         initial_filters: Vec<Regex>,
-    ) -> Arc<Mutex<Self>> {
+    ) -> Arc<Self> {
         let mut last_text = String::from("");
         let mut last_image = 0;
         let history_limit = settings.clipboard_history_size;
@@ -137,15 +141,17 @@ impl ClipboardWatcher {
         log::info!("Clipboard watcher loaded {} filters", initial_filters.len());
         log::info!("Clipboard watcher history limit set to {}", history_limit);
 
-        let state = Arc::new(Mutex::new(Self {
-            running: true,
+        let state = Arc::new(Self {
             app_handle: app_handle.clone(),
-            last_text,
-            last_image,
-            filters: initial_filters.clone(),
-            history_limit,
             pool: db.pool.clone(),
-        }));
+            state: Mutex::new(ClipboardWatcherState {
+                running: true,
+                last_text,
+                last_image,
+                filters: initial_filters.clone(),
+                history_limit,
+            }),
+        });
 
         let refresh_state = Arc::clone(&state);
         let refresh_bus = bus.clone();
@@ -155,25 +161,23 @@ impl ClipboardWatcher {
             loop {
                 match receiver.recv().await {
                     Ok(AppMessage::SettingsUpdated(settings)) => {
-                        let mut watcher = refresh_state.lock().await;
-                        watcher.history_limit = settings.clipboard_history_size;
+                        refresh_state
+                            .set_history_limit(settings.clipboard_history_size)
+                            .await;
                         log::info!(
                             "Clipboard watcher updated history limit: {}",
-                            watcher.history_limit
+                            settings.clipboard_history_size
                         );
                     }
                     Ok(AppMessage::FiltersUpdated(updated_filters)) => {
-                        let mut watcher = refresh_state.lock().await;
-                        watcher.filters = updated_filters.filter_regexes;
-                        log::info!(
-                            "Clipboard watcher refreshed filters: {}",
-                            watcher.filters.len()
-                        );
+                        let filter_count = updated_filters.filter_regexes.len();
+                        refresh_state
+                            .set_filters(updated_filters.filter_regexes)
+                            .await;
+                        log::info!("Clipboard watcher refreshed filters: {}", filter_count);
                     }
                     Ok(AppMessage::SetClipboardText(text)) => {
-                        let mut watcher = refresh_state.lock().await;
-                        watcher.last_text.clone_from(&text);
-                        drop(watcher);
+                        refresh_state.set_last_text(text.clone()).await;
 
                         match Clipboard::new() {
                             Ok(mut clipboard) => {
@@ -219,16 +223,7 @@ impl ClipboardWatcher {
                 let value = clipboard.get_text();
                 // if value received
                 if let Ok(text) = value {
-                    let mut app_state = cloned_state.lock().await;
-                    // if running and text is not same (we also discard empty text)
-                    if !text.trim().is_empty() && app_state.running && text != app_state.last_text {
-                        app_state.last_text.clone_from(&text);
-
-                        if Self::is_filtered(&app_state.filters, &text) {
-                            log::info!("Clipboard text skipped by active filters");
-                            continue;
-                        }
-
+                    if cloned_state.capture_text_change(&text).await {
                         let entry = ClipboardEvent {
                             id: Uuid::new_v4().to_string(),
                             entry: text.as_bytes().to_vec(),
@@ -237,14 +232,14 @@ impl ClipboardWatcher {
                         };
                         log::info!("Clipboard text changed: {:#?}", entry.id);
                         // Push the new clipboard entry to open windows without waiting for a poll.
-                        if app_state
+                        if cloned_state
                             .app_handle
                             .emit("clipboard_entry_added", entry.clone())
                             .is_err()
                         {
                             log::error!("Unable to emit: clipboard_entry_added");
                         }
-                        if app_state.save(entry).await.is_err() {
+                        if cloned_state.save(entry).await.is_err() {
                             log::error!("Unable to save: clipboard_entry_added");
                         }
                         if bus
@@ -258,12 +253,8 @@ impl ClipboardWatcher {
                 let value = clipboard.get_image();
                 // if value received
                 if let Ok(image) = value {
-                    let mut app_state = cloned_state.lock().await;
                     let hash = buffer_hash(&image.bytes);
-                    // if running and image is not same
-                    if app_state.running && hash != app_state.last_image {
-                        app_state.last_image = hash;
-
+                    if cloned_state.capture_image_change(hash).await {
                         let entry = ClipboardEvent {
                             id: Uuid::new_v4().to_string(),
                             entry: match image_to_png(image) {
@@ -278,14 +269,14 @@ impl ClipboardWatcher {
                         };
                         log::info!("Clipboard image changed: Image hash - {:#?}", hash);
                         // Push the new clipboard entry to open windows without waiting for a poll.
-                        if app_state
+                        if cloned_state
                             .app_handle
                             .emit("clipboard_entry_added", entry.clone())
                             .is_err()
                         {
                             log::error!("Unable to emit: clipboard_entry_added");
                         }
-                        if app_state.save(entry).await.is_err() {
+                        if cloned_state.save(entry).await.is_err() {
                             log::error!("Unable to save: clipboard_entry_added");
                         }
                     }
@@ -297,14 +288,67 @@ impl ClipboardWatcher {
         state
     }
 
-    pub fn pause(&mut self) {
-        self.running = false;
+    async fn set_history_limit(&self, history_limit: u32) {
+        self.state.lock().await.history_limit = history_limit;
+    }
+
+    async fn set_filters(&self, filters: Vec<Regex>) {
+        self.state.lock().await.filters = filters;
+    }
+
+    async fn set_last_text(&self, text: String) {
+        self.state.lock().await.last_text = text;
+    }
+
+    async fn clear_last_text(&self) {
+        self.state.lock().await.last_text.clear();
+    }
+
+    async fn set_last_image(&self, hash: u64) {
+        self.state.lock().await.last_image = hash;
+    }
+
+    async fn history_limit(&self) -> u32 {
+        self.state.lock().await.history_limit
+    }
+
+    async fn capture_text_change(&self, text: &str) -> bool {
+        let mut state = self.state.lock().await;
+        if text.trim().is_empty() || !state.running || text == state.last_text {
+            return false;
+        }
+
+        state.last_text = text.to_string();
+        if Self::is_filtered(&state.filters, text) {
+            log::info!("Clipboard text skipped by active filters");
+            return false;
+        }
+
+        true
+    }
+
+    async fn capture_image_change(&self, hash: u64) -> bool {
+        let mut state = self.state.lock().await;
+        if !state.running || hash == state.last_image {
+            return false;
+        }
+
+        state.last_image = hash;
+        true
+    }
+
+    pub async fn pause(&self) {
+        self.state.lock().await.running = false;
         log::info!("Clipboard watcher paused");
     }
 
-    pub fn resume(&mut self) {
-        self.running = true;
+    pub async fn resume(&self) {
+        self.state.lock().await.running = true;
         log::info!("Clipboard watcher resumed");
+    }
+
+    pub async fn read_status(&self) -> bool {
+        self.state.lock().await.running
     }
 
     pub async fn read(&self, count: u32) -> AppResult<Vec<ClipboardEvent>> {
@@ -402,6 +446,7 @@ impl ClipboardWatcher {
 
     async fn save(&self, event: ClipboardEvent) -> Result<(), sqlx::Error> {
         log::info!("Saved clipboard entry: {:#?}", event.id);
+        let history_limit = self.history_limit().await;
 
         // Insert new clipboard entry.
         sqlx::query(
@@ -429,7 +474,7 @@ impl ClipboardWatcher {
                 )
             "#,
         )
-        .bind(self.history_limit)
+        .bind(history_limit)
         .execute(&self.pool)
         .await?;
 
@@ -451,11 +496,10 @@ impl ClipboardWatcher {
 #[tauri::command]
 pub async fn clipboard_pause_watcher(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+    state: State<'_, Arc<ClipboardWatcher>>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
-        let mut clipboard_watcher = state.lock().await;
-        clipboard_watcher.pause();
+        state.pause().await;
         log::info!("CMD:clipboard_pause_watcher");
         // Keep UI controls in sync with the paused watcher state.
         app_handle.emit("clipboard_status_changed", false)?;
@@ -467,18 +511,17 @@ pub async fn clipboard_pause_watcher(
 #[tauri::command]
 pub async fn clipboard_resume_watcher(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+    state: State<'_, Arc<ClipboardWatcher>>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         // reset last text to prevent reading previous clipboard entry
-        let mut clipboard_watcher = state.lock().await;
         let mut clipboard = Clipboard::new()?;
         if let Ok(value) = clipboard.get_text() {
-            clipboard_watcher.last_text.clone_from(&value);
+            state.set_last_text(value).await;
         } else {
-            clipboard_watcher.last_text.clear();
+            state.clear_last_text().await;
         }
-        clipboard_watcher.resume();
+        state.resume().await;
         log::info!("CMD:clipboard_resume_watcher");
         // Keep UI controls in sync with the running watcher state.
         app_handle.emit("clipboard_status_changed", true)?;
@@ -491,17 +534,16 @@ pub async fn clipboard_resume_watcher(
 pub async fn clipboard_add_entry(
     app_handle: tauri::AppHandle,
     id: String,
-    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+    state: State<'_, Arc<ClipboardWatcher>>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:clipboard_add_entry: {:#?}", id);
-        let mut clipboard_watcher = state.lock().await;
         let mut clipboard = Clipboard::new()?;
-        let entry = clipboard_watcher.read_one(id).await?;
+        let entry = state.read_one(id).await?;
         match entry.kind {
             ClipboardEventKind::Text => {
                 let text = String::from_utf8(entry.entry)?;
-                clipboard_watcher.last_text.clone_from(&text);
+                state.set_last_text(text.clone()).await;
                 clipboard.set_text(text)?;
             }
             ClipboardEventKind::Image => {
@@ -519,7 +561,7 @@ pub async fn clipboard_add_entry(
                     height: height as usize,
                     bytes: std::borrow::Cow::from(buffer),
                 })?;
-                clipboard_watcher.last_image = hash;
+                state.set_last_image(hash).await;
             }
         }
         Ok(())
@@ -531,11 +573,11 @@ pub async fn clipboard_add_entry(
 pub async fn clipboard_read_entries(
     app_handle: tauri::AppHandle,
     count: u32,
-    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+    state: State<'_, Arc<ClipboardWatcher>>,
 ) -> AppResult<Vec<ClipboardEvent>> {
     with_error_event(&app_handle, async {
         log::info!("CMD:clipboard_read_entries: {}", count);
-        let entries = state.lock().await.read(count).await?;
+        let entries = state.read(count).await?;
         Ok(entries)
     })
     .await
@@ -545,11 +587,11 @@ pub async fn clipboard_read_entries(
 pub async fn clipboard_delete_one_entry(
     app_handle: tauri::AppHandle,
     id: String,
-    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+    state: State<'_, Arc<ClipboardWatcher>>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:clipboard_delete_one_entry: {:#?}", id);
-        state.lock().await.delete_one(id).await?;
+        state.delete_one(id).await?;
         Ok(())
     })
     .await
@@ -558,11 +600,11 @@ pub async fn clipboard_delete_one_entry(
 #[tauri::command]
 pub async fn clipboard_delete_all_entries(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+    state: State<'_, Arc<ClipboardWatcher>>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:clipboard_delete_all_entries");
-        state.lock().await.delete_all().await?;
+        state.delete_all().await?;
         Ok(())
     })
     .await
@@ -572,12 +614,11 @@ pub async fn clipboard_delete_all_entries(
 pub async fn clipboard_open_entry(
     app_handle: tauri::AppHandle,
     id: String,
-    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+    state: State<'_, Arc<ClipboardWatcher>>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:clipboard_open_entry: {:#?}", id);
-        let clipboard_watcher = state.lock().await;
-        let entry = clipboard_watcher.read_one(id.clone()).await?;
+        let entry = state.read_one(id.clone()).await?;
         if let ClipboardEventKind::Image = entry.kind {
             let image = entry.entry;
 
@@ -607,12 +648,11 @@ pub async fn clipboard_open_entry(
 #[tauri::command]
 pub async fn clipboard_read_status(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<ClipboardWatcher>>>,
+    state: State<'_, Arc<ClipboardWatcher>>,
 ) -> AppResult<bool> {
     with_error_event(&app_handle, async {
         log::info!("CMD:clipboard_read_status");
-        let clipboard_watcher = state.lock().await;
-        Ok(clipboard_watcher.running)
+        Ok(state.read_status().await)
     })
     .await
 }

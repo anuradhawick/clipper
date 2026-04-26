@@ -1,6 +1,6 @@
 use super::db::DbConnection;
 use super::settings::SettingsEntry;
-use crate::content_managers::message_bus::AppMessage;
+use crate::content_managers::message_bus::{AppMessage, SettingsUpdatedPayload};
 use crate::error::{with_error_event, AppError, AppResult};
 use crate::{content_managers::message_bus::MessageBus, AppHandle};
 use anyhow::Context;
@@ -25,10 +25,14 @@ pub struct BookmarkItem {
     timestamp: String,
 }
 
+struct BookmarksState {
+    bookmark_history_size: u32,
+}
+
 pub struct BookmarksManager {
     app_handle: AppHandle,
-    settings: SettingsEntry,
-    pool: Arc<Mutex<SqlitePool>>,
+    pool: SqlitePool,
+    state: Mutex<BookmarksState>,
 }
 
 impl BookmarksManager {
@@ -168,14 +172,16 @@ impl BookmarksManager {
         bus: MessageBus,
         app_handle: AppHandle,
         settings: SettingsEntry,
-    ) -> Arc<Mutex<Self>> {
+    ) -> Arc<Self> {
         let history_limit = settings.bookmark_history_size;
 
-        let state = Arc::new(Mutex::new(Self {
+        let state = Arc::new(Self {
             app_handle,
-            settings,
-            pool: Arc::new(Mutex::new(db.pool.clone())),
-        }));
+            pool: db.pool.clone(),
+            state: Mutex::new(BookmarksState {
+                bookmark_history_size: history_limit,
+            }),
+        });
 
         log::info!("Bookmarks manager history limit set to {}", history_limit);
 
@@ -224,34 +230,27 @@ impl BookmarksManager {
                                 }
                             };
 
-                            {
-                                let app_state = cloned_state.lock().await;
-
-                                match app_state.create(bookmark.clone()).await {
-                                    Ok(_) => {
-                                        // Push newly discovered bookmark metadata to open windows.
-                                        app_state
-                                            .app_handle
-                                            .emit("bookmark_entry_added", bookmark)
-                                            .ok();
-                                        log::info!("Bookmark saved for URL: {}", url)
-                                    }
-                                    Err(e) => log::error!(
-                                        "Failed to save bookmark for URL {}: {}",
-                                        url,
-                                        e
-                                    ),
+                            match cloned_state.create(bookmark.clone()).await {
+                                Ok(_) => {
+                                    // Push newly discovered bookmark metadata to open windows.
+                                    cloned_state
+                                        .app_handle
+                                        .emit("bookmark_entry_added", bookmark)
+                                        .ok();
+                                    log::info!("Bookmark saved for URL: {}", url)
+                                }
+                                Err(e) => {
+                                    log::error!("Failed to save bookmark for URL {}: {}", url, e)
                                 }
                             }
                         }
                     }
                     Ok(AppMessage::SettingsUpdated(settings)) => {
-                        let mut app_state = cloned_state.lock().await;
-                        app_state.settings.clipboard_history_size = settings.clipboard_history_size;
-                        app_state.settings.bookmark_history_size = settings.bookmark_history_size;
+                        let bookmark_history_size = settings.bookmark_history_size;
+                        cloned_state.update_settings(settings).await;
                         log::info!(
                             "Bookmarks manager updated history limit: {}",
-                            app_state.settings.bookmark_history_size
+                            bookmark_history_size
                         );
                     }
                     Ok(_) => {}
@@ -270,10 +269,18 @@ impl BookmarksManager {
         state
     }
 
+    async fn update_settings(&self, settings: SettingsUpdatedPayload) {
+        let mut state = self.state.lock().await;
+        state.bookmark_history_size = settings.bookmark_history_size;
+    }
+
+    async fn bookmark_history_size(&self) -> u32 {
+        self.state.lock().await.bookmark_history_size
+    }
+
     async fn create(&self, bookmark: BookmarkItem) -> Result<(), sqlx::Error> {
         log::info!("Creating bookmark: {:#?}", bookmark.url);
-
-        let pool = self.pool.lock().await;
+        let history_limit = self.bookmark_history_size().await;
 
         // Insert new bookmark or update existing one with same ID (URL hash).
         sqlx::query(
@@ -291,7 +298,7 @@ impl BookmarksManager {
         .bind(bookmark.text)
         .bind(bookmark.image)
         .bind(Utc::now().to_rfc3339())
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
 
         // Enforce history limit by deleting oldest entries exceeding the limit.
@@ -306,8 +313,8 @@ impl BookmarksManager {
             )
             "#,
         )
-        .bind(self.settings.bookmark_history_size)
-        .execute(&*pool)
+        .bind(history_limit)
+        .execute(&self.pool)
         .await?;
 
         // Clean up tag items for deleted bookmarks.
@@ -318,7 +325,7 @@ impl BookmarksManager {
               AND item_id NOT IN (SELECT id FROM bookmarks)
             "#,
         )
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
 
         Ok(())
@@ -326,7 +333,6 @@ impl BookmarksManager {
 
     pub async fn update(&self, bookmark: BookmarkItem) -> Result<(), sqlx::Error> {
         log::info!("Updating bookmark: {:#?}", bookmark.url);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             UPDATE bookmarks
@@ -339,7 +345,7 @@ impl BookmarksManager {
         .bind(bookmark.image)
         .bind(bookmark.timestamp)
         .bind(bookmark.id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         self.notify_bookmarks_updated();
         Ok(())
@@ -347,7 +353,6 @@ impl BookmarksManager {
 
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
         log::info!("Deleting bookmark: {:#?}", id);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             DELETE FROM bookmarks
@@ -355,7 +360,7 @@ impl BookmarksManager {
             "#,
         )
         .bind(id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         sqlx::query(
             r#"
@@ -364,7 +369,7 @@ impl BookmarksManager {
             "#,
         )
         .bind(id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         self.notify_bookmarks_updated();
         Ok(())
@@ -372,7 +377,6 @@ impl BookmarksManager {
 
     pub async fn read(&self) -> Result<Vec<BookmarkItem>, sqlx::Error> {
         log::info!("Reading bookmarks");
-        let pool = self.pool.lock().await;
         let rows = sqlx::query(
             r#"
             SELECT *
@@ -380,7 +384,7 @@ impl BookmarksManager {
             ORDER BY timestamp DESC
             "#,
         )
-        .fetch_all(&*pool)
+        .fetch_all(&self.pool)
         .await?;
 
         let mut bookmarks = Vec::new();
@@ -399,7 +403,6 @@ impl BookmarksManager {
 
     pub async fn get(&self, id: &str) -> Result<BookmarkItem, sqlx::Error> {
         log::info!("Getting bookmark: {:#?}", id);
-        let pool = self.pool.lock().await;
         let item = sqlx::query(
             r#"
             SELECT *
@@ -408,7 +411,7 @@ impl BookmarksManager {
             "#,
         )
         .bind(id)
-        .fetch_one(&*pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(BookmarkItem {
@@ -422,10 +425,11 @@ impl BookmarksManager {
 
     pub async fn delete_all_bookmarks(&self) -> Result<(), sqlx::Error> {
         log::info!("Deleting all bookmarks");
-        let pool = self.pool.lock().await;
-        sqlx::query("DELETE FROM bookmarks").execute(&*pool).await?;
+        sqlx::query("DELETE FROM bookmarks")
+            .execute(&self.pool)
+            .await?;
         sqlx::query("DELETE FROM tag_items WHERE item_kind = 'bookmark'")
-            .execute(&*pool)
+            .execute(&self.pool)
             .await?;
         self.notify_bookmarks_updated();
         Ok(())
@@ -434,17 +438,13 @@ impl BookmarksManager {
 
 #[tauri::command]
 pub async fn bookmarks_update_entry(
-    state: State<'_, Arc<Mutex<BookmarksManager>>>,
+    state: State<'_, Arc<BookmarksManager>>,
     id: String,
     app_handle: tauri::AppHandle,
 ) -> AppResult<BookmarkItem> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Updating bookmark: {:#?}", id);
-
-        let existing = {
-            let mgr = state.lock().await;
-            mgr.get(&id).await?
-        };
+        let existing = state.get(&id).await?;
 
         let (title, description, image) = BookmarksManager::fetch_meta(&existing.url)
             .await
@@ -457,12 +457,8 @@ pub async fn bookmarks_update_entry(
             image,
             timestamp: Utc::now().to_rfc3339(),
         };
-
-        let app_handle = {
-            let mgr = state.lock().await;
-            mgr.update(updated_bookmark.clone()).await?;
-            mgr.app_handle.clone()
-        };
+        state.update(updated_bookmark.clone()).await?;
+        let app_handle = state.app_handle.clone();
 
         // Push refreshed bookmark metadata to open windows.
         app_handle.emit("bookmark_entry_added", updated_bookmark.clone())?;
@@ -475,12 +471,12 @@ pub async fn bookmarks_update_entry(
 #[tauri::command]
 pub async fn bookmarks_delete_one(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<BookmarksManager>>>,
+    state: State<'_, Arc<BookmarksManager>>,
     id: String,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Deleting bookmark: {:#?}", id);
-        state.lock().await.delete(&id).await?;
+        state.delete(&id).await?;
         Ok(())
     })
     .await
@@ -489,15 +485,11 @@ pub async fn bookmarks_delete_one(
 #[tauri::command]
 pub async fn bookmarks_delete_all(
     app_handle: tauri::AppHandle,
-    state_bookmarks_mgr: State<'_, Arc<Mutex<BookmarksManager>>>,
+    state_bookmarks_mgr: State<'_, Arc<BookmarksManager>>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Deleting all bookmarks");
-        state_bookmarks_mgr
-            .lock()
-            .await
-            .delete_all_bookmarks()
-            .await?;
+        state_bookmarks_mgr.delete_all_bookmarks().await?;
         Ok(())
     })
     .await
@@ -506,11 +498,11 @@ pub async fn bookmarks_delete_all(
 #[tauri::command]
 pub async fn bookmarks_read_entries(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<BookmarksManager>>>,
+    state: State<'_, Arc<BookmarksManager>>,
 ) -> AppResult<Vec<BookmarkItem>> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Reading bookmarks");
-        let entries = state.lock().await.read().await?;
+        let entries = state.read().await?;
         Ok(entries)
     })
     .await
