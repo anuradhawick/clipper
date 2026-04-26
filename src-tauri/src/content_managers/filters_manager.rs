@@ -7,7 +7,6 @@ use serde::Serialize;
 use sqlx::{sqlite::SqlitePool, Row};
 use std::sync::Arc;
 use tauri::State;
-use tokio::sync::Mutex;
 
 #[derive(Debug, Serialize, Clone)]
 pub struct FilterItem {
@@ -28,13 +27,13 @@ pub struct FiltersManager {
 }
 
 impl FiltersManager {
-    pub async fn new(db: Arc<DbConnection>, bus: MessageBus) -> Arc<Mutex<Self>> {
+    pub async fn new(db: Arc<DbConnection>, bus: MessageBus) -> Self {
         log::info!("Filters manager initialized");
 
-        Arc::new(Mutex::new(Self {
+        Self {
             bus,
             pool: db.pool.clone(),
-        }))
+        }
     }
 
     pub async fn create(&self, filter: FilterItem) -> Result<(), sqlx::Error> {
@@ -171,7 +170,7 @@ impl FiltersManager {
 #[tauri::command]
 pub async fn filters_create_entry(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<FiltersManager>>>,
+    state: State<'_, FiltersManager>,
     id: String,
     filter_regex: String,
 ) -> AppResult<FilterItem> {
@@ -182,9 +181,8 @@ pub async fn filters_create_entry(
             filter_regex,
             created_date: String::new(),
         };
-        let mgr = state.lock().await;
-        mgr.create(filter).await?;
-        mgr.get(&id).await.map_err(AppError::from)
+        state.create(filter).await?;
+        state.get(&id).await.map_err(AppError::from)
     })
     .await
 }
@@ -192,7 +190,7 @@ pub async fn filters_create_entry(
 #[tauri::command]
 pub async fn filters_update_entry(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<FiltersManager>>>,
+    state: State<'_, FiltersManager>,
     id: String,
     filter_regex: String,
 ) -> AppResult<FilterItem> {
@@ -203,9 +201,8 @@ pub async fn filters_update_entry(
             filter_regex,
             created_date: String::new(),
         };
-        let mgr = state.lock().await;
-        mgr.update(filter).await?;
-        mgr.get(&id).await.map_err(AppError::from)
+        state.update(filter).await?;
+        state.get(&id).await.map_err(AppError::from)
     })
     .await
 }
@@ -213,12 +210,12 @@ pub async fn filters_update_entry(
 #[tauri::command]
 pub async fn filters_delete_one(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<FiltersManager>>>,
+    state: State<'_, FiltersManager>,
     id: String,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Deleting filter: {:#?}", id);
-        state.lock().await.delete(&id).await?;
+        state.delete(&id).await?;
         Ok(())
     })
     .await
@@ -227,11 +224,11 @@ pub async fn filters_delete_one(
 #[tauri::command]
 pub async fn filters_delete_all(
     app_handle: tauri::AppHandle,
-    state_filters_mgr: State<'_, Arc<Mutex<FiltersManager>>>,
+    state_filters_mgr: State<'_, FiltersManager>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Deleting all filters");
-        state_filters_mgr.lock().await.delete_all_filters().await?;
+        state_filters_mgr.delete_all_filters().await?;
         Ok(())
     })
     .await
@@ -240,11 +237,11 @@ pub async fn filters_delete_all(
 #[tauri::command]
 pub async fn filters_read_entries(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<FiltersManager>>>,
+    state: State<'_, FiltersManager>,
 ) -> AppResult<Vec<FilterItem>> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Reading filters");
-        let filters = state.lock().await.read().await?;
+        let filters = state.read().await?;
         Ok(filters)
     })
     .await

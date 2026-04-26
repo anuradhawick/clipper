@@ -241,10 +241,9 @@ async fn setup(app: AppHandle) -> AppResult<()> {
     app.manage(notes_manager);
     // register filters manager
     let filters_manager = FiltersManager::new(Arc::clone(&db), bus.clone()).await;
-    app.manage(Arc::clone(&filters_manager));
     // preload initial settings/filters once and pass them into managers
     let initial_settings = settings_manager.lock().await.read().await?;
-    let initial_filters = match filters_manager.lock().await.read().await {
+    let initial_filters = match filters_manager.read().await {
         Ok(filters) => filters,
         Err(err) => {
             log::error!(
@@ -254,6 +253,7 @@ async fn setup(app: AppHandle) -> AppResult<()> {
             Vec::new()
         }
     };
+    app.manage(filters_manager);
     // register tags manager
     let tags_manager = TagsManager::new(Arc::clone(&db), app.clone()).await;
     app.manage(tags_manager);

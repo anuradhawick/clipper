@@ -6,7 +6,6 @@ use serde::Serialize;
 use sqlx::{sqlite::SqlitePool, Row};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
-use tokio::sync::Mutex;
 
 #[derive(Debug, Serialize, Clone)]
 pub struct NoteItem {
@@ -23,17 +22,13 @@ pub struct NotesManager {
 }
 
 impl NotesManager {
-    pub async fn new(
-        db: Arc<DbConnection>,
-        app_handle: AppHandle,
-        bus: MessageBus,
-    ) -> Arc<Mutex<Self>> {
+    pub async fn new(db: Arc<DbConnection>, app_handle: AppHandle, bus: MessageBus) -> Self {
         log::info!("Notes manager initialized");
-        Arc::new(Mutex::new(Self {
+        Self {
             app_handle,
             bus,
             pool: db.pool.clone(),
-        }))
+        }
     }
 
     fn notify_notes_updated(&self) {
@@ -163,7 +158,7 @@ impl NotesManager {
 #[tauri::command]
 pub async fn create_note(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<NotesManager>>>,
+    state: State<'_, NotesManager>,
     id: String,
     entry: String,
 ) -> AppResult<NoteItem> {
@@ -175,9 +170,8 @@ pub async fn create_note(
             created_time: String::new(),
             updated_time: String::new(),
         };
-        let mgr = state.lock().await;
-        mgr.create(note).await?;
-        mgr.get(&id).await.map_err(AppError::from)
+        state.create(note).await?;
+        state.get(&id).await.map_err(AppError::from)
     })
     .await
 }
@@ -185,7 +179,7 @@ pub async fn create_note(
 #[tauri::command]
 pub async fn update_note(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<NotesManager>>>,
+    state: State<'_, NotesManager>,
     id: String,
     entry: String,
 ) -> AppResult<NoteItem> {
@@ -197,9 +191,8 @@ pub async fn update_note(
             created_time: String::new(),
             updated_time: String::new(),
         };
-        let mgr = state.lock().await;
-        mgr.update(note).await?;
-        mgr.get(&id).await.map_err(AppError::from)
+        state.update(note).await?;
+        state.get(&id).await.map_err(AppError::from)
     })
     .await
 }
@@ -207,12 +200,12 @@ pub async fn update_note(
 #[tauri::command]
 pub async fn delete_note(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<NotesManager>>>,
+    state: State<'_, NotesManager>,
     id: String,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Deleting note: {:#?}", id);
-        state.lock().await.delete(&id).await?;
+        state.delete(&id).await?;
         Ok(())
     })
     .await
@@ -221,11 +214,11 @@ pub async fn delete_note(
 #[tauri::command]
 pub async fn delete_all_notes(
     app_handle: tauri::AppHandle,
-    state_notes_mgr: State<'_, Arc<Mutex<NotesManager>>>,
+    state_notes_mgr: State<'_, NotesManager>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Deleting all notes");
-        state_notes_mgr.lock().await.delete_all_notes().await?;
+        state_notes_mgr.delete_all_notes().await?;
         Ok(())
     })
     .await
@@ -234,11 +227,11 @@ pub async fn delete_all_notes(
 #[tauri::command]
 pub async fn read_notes(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<NotesManager>>>,
+    state: State<'_, NotesManager>,
 ) -> AppResult<Vec<NoteItem>> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Reading notes");
-        let notes = state.lock().await.read().await?;
+        let notes = state.read().await?;
         Ok(notes)
     })
     .await
@@ -248,15 +241,13 @@ pub async fn read_notes(
 pub async fn clipboard_add_note(
     app_handle: tauri::AppHandle,
     id: String,
-    state_notes_mgr: State<'_, Arc<Mutex<NotesManager>>>,
+    state_notes_mgr: State<'_, NotesManager>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Note added to clipboard: {:#?}", id);
-        let (text, bus) = {
-            let notes_mgr = state_notes_mgr.lock().await;
-            let entry = notes_mgr.get(&id).await?;
-            (entry.entry, notes_mgr.bus.clone())
-        };
+        let entry = state_notes_mgr.get(&id).await?;
+        let text = entry.entry;
+        let bus = state_notes_mgr.bus.clone();
 
         bus.send(AppMessage::SetClipboardText(text))
             .map_err(|error| AppError::RuntimeError(error.to_string()))?;

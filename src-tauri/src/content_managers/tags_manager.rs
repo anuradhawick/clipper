@@ -5,7 +5,6 @@ use serde::Serialize;
 use sqlx::{sqlite::SqlitePool, Row};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Clone)]
@@ -31,13 +30,13 @@ pub struct TagsManager {
 }
 
 impl TagsManager {
-    pub async fn new(db: Arc<DbConnection>, app_handle: AppHandle) -> Arc<Mutex<Self>> {
+    pub async fn new(db: Arc<DbConnection>, app_handle: AppHandle) -> Self {
         log::info!("Tags manager initialized");
 
-        Arc::new(Mutex::new(Self {
+        Self {
             app_handle,
             pool: db.pool.clone(),
-        }))
+        }
     }
 
     pub async fn create(&self, item: TagItem) -> Result<(), sqlx::Error> {
@@ -359,7 +358,7 @@ fn validate_tagged_item_kind(kind: &str) -> AppResult<()> {
 #[tauri::command]
 pub async fn tags_create_entry(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<TagsManager>>>,
+    state: State<'_, TagsManager>,
     id: String,
     tag: String,
     kind: String,
@@ -372,9 +371,8 @@ pub async fn tags_create_entry(
             kind,
             timestamp: String::new(),
         };
-        let mgr = state.lock().await;
-        mgr.create(item).await?;
-        mgr.get(&id).await.map_err(AppError::from)
+        state.create(item).await?;
+        state.get(&id).await.map_err(AppError::from)
     })
     .await
 }
@@ -382,7 +380,7 @@ pub async fn tags_create_entry(
 #[tauri::command]
 pub async fn tags_update_entry(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<TagsManager>>>,
+    state: State<'_, TagsManager>,
     id: String,
     tag: String,
     kind: String,
@@ -395,9 +393,8 @@ pub async fn tags_update_entry(
             kind,
             timestamp: String::new(),
         };
-        let mgr = state.lock().await;
-        mgr.update(item).await?;
-        mgr.get(&id).await.map_err(AppError::from)
+        state.update(item).await?;
+        state.get(&id).await.map_err(AppError::from)
     })
     .await
 }
@@ -405,12 +402,12 @@ pub async fn tags_update_entry(
 #[tauri::command]
 pub async fn tags_delete_one(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<TagsManager>>>,
+    state: State<'_, TagsManager>,
     id: String,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Deleting tag: {:#?}", id);
-        state.lock().await.delete(&id).await?;
+        state.delete(&id).await?;
         Ok(())
     })
     .await
@@ -419,11 +416,11 @@ pub async fn tags_delete_one(
 #[tauri::command]
 pub async fn tags_read_entries(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<TagsManager>>>,
+    state: State<'_, TagsManager>,
 ) -> AppResult<Vec<TagItem>> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Reading tags");
-        let tags = state.lock().await.read().await?;
+        let tags = state.read().await?;
         Ok(tags)
     })
     .await
@@ -432,11 +429,11 @@ pub async fn tags_read_entries(
 #[tauri::command]
 pub async fn tags_read_items(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<TagsManager>>>,
+    state: State<'_, TagsManager>,
 ) -> AppResult<Vec<TaggedItem>> {
     with_error_event(&app_handle, async {
         log::info!("CMD:Reading tagged items");
-        let items = state.lock().await.read_tagged_items().await?;
+        let items = state.read_tagged_items().await?;
         Ok(items)
     })
     .await
@@ -445,7 +442,7 @@ pub async fn tags_read_items(
 #[tauri::command]
 pub async fn tags_set_item_tags(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<TagsManager>>>,
+    state: State<'_, TagsManager>,
     item_kind: String,
     item_id: String,
     tag_ids: Vec<String>,
@@ -458,11 +455,7 @@ pub async fn tags_set_item_tags(
             item_id,
             tag_ids
         );
-        let tags = state
-            .lock()
-            .await
-            .set_item_tags(&item_kind, &item_id, tag_ids)
-            .await?;
+        let tags = state.set_item_tags(&item_kind, &item_id, tag_ids).await?;
         Ok(tags)
     })
     .await
@@ -471,7 +464,7 @@ pub async fn tags_set_item_tags(
 #[tauri::command]
 pub async fn tags_assign_item(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<TagsManager>>>,
+    state: State<'_, TagsManager>,
     tag_id: String,
     item_kind: String,
     item_id: String,
@@ -484,11 +477,7 @@ pub async fn tags_assign_item(
             item_kind,
             item_id
         );
-        let item = state
-            .lock()
-            .await
-            .assign_item_tag(&tag_id, &item_kind, &item_id)
-            .await?;
+        let item = state.assign_item_tag(&tag_id, &item_kind, &item_id).await?;
         Ok(item)
     })
     .await
@@ -497,7 +486,7 @@ pub async fn tags_assign_item(
 #[tauri::command]
 pub async fn tags_remove_item(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<TagsManager>>>,
+    state: State<'_, TagsManager>,
     tag_id: String,
     item_kind: String,
     item_id: String,
@@ -510,11 +499,7 @@ pub async fn tags_remove_item(
             item_kind,
             item_id
         );
-        state
-            .lock()
-            .await
-            .remove_item_tag(&tag_id, &item_kind, &item_id)
-            .await?;
+        state.remove_item_tag(&tag_id, &item_kind, &item_id).await?;
         Ok(())
     })
     .await
@@ -523,18 +508,14 @@ pub async fn tags_remove_item(
 #[tauri::command]
 pub async fn tags_read_item_tags(
     app_handle: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<TagsManager>>>,
+    state: State<'_, TagsManager>,
     item_kind: String,
     item_id: String,
 ) -> AppResult<Vec<TagItem>> {
     with_error_event(&app_handle, async {
         validate_tagged_item_kind(&item_kind)?;
         log::info!("CMD:Reading item tags: {:#?} {:#?}", item_kind, item_id);
-        let tags = state
-            .lock()
-            .await
-            .read_item_tags(&item_kind, &item_id)
-            .await?;
+        let tags = state.read_item_tags(&item_kind, &item_id).await?;
         Ok(tags)
     })
     .await
