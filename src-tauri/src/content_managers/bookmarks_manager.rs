@@ -10,7 +10,7 @@ use serde::Serialize;
 use sqlx::{sqlite::SqlitePool, Row};
 use std::collections::HashSet;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use tauri::async_runtime;
 use tauri::Emitter;
 use tauri::State;
@@ -35,6 +35,13 @@ pub struct BookmarksManager {
     state: Mutex<BookmarksState>,
 }
 
+static BOOKMARK_URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))"#,
+    )
+    .expect("bookmark URL regex must compile")
+});
+
 impl BookmarksManager {
     fn notify_bookmarks_updated(&self) {
         // Notify bookmark lists to refetch after bookmark mutations.
@@ -44,16 +51,7 @@ impl BookmarksManager {
     }
 
     fn extract_urls(text: &str) -> Vec<String> {
-        let url_regex = match Regex::new(
-            r#"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))"#,
-        ) {
-            Ok(regex) => regex,
-            Err(error) => {
-                log::error!("Failed to compile URL regex: {}", error);
-                return Vec::new();
-            }
-        };
-        url_regex
+        BOOKMARK_URL_REGEX
             .find_iter(text)
             .map(|mat| mat.as_str().to_string())
             .collect::<HashSet<_>>()
