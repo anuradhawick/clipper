@@ -45,13 +45,18 @@ pub fn handle_window_event(window: &Window, event: &WindowEvent) {
                 return;
             }
 
-            tokio::task::block_in_place(|| {
-                tauri::async_runtime::block_on(async {
-                    let files_manager = app_handle.state::<FilesManager>();
-                    if files_manager.handle_drop(paths.clone()).await.is_err() {
-                        log::error!("Failed to handle drop of files: {:#?}", paths);
-                    }
-                })
+            let dropped_paths = paths.clone();
+            let async_app_handle = app_handle.clone();
+
+            tauri::async_runtime::spawn(async move {
+                let files_manager = async_app_handle.state::<FilesManager>();
+                if let Err(error) = files_manager.handle_drop(dropped_paths.clone()).await {
+                    log::error!(
+                        "Failed to handle drop of files: {:#?}: {}",
+                        dropped_paths,
+                        error
+                    );
+                }
             });
 
             // Mirror the completed native drop and accepted paths to the frontend.
