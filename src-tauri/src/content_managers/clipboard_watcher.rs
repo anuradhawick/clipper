@@ -70,7 +70,7 @@ pub struct ClipboardWatcher {
     last_image: u64,
     filters: Vec<Regex>,
     history_limit: u32,
-    pool: Arc<Mutex<SqlitePool>>,
+    pool: SqlitePool,
 }
 
 fn buffer_hash(buffer: &[u8]) -> u64 {
@@ -144,7 +144,7 @@ impl ClipboardWatcher {
             last_image,
             filters: initial_filters.clone(),
             history_limit,
-            pool: Arc::new(Mutex::new(db.pool.clone())),
+            pool: db.pool.clone(),
         }));
 
         let refresh_state = Arc::clone(&state);
@@ -308,7 +308,6 @@ impl ClipboardWatcher {
     }
 
     pub async fn read(&self, count: u32) -> AppResult<Vec<ClipboardEvent>> {
-        let pool: tokio::sync::MutexGuard<'_, sqlx::Pool<sqlx::Sqlite>> = self.pool.lock().await;
         let rows = sqlx::query(
             r#"
             SELECT *
@@ -318,7 +317,7 @@ impl ClipboardWatcher {
             "#,
         )
         .bind(count)
-        .fetch_all(&*pool)
+        .fetch_all(&self.pool)
         .await?;
 
         let mut events = Vec::new();
@@ -336,7 +335,6 @@ impl ClipboardWatcher {
 
     pub async fn read_one(&self, id: String) -> AppResult<ClipboardEvent> {
         log::info!("Read clipboard entry: {:#?}", id);
-        let pool = self.pool.lock().await;
         let row = sqlx::query(
             r#"
             SELECT *
@@ -345,7 +343,7 @@ impl ClipboardWatcher {
             "#,
         )
         .bind(&id)
-        .fetch_one(&*pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(ClipboardEvent {
@@ -358,7 +356,6 @@ impl ClipboardWatcher {
 
     pub async fn delete_one(&self, id: String) -> Result<(), sqlx::Error> {
         log::info!("Deleted clipboard entry: {:#?}", id);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             DELETE FROM clipboard
@@ -366,7 +363,7 @@ impl ClipboardWatcher {
             "#,
         )
         .bind(&id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         sqlx::query(
             r#"
@@ -375,7 +372,7 @@ impl ClipboardWatcher {
             "#,
         )
         .bind(id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         self.notify_clipboard_updated();
         Ok(())
@@ -383,13 +380,12 @@ impl ClipboardWatcher {
 
     pub async fn delete_all(&self) -> Result<(), sqlx::Error> {
         log::info!("Deleted all clipboard entries");
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             DELETE FROM clipboard
             "#,
         )
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         sqlx::query(
             r#"
@@ -397,7 +393,7 @@ impl ClipboardWatcher {
             WHERE item_kind = 'clipboard'
             "#,
         )
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         self.notify_clipboard_updated();
         log::info!("Deleted all clipboard entries");
@@ -407,7 +403,6 @@ impl ClipboardWatcher {
     async fn save(&self, event: ClipboardEvent) -> Result<(), sqlx::Error> {
         log::info!("Saved clipboard entry: {:#?}", event.id);
 
-        let pool = self.pool.lock().await;
         // Insert new clipboard entry.
         sqlx::query(
             r#"
@@ -419,7 +414,7 @@ impl ClipboardWatcher {
         .bind(event.entry)
         .bind(event.kind.as_str())
         .bind(event.timestamp)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
 
         // Enforce history limit by deleting oldest entries exceeding the limit.
@@ -435,7 +430,7 @@ impl ClipboardWatcher {
             "#,
         )
         .bind(self.history_limit)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
 
         // Clean up tag items for deleted clipboard entries.
@@ -446,7 +441,7 @@ impl ClipboardWatcher {
               AND item_id NOT IN (SELECT id FROM clipboard)
             "#,
         )
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
 
         Ok(())

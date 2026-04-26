@@ -24,7 +24,7 @@ impl FilterItem {
 
 pub struct FiltersManager {
     bus: MessageBus,
-    pool: Arc<Mutex<SqlitePool>>,
+    pool: SqlitePool,
 }
 
 impl FiltersManager {
@@ -33,13 +33,12 @@ impl FiltersManager {
 
         Arc::new(Mutex::new(Self {
             bus,
-            pool: Arc::new(Mutex::new(db.pool.clone())),
+            pool: db.pool.clone(),
         }))
     }
 
     pub async fn create(&self, filter: FilterItem) -> Result<(), sqlx::Error> {
         log::info!("Creating filter: {:#?}", filter);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             INSERT INTO filters (id, filter_regex, created_date)
@@ -49,16 +48,14 @@ impl FiltersManager {
         .bind(filter.id)
         .bind(filter.filter_regex)
         .bind(Utc::now().to_rfc3339())
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
-        drop(pool);
         self.notify_filters_updated().await;
         Ok(())
     }
 
     pub async fn update(&self, filter: FilterItem) -> Result<(), sqlx::Error> {
         log::info!("Updating filter: {:#?}", filter);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             UPDATE filters
@@ -68,16 +65,14 @@ impl FiltersManager {
         )
         .bind(filter.filter_regex)
         .bind(filter.id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
-        drop(pool);
         self.notify_filters_updated().await;
         Ok(())
     }
 
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
         log::info!("Deleting filter: {:#?}", id);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             DELETE FROM filters
@@ -85,16 +80,14 @@ impl FiltersManager {
             "#,
         )
         .bind(id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
-        drop(pool);
         self.notify_filters_updated().await;
         Ok(())
     }
 
     pub async fn read(&self) -> Result<Vec<FilterItem>, sqlx::Error> {
         log::info!("Reading filters");
-        let pool = self.pool.lock().await;
         let rows = sqlx::query(
             r#"
             SELECT *
@@ -102,7 +95,7 @@ impl FiltersManager {
             ORDER BY created_date DESC
             "#,
         )
-        .fetch_all(&*pool)
+        .fetch_all(&self.pool)
         .await?;
 
         let mut filters = Vec::new();
@@ -119,7 +112,6 @@ impl FiltersManager {
 
     pub async fn get(&self, id: &str) -> Result<FilterItem, sqlx::Error> {
         log::info!("Getting filter: {:#?}", id);
-        let pool = self.pool.lock().await;
         let item = sqlx::query(
             r#"
             SELECT *
@@ -128,7 +120,7 @@ impl FiltersManager {
             "#,
         )
         .bind(id)
-        .fetch_one(&*pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(FilterItem {
@@ -140,9 +132,9 @@ impl FiltersManager {
 
     pub async fn delete_all_filters(&self) -> Result<(), sqlx::Error> {
         log::info!("Deleting all filters");
-        let pool = self.pool.lock().await;
-        sqlx::query("DELETE FROM filters").execute(&*pool).await?;
-        drop(pool);
+        sqlx::query("DELETE FROM filters")
+            .execute(&self.pool)
+            .await?;
         self.notify_filters_updated().await;
         Ok(())
     }

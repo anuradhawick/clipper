@@ -27,7 +27,7 @@ pub struct SettingsEntry {
 
 pub struct SettingsManager {
     app_handle: AppHandle,
-    pool: Arc<Mutex<SqlitePool>>,
+    pool: SqlitePool,
     bus: MessageBus,
 }
 
@@ -96,7 +96,7 @@ impl SettingsManager {
         }
 
         Ok(Arc::new(Mutex::new(Self {
-            pool: Arc::new(Mutex::new(db.pool.clone())),
+            pool: db.pool.clone(),
             app_handle,
             bus,
         })))
@@ -105,7 +105,6 @@ impl SettingsManager {
     pub async fn update(&self, settings: SettingsEntry) -> AppResult<()> {
         log::info!("Updating settings: {:#?}", settings);
         let settings_for_event = settings.clone();
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             UPDATE settings
@@ -118,7 +117,7 @@ impl SettingsManager {
         .bind(settings.clipboard_history_size)
         .bind(settings.bookmark_history_size)
         .bind(settings.global_shortcut.clone())
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
 
         if settings.autolaunch {
@@ -170,7 +169,6 @@ impl SettingsManager {
 
     pub async fn read(&self) -> AppResult<SettingsEntry> {
         log::info!("Reading settings");
-        let pool = self.pool.lock().await;
         let result = sqlx::query(
             r#"
             SELECT *
@@ -178,7 +176,7 @@ impl SettingsManager {
             LIMIT 1
             "#,
         )
-        .fetch_one(&*pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(SettingsEntry {

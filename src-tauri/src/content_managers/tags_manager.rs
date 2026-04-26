@@ -27,7 +27,7 @@ pub struct TaggedItem {
 
 pub struct TagsManager {
     app_handle: AppHandle,
-    pool: Arc<Mutex<SqlitePool>>,
+    pool: SqlitePool,
 }
 
 impl TagsManager {
@@ -36,13 +36,12 @@ impl TagsManager {
 
         Arc::new(Mutex::new(Self {
             app_handle,
-            pool: Arc::new(Mutex::new(db.pool.clone())),
+            pool: db.pool.clone(),
         }))
     }
 
     pub async fn create(&self, item: TagItem) -> Result<(), sqlx::Error> {
         log::info!("Creating tag: {:#?}", item);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             INSERT INTO tags (id, tag, kind, timestamp)
@@ -53,7 +52,7 @@ impl TagsManager {
         .bind(item.tag)
         .bind(item.kind)
         .bind(Utc::now().to_rfc3339())
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         self.notify_tags_updated();
         Ok(())
@@ -61,7 +60,6 @@ impl TagsManager {
 
     pub async fn update(&self, item: TagItem) -> Result<(), sqlx::Error> {
         log::info!("Updating tag: {:#?}", item);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             UPDATE tags
@@ -73,7 +71,7 @@ impl TagsManager {
         .bind(item.kind)
         .bind(Utc::now().to_rfc3339())
         .bind(item.id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         self.notify_tags_updated();
         Ok(())
@@ -81,7 +79,6 @@ impl TagsManager {
 
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
         log::info!("Deleting tag: {:#?}", id);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             DELETE FROM tag_items
@@ -89,7 +86,7 @@ impl TagsManager {
             "#,
         )
         .bind(id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         sqlx::query(
             r#"
@@ -98,7 +95,7 @@ impl TagsManager {
             "#,
         )
         .bind(id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         self.notify_tags_updated();
         self.notify_tag_items_updated();
@@ -117,7 +114,6 @@ impl TagsManager {
             item_id,
             tag_ids
         );
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             DELETE FROM tag_items
@@ -126,7 +122,7 @@ impl TagsManager {
         )
         .bind(item_kind)
         .bind(item_id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
 
         for tag_id in tag_ids {
@@ -143,11 +139,10 @@ impl TagsManager {
             .bind(item_kind)
             .bind(item_id)
             .bind(Utc::now().to_rfc3339())
-            .execute(&*pool)
+            .execute(&self.pool)
             .await?;
         }
 
-        drop(pool);
         self.notify_tag_items_updated();
         self.read_item_tags(item_kind, item_id).await
     }
@@ -165,7 +160,6 @@ impl TagsManager {
             item_id
         );
         let tagged_item_id = Uuid::new_v4().to_string();
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             INSERT INTO tag_items (id, tag_id, item_kind, item_id, timestamp)
@@ -179,7 +173,7 @@ impl TagsManager {
         .bind(item_kind)
         .bind(item_id)
         .bind(Utc::now().to_rfc3339())
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
 
         let row = sqlx::query(
@@ -192,7 +186,7 @@ impl TagsManager {
         .bind(tag_id)
         .bind(item_kind)
         .bind(item_id)
-        .fetch_one(&*pool)
+        .fetch_one(&self.pool)
         .await?;
 
         self.notify_tag_items_updated();
@@ -217,7 +211,6 @@ impl TagsManager {
             item_kind,
             item_id
         );
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             DELETE FROM tag_items
@@ -227,7 +220,7 @@ impl TagsManager {
         .bind(tag_id)
         .bind(item_kind)
         .bind(item_id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         self.notify_tag_items_updated();
         Ok(())
@@ -239,7 +232,6 @@ impl TagsManager {
         item_id: &str,
     ) -> Result<Vec<TagItem>, sqlx::Error> {
         log::info!("Reading item tags: {:#?} {:#?}", item_kind, item_id);
-        let pool = self.pool.lock().await;
         let rows = sqlx::query(
             r#"
             SELECT tags.*
@@ -251,7 +243,7 @@ impl TagsManager {
         )
         .bind(item_kind)
         .bind(item_id)
-        .fetch_all(&*pool)
+        .fetch_all(&self.pool)
         .await?;
 
         let mut items = Vec::new();
@@ -269,7 +261,6 @@ impl TagsManager {
 
     pub async fn read_tagged_items(&self) -> Result<Vec<TaggedItem>, sqlx::Error> {
         log::info!("Reading tagged items");
-        let pool = self.pool.lock().await;
         let rows = sqlx::query(
             r#"
             SELECT *
@@ -277,7 +268,7 @@ impl TagsManager {
             ORDER BY timestamp DESC
             "#,
         )
-        .fetch_all(&*pool)
+        .fetch_all(&self.pool)
         .await?;
 
         let mut items = Vec::new();
@@ -296,7 +287,6 @@ impl TagsManager {
 
     pub async fn read(&self) -> Result<Vec<TagItem>, sqlx::Error> {
         log::info!("Reading tags");
-        let pool = self.pool.lock().await;
         let rows = sqlx::query(
             r#"
             SELECT *
@@ -304,7 +294,7 @@ impl TagsManager {
             ORDER BY timestamp DESC
             "#,
         )
-        .fetch_all(&*pool)
+        .fetch_all(&self.pool)
         .await?;
 
         let mut items = Vec::new();
@@ -322,7 +312,6 @@ impl TagsManager {
 
     pub async fn get(&self, id: &str) -> Result<TagItem, sqlx::Error> {
         log::info!("Getting tag: {:#?}", id);
-        let pool = self.pool.lock().await;
         let item = sqlx::query(
             r#"
             SELECT *
@@ -331,7 +320,7 @@ impl TagsManager {
             "#,
         )
         .bind(id)
-        .fetch_one(&*pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(TagItem {

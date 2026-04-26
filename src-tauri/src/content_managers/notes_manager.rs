@@ -19,7 +19,7 @@ pub struct NoteItem {
 pub struct NotesManager {
     app_handle: AppHandle,
     bus: MessageBus,
-    pool: Arc<Mutex<SqlitePool>>,
+    pool: SqlitePool,
 }
 
 impl NotesManager {
@@ -32,7 +32,7 @@ impl NotesManager {
         Arc::new(Mutex::new(Self {
             app_handle,
             bus,
-            pool: Arc::new(Mutex::new(db.pool.clone())),
+            pool: db.pool.clone(),
         }))
     }
 
@@ -45,7 +45,6 @@ impl NotesManager {
 
     pub async fn create(&self, note: NoteItem) -> Result<(), sqlx::Error> {
         log::info!("Creating note: {:#?}", note);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             INSERT INTO notes (id, entry, created_time, updated_time)
@@ -56,7 +55,7 @@ impl NotesManager {
         .bind(note.entry)
         .bind(Utc::now().to_rfc3339())
         .bind(String::new())
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         self.notify_notes_updated();
         Ok(())
@@ -64,7 +63,6 @@ impl NotesManager {
 
     pub async fn update(&self, note: NoteItem) -> Result<(), sqlx::Error> {
         log::info!("Updating note: {:#?}", note);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             UPDATE notes
@@ -75,7 +73,7 @@ impl NotesManager {
         .bind(note.entry)
         .bind(Utc::now().to_rfc3339())
         .bind(note.id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         self.notify_notes_updated();
         Ok(())
@@ -83,7 +81,6 @@ impl NotesManager {
 
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
         log::info!("Deleting note: {:#?}", id);
-        let pool = self.pool.lock().await;
         sqlx::query(
             r#"
             DELETE FROM notes
@@ -91,7 +88,7 @@ impl NotesManager {
             "#,
         )
         .bind(id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         sqlx::query(
             r#"
@@ -100,7 +97,7 @@ impl NotesManager {
             "#,
         )
         .bind(id)
-        .execute(&*pool)
+        .execute(&self.pool)
         .await?;
         self.notify_notes_updated();
         Ok(())
@@ -108,7 +105,6 @@ impl NotesManager {
 
     pub async fn read(&self) -> Result<Vec<NoteItem>, sqlx::Error> {
         log::info!("Reading notes");
-        let pool = self.pool.lock().await;
         let rows = sqlx::query(
             r#"
             SELECT *
@@ -116,7 +112,7 @@ impl NotesManager {
             ORDER BY created_time DESC
             "#,
         )
-        .fetch_all(&*pool)
+        .fetch_all(&self.pool)
         .await?;
 
         let mut notes = Vec::new();
@@ -134,7 +130,6 @@ impl NotesManager {
 
     pub async fn get(&self, id: &str) -> Result<NoteItem, sqlx::Error> {
         log::info!("Getting note: {:#?}", id);
-        let pool = self.pool.lock().await;
         let item = sqlx::query(
             r#"
             SELECT *
@@ -143,7 +138,7 @@ impl NotesManager {
             "#,
         )
         .bind(id)
-        .fetch_one(&*pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(NoteItem {
@@ -156,10 +151,9 @@ impl NotesManager {
 
     pub async fn delete_all_notes(&self) -> Result<(), sqlx::Error> {
         log::info!("Deleting all notes");
-        let pool = self.pool.lock().await;
-        sqlx::query("DELETE FROM notes").execute(&*pool).await?;
+        sqlx::query("DELETE FROM notes").execute(&self.pool).await?;
         sqlx::query("DELETE FROM tag_items WHERE item_kind = 'note'")
-            .execute(&*pool)
+            .execute(&self.pool)
             .await?;
         self.notify_notes_updated();
         Ok(())
