@@ -33,10 +33,18 @@ struct NetworkPeer {
     addr: SocketAddr,
 }
 
+#[derive(Clone)]
+struct ConnectedPeer {
+    name: String,
+    addr: SocketAddr,
+    socket: Arc<UdpSocket>,
+}
+
 struct NetworkManagerState {
     running: bool,
     local_name: String,
     peers: HashMap<SocketAddr, NetworkPeer>,
+    connected_peers: HashMap<SocketAddr, ConnectedPeer>,
     shutdown_tx: Option<watch::Sender<bool>>,
     tasks: Vec<JoinHandle<()>>,
 }
@@ -54,6 +62,7 @@ impl NetworkManager {
                 running: false,
                 local_name: Self::local_name(),
                 peers: HashMap::new(),
+                connected_peers: HashMap::new(),
                 shutdown_tx: None,
                 tasks: Vec::new(),
             }),
@@ -102,6 +111,7 @@ impl NetworkManager {
 
             state.running = false;
             state.peers.clear();
+            state.connected_peers.clear();
             (state.shutdown_tx.take(), std::mem::take(&mut state.tasks))
         };
 
@@ -190,13 +200,13 @@ impl NetworkManager {
                                         name: packet.name,
                                         addr: SocketAddr::new(address.ip(), packet.clipboard_port),
                                     };
-                                    let peer_addr = peer.addr;
-                                    manager.upsert_peer(peer).await;
+                                    manager.upsert_peer(peer.clone()).await;
 
-                                    if let Err(error) = Self::connect_to_peer(peer_addr).await {
+                                    if let Err(error) = manager.connect_peer(peer.clone()).await {
                                         log::debug!(
-                                            "Network manager failed to connect placeholder transport to {}: {}",
-                                            peer_addr,
+                                            "Network manager failed to prepare peer transport to {} ({}): {}",
+                                            peer.name,
+                                            peer.addr,
                                             error
                                         );
                                     }
@@ -247,8 +257,8 @@ impl NetworkManager {
 
                             match serde_json::to_vec(&packet) {
                                 Ok(payload) => {
-                                    for peer in manager.peers().await {
-                                        if let Err(error) = socket.send_to(&payload, peer.addr).await {
+                                    for peer in manager.peer_connections().await {
+                                        if let Err(error) = peer.socket.send(&payload).await {
                                             log::debug!(
                                                 "Network manager failed to send clipboard payload to {} ({}): {}",
                                                 peer.name,
@@ -314,10 +324,6 @@ impl NetworkManager {
         }
     }
 
-    async fn peers(&self) -> Vec<NetworkPeer> {
-        self.state.lock().await.peers.values().cloned().collect()
-    }
-
     fn create_multicast_sender() -> std::io::Result<UdpSocket> {
         let socket = StdUdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))?;
         socket.set_nonblocking(true)?;
@@ -332,8 +338,47 @@ impl NetworkManager {
         UdpSocket::from_std(socket)
     }
 
-    async fn connect_to_peer(peer_addr: SocketAddr) -> std::io::Result<()> {
-        let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await?;
-        socket.connect(peer_addr).await
+    async fn connect_peer(&self, peer: NetworkPeer) -> std::io::Result<()> {
+        {
+            let state = self.state.lock().await;
+            if state.connected_peers.contains_key(&peer.addr) {
+                return Ok(());
+            }
+        }
+
+        let socket = Arc::new(UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await?);
+        socket.connect(peer.addr).await?;
+
+        let mut state = self.state.lock().await;
+        if state.connected_peers.contains_key(&peer.addr) {
+            return Ok(());
+        }
+
+        state.connected_peers.insert(
+            peer.addr,
+            ConnectedPeer {
+                name: peer.name.clone(),
+                addr: peer.addr,
+                socket,
+            },
+        );
+
+        log::info!(
+            "Network manager prepared clipboard transport to {} at {}",
+            peer.name,
+            peer.addr
+        );
+
+        Ok(())
+    }
+
+    async fn peer_connections(&self) -> Vec<ConnectedPeer> {
+        self.state
+            .lock()
+            .await
+            .connected_peers
+            .values()
+            .cloned()
+            .collect()
     }
 }
