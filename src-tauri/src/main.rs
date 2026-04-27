@@ -31,6 +31,7 @@ use content_managers::notes_manager::{
     clipboard_add_note, create_note, delete_all_notes, delete_note, read_notes, update_note,
     NotesManager,
 };
+use content_managers::net_manager::NetworkManager;
 use content_managers::settings::{settings_read, settings_update, SettingsManager};
 use content_managers::tags_manager::{
     tags_assign_item, tags_create_entry, tags_delete_one, tags_read_entries, tags_read_item_tags,
@@ -270,6 +271,9 @@ async fn setup(app: AppHandle) -> AppResult<()> {
     let bookmarks_manager =
         BookmarksManager::new(Arc::clone(&db), bus.clone(), app.clone(), initial_settings).await;
     app.manage(bookmarks_manager);
+    // register network clipboard manager
+    let network_manager = NetworkManager::new(bus.clone()).await;
+    app.manage(network_manager);
     // register file service
     let files_manager = FilesManager::new(
         // Arc::clone(&db),

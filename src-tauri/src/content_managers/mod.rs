@@ -5,6 +5,7 @@ pub mod files_manager;
 pub mod filters_manager;
 pub mod global_shortcut;
 pub mod message_bus;
+pub mod net_manager;
 pub mod notes_manager;
 pub mod settings;
 pub mod tags_manager;

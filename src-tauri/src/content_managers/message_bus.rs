@@ -12,12 +12,19 @@ pub struct FiltersUpdatedPayload {
     pub filter_regexes: Vec<Regex>,
 }
 
+#[derive(Clone, Debug)]
+pub struct NetworkClipboardPayload {
+    pub source_name: String,
+    pub text: String,
+}
+
 #[derive(Clone)]
 pub enum AppMessage {
     AddedToClipboard(String),
     SetClipboardText(String),
     FiltersUpdated(FiltersUpdatedPayload),
     SettingsUpdated(SettingsUpdatedPayload),
+    NetworkClipboardReceived(NetworkClipboardPayload),
 }
 
 #[derive(Clone)]
