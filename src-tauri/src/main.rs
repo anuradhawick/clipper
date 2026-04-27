@@ -27,11 +27,11 @@ use content_managers::filters_manager::{
     filters_create_entry, filters_delete_all, filters_delete_one, filters_read_entries,
     filters_update_entry, FiltersManager,
 };
+use content_managers::net_manager::NetworkManager;
 use content_managers::notes_manager::{
     clipboard_add_note, create_note, delete_all_notes, delete_note, read_notes, update_note,
     NotesManager,
 };
-use content_managers::net_manager::NetworkManager;
 use content_managers::settings::{settings_read, settings_update, SettingsManager};
 use content_managers::tags_manager::{
     tags_assign_item, tags_create_entry, tags_delete_one, tags_read_entries, tags_read_item_tags,

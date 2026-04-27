@@ -102,10 +102,7 @@ impl NetworkManager {
 
             state.running = false;
             state.peers.clear();
-            (
-                state.shutdown_tx.take(),
-                std::mem::take(&mut state.tasks),
-            )
+            (state.shutdown_tx.take(), std::mem::take(&mut state.tasks))
         };
 
         if let Some(shutdown_tx) = shutdown_tx {
@@ -130,7 +127,10 @@ impl NetworkManager {
         let socket = match Self::create_multicast_sender() {
             Ok(socket) => socket,
             Err(error) => {
-                log::error!("Network manager failed to create discovery sender: {}", error);
+                log::error!(
+                    "Network manager failed to create discovery sender: {}",
+                    error
+                );
                 return;
             }
         };
@@ -190,7 +190,16 @@ impl NetworkManager {
                                         name: packet.name,
                                         addr: SocketAddr::new(address.ip(), packet.clipboard_port),
                                     };
+                                    let peer_addr = peer.addr;
                                     manager.upsert_peer(peer).await;
+
+                                    if let Err(error) = Self::connect_to_peer(peer_addr).await {
+                                        log::debug!(
+                                            "Network manager failed to connect placeholder transport to {}: {}",
+                                            peer_addr,
+                                            error
+                                        );
+                                    }
                                 }
                                 Ok(_) => {}
                                 Err(error) => {
@@ -297,7 +306,11 @@ impl NetworkManager {
         state.peers.insert(peer.addr, peer);
 
         if is_new_peer {
-            log::info!("Network manager discovered peer {} at {}", peer_name, peer_addr);
+            log::info!(
+                "Network manager discovered peer {} at {}",
+                peer_name,
+                peer_addr
+            );
         }
     }
 
@@ -317,5 +330,10 @@ impl NetworkManager {
         socket.set_nonblocking(true)?;
         socket.join_multicast_v4(&DISCOVERY_MULTICAST_HOST, &Ipv4Addr::UNSPECIFIED)?;
         UdpSocket::from_std(socket)
+    }
+
+    async fn connect_to_peer(peer_addr: SocketAddr) -> std::io::Result<()> {
+        let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await?;
+        socket.connect(peer_addr).await
     }
 }
