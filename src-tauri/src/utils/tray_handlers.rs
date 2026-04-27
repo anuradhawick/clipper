@@ -79,7 +79,7 @@ pub fn handle_system_tray_menu_event(app: &AppHandle, event: MenuEvent) {
             }
         }
         "quit" => {
-            std::process::exit(0);
+            app.exit(0);
         }
         "about" => {
             log::info!("Open author website");
