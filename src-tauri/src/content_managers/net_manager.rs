@@ -16,6 +16,7 @@ use uuid::Uuid;
 const DISCOVERY_MULTICAST_HOST: Ipv4Addr = Ipv4Addr::new(239, 255, 42, 99);
 const DISCOVERY_PORT: u16 = 34254;
 const CLIPBOARD_PORT: u16 = 34255;
+const DISCOVERY_ANNOUNCE_INTERVAL_SECS: u64 = 10;
 
 // ─── Wire types ───────────────────────────────────────────────────────────────
 
@@ -173,8 +174,18 @@ impl NetworkManager {
     // ─── OTP ────────────────────────────────────────────────────────────────
 
     fn generate_otp() -> String {
-        let n = Uuid::new_v4().as_u128() % 1_000_000;
-        format!("{n:06}")
+        // Use 6 bytes from a UUID v4 (OS CSPRNG via getrandom) to form a
+        // 6-digit code without modulo bias: pick a random value in [0, 999999]
+        // using the bottom 20 bits of the first 4 bytes (max value 1_048_575),
+        // then reject values >= 1_000_000 and retry. Expected retries < 5%.
+        loop {
+            let bytes = Uuid::new_v4();
+            let b = bytes.as_bytes();
+            let n = u32::from_le_bytes([b[0], b[1], b[2], b[3] & 0x0F]);
+            if n < 1_000_000 {
+                return format!("{n:06}");
+            }
+        }
     }
 
     /// Replace the current OTP with a freshly generated one and return it.
@@ -276,7 +287,8 @@ impl NetworkManager {
             }
         };
 
-        let mut interval = tokio::time::interval(Duration::from_secs(10));
+        let mut interval =
+            tokio::time::interval(Duration::from_secs(DISCOVERY_ANNOUNCE_INTERVAL_SECS));
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         let target = SocketAddr::from((DISCOVERY_MULTICAST_HOST, DISCOVERY_PORT));
 
