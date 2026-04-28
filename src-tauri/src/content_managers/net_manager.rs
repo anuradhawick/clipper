@@ -1,68 +1,103 @@
 use crate::content_managers::message_bus::{AppMessage, MessageBus, NetworkClipboardPayload};
+use crate::error::{with_error_event, AppError, AppResult};
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::net::{Ipv4Addr, SocketAddr, UdpSocket as StdUdpSocket};
 use std::sync::Arc;
 use std::time::Duration;
-use tauri::async_runtime;
+use tauri::{async_runtime, AppHandle, Emitter, State};
 use tokio::net::UdpSocket;
 use tokio::sync::{watch, Mutex};
 use tokio::task::JoinHandle;
+use uuid::Uuid;
 
 const DISCOVERY_MULTICAST_HOST: Ipv4Addr = Ipv4Addr::new(239, 255, 42, 99);
 const DISCOVERY_PORT: u16 = 34254;
 const CLIPBOARD_PORT: u16 = 34255;
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+// ─── Wire types ───────────────────────────────────────────────────────────────
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct DiscoveryPacket {
     name: String,
     clipboard_port: u16,
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-struct ClipboardWirePacket {
-    source_name: String,
-    text: String,
-    timestamp: String,
+/// All packets exchanged on CLIPBOARD_PORT are tagged with `kind`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum WirePacket {
+    Clipboard {
+        source_name: String,
+        text: String,
+        timestamp: String,
+    },
+    /// Sent by Device B to ask Device A to authorize it.
+    /// `otp` is the 6-digit code shown on Device A's UI.
+    AuthRequest { source_name: String, otp: String },
+    /// Reply from Device A after verifying the OTP.
+    AuthResponse { source_name: String, approved: bool },
 }
+
+// ─── Internal state ───────────────────────────────────────────────────────────
 
 #[derive(Clone, Debug)]
-struct NetworkPeer {
+struct PeerRecord {
     name: String,
     addr: SocketAddr,
-}
-
-#[derive(Clone)]
-struct ConnectedPeer {
-    name: String,
-    addr: SocketAddr,
-    socket: Arc<UdpSocket>,
+    authorized: bool,
 }
 
 struct NetworkManagerState {
     running: bool,
     local_name: String,
-    peers: HashMap<SocketAddr, NetworkPeer>,
-    connected_peers: HashMap<SocketAddr, ConnectedPeer>,
+    /// 6-digit OTP that remote devices must supply to be authorized.
+    local_otp: String,
+    peers: HashMap<SocketAddr, PeerRecord>,
     shutdown_tx: Option<watch::Sender<bool>>,
     tasks: Vec<JoinHandle<()>>,
 }
 
+// ─── Public DTOs ──────────────────────────────────────────────────────────────
+
+/// Returned by `net_get_status`.
+#[derive(Debug, Serialize)]
+pub struct NetStatus {
+    pub running: bool,
+    pub local_name: String,
+    /// Show this code to the user so peers can connect to this device.
+    pub otp: String,
+}
+
+/// One element of the list returned by `net_list_peers`.
+#[derive(Clone, Debug, Serialize)]
+pub struct NetworkPeerEntry {
+    /// Stable peer identity – the stringified socket address (`ip:port`).
+    pub id: String,
+    pub name: String,
+    pub authorized: bool,
+}
+
+// ─── Manager ──────────────────────────────────────────────────────────────────
+
 pub struct NetworkManager {
+    app_handle: AppHandle,
     bus: MessageBus,
     state: Mutex<NetworkManagerState>,
 }
 
 impl NetworkManager {
-    pub async fn new(bus: MessageBus) -> Arc<Self> {
+    pub async fn new(bus: MessageBus, app_handle: AppHandle) -> Arc<Self> {
         let manager = Arc::new(Self {
+            app_handle,
             bus,
             state: Mutex::new(NetworkManagerState {
                 running: false,
-                local_name: Self::local_name(),
+                local_name: Self::resolve_local_name(),
+                local_otp: Self::generate_otp(),
                 peers: HashMap::new(),
-                connected_peers: HashMap::new(),
                 shutdown_tx: None,
                 tasks: Vec::new(),
             }),
@@ -72,34 +107,43 @@ impl NetworkManager {
         manager
     }
 
+    // ─── Lifecycle ──────────────────────────────────────────────────────────
+
     pub async fn start(self: &Arc<Self>) {
-        let mut state = self.state.lock().await;
-        if state.running {
-            return;
+        {
+            let mut state = self.state.lock().await;
+            if state.running {
+                return;
+            }
+
+            let local_name = state.local_name.clone();
+            let (shutdown_tx, shutdown_rx) = watch::channel(false);
+
+            state.running = true;
+            state.shutdown_tx = Some(shutdown_tx);
+            state.tasks = vec![
+                async_runtime::spawn(Self::run_presence_announcer(
+                    local_name.clone(),
+                    shutdown_rx.clone(),
+                )),
+                async_runtime::spawn(Self::run_peer_discovery(
+                    local_name.clone(),
+                    Arc::clone(self),
+                    shutdown_rx.clone(),
+                )),
+                async_runtime::spawn(Self::run_clipboard_transport(
+                    local_name,
+                    Arc::clone(self),
+                    self.bus.clone(),
+                    shutdown_rx,
+                )),
+            ];
         }
 
-        let local_name = state.local_name.clone();
-        let (shutdown_tx, shutdown_rx) = watch::channel(false);
-
-        state.running = true;
-        state.shutdown_tx = Some(shutdown_tx);
-        state.tasks = vec![
-            async_runtime::spawn(Self::run_presence_announcer(
-                local_name.clone(),
-                shutdown_rx.clone(),
-            )),
-            async_runtime::spawn(Self::run_peer_discovery(
-                local_name.clone(),
-                Arc::clone(self),
-                shutdown_rx.clone(),
-            )),
-            async_runtime::spawn(Self::run_clipboard_transport(
-                local_name,
-                Arc::clone(self),
-                self.bus.clone(),
-                shutdown_rx,
-            )),
-        ];
+        log::info!("Network manager started");
+        if self.app_handle.emit("net_status_changed", true).is_err() {
+            log::error!("Unable to emit: net_status_changed");
+        }
     }
 
     pub async fn stop(&self) {
@@ -108,39 +152,126 @@ impl NetworkManager {
             if !state.running {
                 return;
             }
-
             state.running = false;
             state.peers.clear();
-            state.connected_peers.clear();
             (state.shutdown_tx.take(), std::mem::take(&mut state.tasks))
         };
 
-        if let Some(shutdown_tx) = shutdown_tx {
-            let _ = shutdown_tx.send(true);
+        if let Some(tx) = shutdown_tx {
+            let _ = tx.send(true);
         }
-
         for task in tasks {
             task.abort();
         }
+
+        log::info!("Network manager stopped");
+        if self.app_handle.emit("net_status_changed", false).is_err() {
+            log::error!("Unable to emit: net_status_changed");
+        }
     }
 
-    fn local_name() -> String {
-        env::var("CLIPPER_DEVICE_NAME")
-            .or_else(|_| env::var("HOSTNAME"))
-            .or_else(|_| env::var("COMPUTERNAME"))
-            .ok()
-            .filter(|value| !value.trim().is_empty())
-            .unwrap_or_else(|| "Clipper".to_string())
+    // ─── OTP ────────────────────────────────────────────────────────────────
+
+    fn generate_otp() -> String {
+        let n = Uuid::new_v4().as_u128() % 1_000_000;
+        format!("{n:06}")
     }
+
+    /// Replace the current OTP with a freshly generated one and return it.
+    pub async fn refresh_otp(&self) -> String {
+        let otp = Self::generate_otp();
+        self.state.lock().await.local_otp = otp.clone();
+        otp
+    }
+
+    // ─── Queries used by Tauri commands ─────────────────────────────────────
+
+    pub async fn get_status(&self) -> NetStatus {
+        let s = self.state.lock().await;
+        NetStatus {
+            running: s.running,
+            local_name: s.local_name.clone(),
+            otp: s.local_otp.clone(),
+        }
+    }
+
+    pub async fn list_peers(&self) -> Vec<NetworkPeerEntry> {
+        self.state
+            .lock()
+            .await
+            .peers
+            .values()
+            .map(|p| NetworkPeerEntry {
+                id: p.addr.to_string(),
+                name: p.name.clone(),
+                authorized: p.authorized,
+            })
+            .collect()
+    }
+
+    // ─── Authorization ────────────────────────────────────────────────────────
+
+    /// Send an auth-request packet to `peer_id` carrying the OTP shown on that
+    /// peer's UI.  The peer will verify it and respond; the response is handled
+    /// inside `run_clipboard_transport`.
+    pub async fn request_auth(&self, peer_id: &str, otp: &str) -> AppResult<()> {
+        let (addr, local_name) = {
+            let state = self.state.lock().await;
+            let addr: SocketAddr = peer_id
+                .parse()
+                .map_err(|_| AppError::validation(format!("Invalid peer id: {peer_id}")))?;
+            if !state.peers.contains_key(&addr) {
+                return Err(AppError::validation(format!("Peer not found: {peer_id}")));
+            }
+            (addr, state.local_name.clone())
+        };
+
+        let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .map_err(|e| AppError::NetworkError(e.to_string()))?;
+
+        let packet = WirePacket::AuthRequest {
+            source_name: local_name,
+            otp: otp.to_string(),
+        };
+        let payload =
+            serde_json::to_vec(&packet).map_err(|e| AppError::RuntimeError(e.to_string()))?;
+
+        socket
+            .send_to(&payload, addr)
+            .await
+            .map_err(|e| AppError::NetworkError(e.to_string()))?;
+
+        log::info!("Network manager sent auth request to {peer_id}");
+        Ok(())
+    }
+
+    /// Remove authorization from a peer so clipboard sharing stops.
+    pub async fn revoke_peer(&self, peer_id: &str) -> AppResult<()> {
+        let addr: SocketAddr = peer_id
+            .parse()
+            .map_err(|_| AppError::validation(format!("Invalid peer id: {peer_id}")))?;
+
+        let mut state = self.state.lock().await;
+        if let Some(peer) = state.peers.get_mut(&addr) {
+            peer.authorized = false;
+            log::info!("Network manager revoked peer {}", peer.name);
+        }
+        drop(state);
+
+        if self.app_handle.emit("net_peers_updated", ()).is_err() {
+            log::error!("Unable to emit: net_peers_updated");
+        }
+        Ok(())
+    }
+
+    // ─── Background tasks ─────────────────────────────────────────────────────
 
     async fn run_presence_announcer(local_name: String, mut shutdown_rx: watch::Receiver<bool>) {
         let socket = match Self::create_multicast_sender() {
-            Ok(socket) => socket,
-            Err(error) => {
-                log::error!(
-                    "Network manager failed to create discovery sender: {}",
-                    error
-                );
+            Ok(s) => s,
+            Err(e) => {
+                log::error!("Network manager failed to create discovery sender: {}", e);
                 return;
             }
         };
@@ -157,15 +288,14 @@ impl NetworkManager {
                         name: local_name.clone(),
                         clipboard_port: CLIPBOARD_PORT,
                     };
-
                     match serde_json::to_vec(&packet) {
                         Ok(payload) => {
-                            if let Err(error) = socket.send_to(&payload, target).await {
-                                log::warn!("Network manager failed to announce presence: {}", error);
+                            if let Err(e) = socket.send_to(&payload, target).await {
+                                log::warn!("Network manager failed to announce presence: {}", e);
                             }
                         }
-                        Err(error) => {
-                            log::warn!("Network manager failed to serialize discovery packet: {}", error);
+                        Err(e) => {
+                            log::warn!("Network manager failed to serialize discovery packet: {}", e);
                         }
                     }
                 }
@@ -179,46 +309,34 @@ impl NetworkManager {
         mut shutdown_rx: watch::Receiver<bool>,
     ) {
         let socket = match Self::bind_discovery_socket() {
-            Ok(socket) => socket,
-            Err(error) => {
-                log::error!("Network manager failed to bind discovery socket: {}", error);
+            Ok(s) => s,
+            Err(e) => {
+                log::error!("Network manager failed to bind discovery socket: {}", e);
                 return;
             }
         };
 
-        let mut buffer = [0_u8; 2048];
+        let mut buf = [0_u8; 2048];
 
         loop {
             tokio::select! {
                 _ = shutdown_rx.changed() => break,
-                result = socket.recv_from(&mut buffer) => {
+                result = socket.recv_from(&mut buf) => {
                     match result {
-                        Ok((length, address)) => {
-                            match serde_json::from_slice::<DiscoveryPacket>(&buffer[..length]) {
-                                Ok(packet) if packet.name != local_name => {
-                                    let peer = NetworkPeer {
-                                        name: packet.name,
-                                        addr: SocketAddr::new(address.ip(), packet.clipboard_port),
-                                    };
-                                    manager.upsert_peer(peer.clone()).await;
-
-                                    if let Err(error) = manager.connect_peer(peer.clone()).await {
-                                        log::debug!(
-                                            "Network manager failed to prepare peer transport to {} ({}): {}",
-                                            peer.name,
-                                            peer.addr,
-                                            error
-                                        );
-                                    }
+                        Ok((len, addr)) => {
+                            match serde_json::from_slice::<DiscoveryPacket>(&buf[..len]) {
+                                Ok(pkt) if pkt.name != local_name => {
+                                    let peer_addr = SocketAddr::new(addr.ip(), pkt.clipboard_port);
+                                    manager.upsert_discovered_peer(pkt.name, peer_addr).await;
                                 }
                                 Ok(_) => {}
-                                Err(error) => {
-                                    log::debug!("Network manager ignored invalid discovery packet: {}", error);
+                                Err(e) => {
+                                    log::debug!("Network manager ignored invalid discovery packet: {}", e);
                                 }
                             }
                         }
-                        Err(error) => {
-                            log::warn!("Network manager failed to receive discovery packet: {}", error);
+                        Err(e) => {
+                            log::warn!("Network manager failed to receive discovery packet: {}", e);
                         }
                     }
                 }
@@ -233,15 +351,15 @@ impl NetworkManager {
         mut shutdown_rx: watch::Receiver<bool>,
     ) {
         let socket = match UdpSocket::bind((Ipv4Addr::UNSPECIFIED, CLIPBOARD_PORT)).await {
-            Ok(socket) => socket,
-            Err(error) => {
-                log::error!("Network manager failed to bind clipboard socket: {}", error);
+            Ok(s) => s,
+            Err(e) => {
+                log::error!("Network manager failed to bind clipboard socket: {}", e);
                 return;
             }
         };
 
         let mut receiver = bus.subscribe();
-        let mut buffer = [0_u8; 65_535];
+        let mut buf = [0_u8; 65_535];
 
         loop {
             tokio::select! {
@@ -249,58 +367,61 @@ impl NetworkManager {
                 message = receiver.recv() => {
                     match message {
                         Ok(AppMessage::AddedToClipboard(text)) => {
-                            let packet = ClipboardWirePacket {
+                            let packet = WirePacket::Clipboard {
                                 source_name: local_name.clone(),
                                 text,
                                 timestamp: Utc::now().to_rfc3339(),
                             };
-
-                            match serde_json::to_vec(&packet) {
-                                Ok(payload) => {
-                                    for peer in manager.peer_connections().await {
-                                        if let Err(error) = peer.socket.send(&payload).await {
-                                            log::debug!(
-                                                "Network manager failed to send clipboard payload to {} ({}): {}",
-                                                peer.name,
-                                                peer.addr,
-                                                error
-                                            );
-                                        }
+                            if let Ok(payload) = serde_json::to_vec(&packet) {
+                                for peer in manager.authorized_peers().await {
+                                    if let Err(e) = socket.send_to(&payload, peer.addr).await {
+                                        log::debug!(
+                                            "Network manager failed to send clipboard to {} ({}): {}",
+                                            peer.name,
+                                            peer.addr,
+                                            e
+                                        );
                                     }
-                                }
-                                Err(error) => {
-                                    log::warn!("Network manager failed to serialize clipboard payload: {}", error);
                                 }
                             }
                         }
                         Ok(_) => {}
-                        Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
-                            log::warn!("Network manager lagged and skipped {} clipboard messages", skipped);
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                            log::warn!("Network manager lagged and skipped {} messages", n);
                         }
                         Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                     }
                 }
-                result = socket.recv_from(&mut buffer) => {
+                result = socket.recv_from(&mut buf) => {
                     match result {
-                        Ok((length, _)) => {
-                            match serde_json::from_slice::<ClipboardWirePacket>(&buffer[..length]) {
-                                Ok(packet) if packet.source_name != local_name => {
-                                    let payload = NetworkClipboardPayload {
-                                        source_name: packet.source_name,
-                                        text: packet.text,
-                                    };
-                                    if bus.send(AppMessage::NetworkClipboardReceived(payload)).is_err() {
-                                        log::error!("Unable to send message: NetworkClipboardReceived");
+                        Ok((len, from)) => {
+                            match serde_json::from_slice::<WirePacket>(&buf[..len]) {
+                                Ok(WirePacket::Clipboard { source_name, text, .. })
+                                    if source_name != local_name =>
+                                {
+                                    if manager.is_authorized(from).await {
+                                        let payload = NetworkClipboardPayload { source_name, text };
+                                        if bus.send(AppMessage::NetworkClipboardReceived(payload)).is_err() {
+                                            log::error!("Unable to send message: NetworkClipboardReceived");
+                                        }
                                     }
                                 }
+                                Ok(WirePacket::AuthRequest { source_name, otp }) => {
+                                    manager
+                                        .handle_auth_request(source_name, from, &otp, &socket)
+                                        .await;
+                                }
+                                Ok(WirePacket::AuthResponse { source_name, approved }) => {
+                                    manager.handle_auth_response(source_name, from, approved).await;
+                                }
                                 Ok(_) => {}
-                                Err(error) => {
-                                    log::debug!("Network manager ignored invalid clipboard payload: {}", error);
+                                Err(e) => {
+                                    log::debug!("Network manager ignored invalid wire packet: {}", e);
                                 }
                             }
                         }
-                        Err(error) => {
-                            log::warn!("Network manager failed to receive clipboard payload: {}", error);
+                        Err(e) => {
+                            log::warn!("Network manager failed to receive wire packet: {}", e);
                         }
                     }
                 }
@@ -308,20 +429,155 @@ impl NetworkManager {
         }
     }
 
-    async fn upsert_peer(&self, peer: NetworkPeer) {
-        let mut state = self.state.lock().await;
-        let is_new_peer = !state.peers.contains_key(&peer.addr);
-        let peer_name = peer.name.clone();
-        let peer_addr = peer.addr;
-        state.peers.insert(peer.addr, peer);
+    // ─── Internal helpers ─────────────────────────────────────────────────────
 
-        if is_new_peer {
-            log::info!(
-                "Network manager discovered peer {} at {}",
-                peer_name,
-                peer_addr
+    async fn upsert_discovered_peer(&self, name: String, addr: SocketAddr) {
+        let is_new = {
+            let mut state = self.state.lock().await;
+            let was_present = state.peers.contains_key(&addr);
+            if !was_present {
+                state.peers.insert(
+                    addr,
+                    PeerRecord {
+                        name: name.clone(),
+                        addr,
+                        authorized: false,
+                    },
+                );
+            }
+            !was_present
+        };
+
+        if is_new {
+            log::info!("Network manager discovered peer {} at {}", name, addr);
+            if self.app_handle.emit("net_peers_updated", ()).is_err() {
+                log::error!("Unable to emit: net_peers_updated");
+            }
+        }
+    }
+
+    async fn is_authorized(&self, addr: SocketAddr) -> bool {
+        self.state
+            .lock()
+            .await
+            .peers
+            .get(&addr)
+            .map_or(false, |p| p.authorized)
+    }
+
+    async fn authorized_peers(&self) -> Vec<PeerRecord> {
+        self.state
+            .lock()
+            .await
+            .peers
+            .values()
+            .filter(|p| p.authorized)
+            .cloned()
+            .collect()
+    }
+
+    /// Called when we receive an `AuthRequest` on CLIPBOARD_PORT.
+    /// Verifies the OTP, updates peer state, and sends an `AuthResponse` back
+    /// to the requester's CLIPBOARD_PORT (so their transport loop receives it).
+    async fn handle_auth_request(
+        &self,
+        source_name: String,
+        from: SocketAddr,
+        otp: &str,
+        socket: &UdpSocket,
+    ) {
+        let (local_otp, local_name) = {
+            let state = self.state.lock().await;
+            (state.local_otp.clone(), state.local_name.clone())
+        };
+
+        let approved = otp == local_otp;
+
+        if approved {
+            let mut state = self.state.lock().await;
+            state
+                .peers
+                .entry(from)
+                .and_modify(|p| {
+                    p.authorized = true;
+                    p.name = source_name.clone();
+                })
+                .or_insert_with(|| PeerRecord {
+                    name: source_name.clone(),
+                    addr: from,
+                    authorized: true,
+                });
+            drop(state);
+            log::info!("Network manager authorized peer {} ({})", source_name, from);
+            if self.app_handle.emit("net_peers_updated", ()).is_err() {
+                log::error!("Unable to emit: net_peers_updated");
+            }
+        } else {
+            log::warn!(
+                "Network manager rejected auth request from {} ({}): invalid OTP",
+                source_name,
+                from
             );
         }
+
+        let response = WirePacket::AuthResponse {
+            source_name: local_name,
+            approved,
+        };
+        if let Ok(payload) = serde_json::to_vec(&response) {
+            // Respond to the peer's CLIPBOARD_PORT so their transport loop receives it.
+            let response_addr = SocketAddr::new(from.ip(), CLIPBOARD_PORT);
+            if let Err(e) = socket.send_to(&payload, response_addr).await {
+                log::warn!(
+                    "Network manager failed to send auth response to {}: {}",
+                    response_addr,
+                    e
+                );
+            }
+        }
+    }
+
+    /// Called when we receive an `AuthResponse` for a request we sent earlier.
+    async fn handle_auth_response(&self, source_name: String, from: SocketAddr, approved: bool) {
+        if approved {
+            let mut state = self.state.lock().await;
+            state
+                .peers
+                .entry(from)
+                .and_modify(|p| {
+                    p.authorized = true;
+                    p.name = source_name.clone();
+                })
+                .or_insert_with(|| PeerRecord {
+                    name: source_name.clone(),
+                    addr: from,
+                    authorized: true,
+                });
+            drop(state);
+            log::info!(
+                "Network manager: peer {} ({}) approved our auth request",
+                source_name,
+                from
+            );
+            if self.app_handle.emit("net_peers_updated", ()).is_err() {
+                log::error!("Unable to emit: net_peers_updated");
+            }
+        } else {
+            log::warn!(
+                "Network manager: peer {} ({}) rejected our auth request",
+                source_name,
+                from
+            );
+        }
+    }
+
+    fn resolve_local_name() -> String {
+        env::var("CLIPPER_DEVICE_NAME")
+            .or_else(|_| env::var("HOSTNAME"))
+            .or_else(|_| env::var("COMPUTERNAME"))
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .unwrap_or_else(|| "Clipper".to_string())
     }
 
     fn create_multicast_sender() -> std::io::Result<UdpSocket> {
@@ -337,48 +593,86 @@ impl NetworkManager {
         socket.join_multicast_v4(&DISCOVERY_MULTICAST_HOST, &Ipv4Addr::UNSPECIFIED)?;
         UdpSocket::from_std(socket)
     }
+}
 
-    async fn connect_peer(&self, peer: NetworkPeer) -> std::io::Result<()> {
-        {
-            let state = self.state.lock().await;
-            if state.connected_peers.contains_key(&peer.addr) {
-                return Ok(());
-            }
-        }
+// ─── Tauri Commands ───────────────────────────────────────────────────────────
 
-        let socket = Arc::new(UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await?);
-        socket.connect(peer.addr).await?;
+/// Returns the current network manager status including the local OTP.
+#[tauri::command]
+pub async fn net_get_status(
+    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<NetworkManager>>,
+) -> AppResult<NetStatus> {
+    with_error_event(&app_handle, async { Ok(state.get_status().await) }).await
+}
 
-        let mut state = self.state.lock().await;
-        if state.connected_peers.contains_key(&peer.addr) {
-            return Ok(());
-        }
+/// Returns all discovered peers with their authorization state.
+#[tauri::command]
+pub async fn net_list_peers(
+    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<NetworkManager>>,
+) -> AppResult<Vec<NetworkPeerEntry>> {
+    with_error_event(&app_handle, async { Ok(state.list_peers().await) }).await
+}
 
-        state.connected_peers.insert(
-            peer.addr,
-            ConnectedPeer {
-                name: peer.name.clone(),
-                addr: peer.addr,
-                socket,
-            },
-        );
+/// Generates and stores a new 6-digit OTP, invalidating the old one.
+/// Returns the new OTP so the frontend can display it.
+#[tauri::command]
+pub async fn net_generate_otp(
+    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<NetworkManager>>,
+) -> AppResult<String> {
+    with_error_event(&app_handle, async { Ok(state.refresh_otp().await) }).await
+}
 
-        log::info!(
-            "Network manager prepared clipboard transport to {} at {}",
-            peer.name,
-            peer.addr
-        );
+/// Sends an authorization request to the peer identified by `peer_id`
+/// (an `ip:port` string).  `otp` is the 6-digit code shown on *that peer's* UI.
+#[tauri::command]
+pub async fn net_authorize_peer(
+    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<NetworkManager>>,
+    peer_id: String,
+    otp: String,
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        state.request_auth(&peer_id, &otp).await
+    })
+    .await
+}
 
+/// Removes authorization from a peer, stopping clipboard sharing with it.
+#[tauri::command]
+pub async fn net_revoke_peer(
+    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<NetworkManager>>,
+    peer_id: String,
+) -> AppResult<()> {
+    with_error_event(&app_handle, async { state.revoke_peer(&peer_id).await }).await
+}
+
+/// Starts network discovery and clipboard transport workers.
+#[tauri::command]
+pub async fn net_start(
+    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<NetworkManager>>,
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        let manager = Arc::clone(&*state);
+        manager.start().await;
         Ok(())
-    }
+    })
+    .await
+}
 
-    async fn peer_connections(&self) -> Vec<ConnectedPeer> {
-        self.state
-            .lock()
-            .await
-            .connected_peers
-            .values()
-            .cloned()
-            .collect()
-    }
+/// Stops all network workers and clears the peer list.
+#[tauri::command]
+pub async fn net_stop(
+    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<NetworkManager>>,
+) -> AppResult<()> {
+    with_error_event(&app_handle, async {
+        state.stop().await;
+        Ok(())
+    })
+    .await
 }
