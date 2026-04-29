@@ -54,8 +54,11 @@ struct PeerRecord {
 struct NetworkManagerState {
     running: bool,
     local_name: String,
-    /// 6-digit OTP that remote devices must supply to be authorized.
-    local_otp: String,
+    /// 6-digit OTP for the next inbound auth attempt.
+    /// `None` means no OTP is currently active — the frontend must call
+    /// `net_generate_otp` to issue one.  The value is consumed (set to `None`)
+    /// on the first inbound `AuthRequest`, whether it matches or not.
+    local_otp: Option<String>,
     peers: HashMap<SocketAddr, PeerRecord>,
     shutdown_tx: Option<watch::Sender<bool>>,
     tasks: Vec<JoinHandle<()>>,
@@ -68,8 +71,9 @@ struct NetworkManagerState {
 pub struct NetStatus {
     pub running: bool,
     pub local_name: String,
-    /// Show this code to the user so peers can connect to this device.
-    pub otp: String,
+    /// The active OTP if one has been generated, `None` otherwise.
+    /// The frontend should call `net_generate_otp` to obtain a fresh code.
+    pub otp: Option<String>,
 }
 
 /// One element of the list returned by `net_list_peers`.
@@ -97,7 +101,7 @@ impl NetworkManager {
             state: Mutex::new(NetworkManagerState {
                 running: false,
                 local_name: Self::resolve_local_name(),
-                local_otp: Self::generate_otp(),
+                local_otp: None,
                 peers: HashMap::new(),
                 shutdown_tx: None,
                 tasks: Vec::new(),
@@ -188,10 +192,11 @@ impl NetworkManager {
         }
     }
 
-    /// Replace the current OTP with a freshly generated one and return it.
+    /// Generate a new 6-digit OTP, store it as active, and return it.
+    /// Any previously active OTP is discarded.
     pub async fn refresh_otp(&self) -> String {
         let otp = Self::generate_otp();
-        self.state.lock().await.local_otp = otp.clone();
+        self.state.lock().await.local_otp = Some(otp.clone());
         otp
     }
 
@@ -491,6 +496,8 @@ impl NetworkManager {
     /// Called when we receive an `AuthRequest` on CLIPBOARD_PORT.
     /// Verifies the OTP, updates peer state, and sends an `AuthResponse` back
     /// to the requester's CLIPBOARD_PORT (so their transport loop receives it).
+    /// The OTP is consumed (set to `None`) on every attempt, whether it matches
+    /// or not, enforcing single-use semantics.
     async fn handle_auth_request(
         &self,
         source_name: String,
@@ -499,11 +506,13 @@ impl NetworkManager {
         socket: &UdpSocket,
     ) {
         let (local_otp, local_name) = {
-            let state = self.state.lock().await;
-            (state.local_otp.clone(), state.local_name.clone())
+            let mut state = self.state.lock().await;
+            // Consume the OTP regardless of whether the request succeeds.
+            let consumed = state.local_otp.take();
+            (consumed, state.local_name.clone())
         };
 
-        let approved = otp == local_otp;
+        let approved = local_otp.as_deref() == Some(otp);
 
         if approved {
             let mut state = self.state.lock().await;
@@ -526,7 +535,7 @@ impl NetworkManager {
             }
         } else {
             log::warn!(
-                "Network manager rejected auth request from {} ({}): invalid OTP",
+                "Network manager rejected auth request from {} ({}): invalid or expired OTP",
                 source_name,
                 from
             );
@@ -627,8 +636,12 @@ pub async fn net_list_peers(
     with_error_event(&app_handle, async { Ok(state.list_peers().await) }).await
 }
 
-/// Generates and stores a new 6-digit OTP, invalidating the old one.
-/// Returns the new OTP so the frontend can display it.
+/// Generates a fresh 6-digit OTP and stores it as the active one-time code.
+/// Any previously active OTP is discarded.  The frontend should call this
+/// command before showing the pairing screen, then display the returned code
+/// to the user so a remote device can enter it via `net_authorize_peer`.
+/// The OTP is automatically consumed (invalidated) after the first inbound
+/// auth attempt so it cannot be reused.
 #[tauri::command]
 pub async fn net_generate_otp(
     app_handle: tauri::AppHandle,
