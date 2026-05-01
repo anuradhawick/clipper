@@ -27,6 +27,10 @@ use content_managers::filters_manager::{
     filters_create_entry, filters_delete_all, filters_delete_one, filters_read_entries,
     filters_update_entry, FiltersManager,
 };
+use content_managers::net_manager::{
+    net_authorize_peer, net_generate_otp, net_get_status, net_list_peers, net_revoke_peer,
+    net_start, net_stop, NetworkManager,
+};
 use content_managers::notes_manager::{
     clipboard_add_note, create_note, delete_all_notes, delete_note, read_notes, update_note,
     NotesManager,
@@ -160,6 +164,14 @@ async fn main() {
             // db related
             db_delete_dbfile,
             db_get_dbfile_path,
+            // network related
+            net_get_status,
+            net_list_peers,
+            net_generate_otp,
+            net_authorize_peer,
+            net_revoke_peer,
+            net_start,
+            net_stop,
         ])
         .on_window_event(handle_window_event)
         .setup(|app| {
@@ -270,6 +282,9 @@ async fn setup(app: AppHandle) -> AppResult<()> {
     let bookmarks_manager =
         BookmarksManager::new(Arc::clone(&db), bus.clone(), app.clone(), initial_settings).await;
     app.manage(bookmarks_manager);
+    // register network clipboard manager
+    let network_manager = NetworkManager::new(bus.clone(), app.clone()).await;
+    app.manage(network_manager);
     // register file service
     let files_manager = FilesManager::new(
         // Arc::clone(&db),

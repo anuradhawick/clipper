@@ -23,7 +23,8 @@ Startup flow:
   their mutable runtime state synchronized internally.
 3. The main widget window is positioned on the active monitor, made floating or
    always-on-top depending on platform, and wired to drag/drop and tray events.
-4. Background tasks start for clipboard polling and internal bus subscribers.
+4. Background tasks start for clipboard polling, internal bus subscribers, and
+   network clipboard discovery/transport workers.
 
 ## Backend Components
 
@@ -40,6 +41,7 @@ Startup flow:
 | Filters manager | `src-tauri/src/content_managers/filters_manager.rs` | Persists regex clipboard filters and broadcasts compiled filter updates to the clipboard watcher. |
 | Tags manager | `src-tauri/src/content_managers/tags_manager.rs` | Manages tag definitions and tag assignments for clipboard, bookmark, and note items. |
 | Files manager | `src-tauri/src/content_managers/files_manager.rs` | Copies dropped files/folders into `$HOME/clipper/`, lists managed files, and deletes one or all stored files. |
+| Network manager | `src-tauri/src/content_managers/net_manager.rs` | Advertises this device on the local network, tracks discovered peers, secures connections with a 6-digit OTP handshake, and relays clipboard text payloads to authorized peers over UDP. |
 | Global shortcut | `src-tauri/src/content_managers/global_shortcut.rs` | Registers the configured shortcut and toggles the widget window near the active monitor or mouse position. |
 | Window commands | `src-tauri/src/utils/window_commands.rs` | Hides the widget and creates or focuses manager and QR viewer windows. |
 | Window handlers | `src-tauri/src/utils/window_handlers.rs` | Bridges native drag/drop lifecycle events to Angular and forwards dropped paths to `FilesManager`. |
@@ -84,6 +86,8 @@ services through `@tauri-apps/api/event`.
 | `tag_items_updated` | `()` | `TagsManager::notify_tag_items_updated` after assignments change or a tag is deleted | `TagsService` | Invalidates per-item tag queries and the tagged-items page after assignment changes. |
 | `window_dragdrop` | `{ eventType, paths? }` | `handle_window_event` on native drag enter/drop/leave | `DropperService` | Mirrors native drag state so Angular can show or clear drop overlays. |
 | `files_added_paths` | `FileEntry[]` | `FilesManager::handle_drop` after copied dropped paths | `DropperService` | Sends the frontend the managed storage entries created from a drop. |
+| `net_status_changed` | `bool` | `NetworkManager` when started or stopped | `NetworkService` | Keeps the network-sharing toggle synchronized across windows. |
+| `net_peers_updated` | `()` | `NetworkManager` when a peer is discovered, authorized, or revoked | `NetworkService` | Invalidates the peer list so the frontend refetches via `net_list_peers`. |
 
 Most "updated" events intentionally carry no payload. They are invalidation
 signals: the frontend service owns its local signal state and refetches through
@@ -101,6 +105,7 @@ created once in `setup()` and passed to managers that need it.
 | `SetClipboardText` | text | `NotesManager` when copying a note | `ClipboardWatcher` | Writes note text into the system clipboard while updating `last_text`, preventing the watcher from re-adding the same text as a new history item. |
 | `FiltersUpdated` | compiled regex list | `FiltersManager` after filter create/update/delete/delete-all | `ClipboardWatcher` | Refreshes active clipboard filters without restarting the watcher. |
 | `SettingsUpdated` | clipboard and bookmark history limits | `SettingsManager` after settings save | `ClipboardWatcher`, `BookmarksManager` | Applies history size changes to long-lived managers. |
+| `NetworkClipboardReceived` | `{ source_name, text }` | `NetworkManager` after a remote peer sends clipboard text | future consumers | Makes inbound network clipboard entries available to other backend managers without coupling transport details into clipboard persistence yet. |
 
 Use the bus for backend-to-backend state propagation. Use Tauri events for
 backend-to-frontend synchronization.
@@ -128,6 +133,8 @@ list and frontend `invoke(...)` calls in sync when adding or renaming commands.
   `files_delete_storage_path`, `files_delete_one_file`, `db_delete_dbfile`,
   `db_get_dbfile_path`
 - Windows: `window_hide`, `window_show_qrviewer`, `window_show_manager`
+- Network: `net_get_status`, `net_list_peers`, `net_generate_otp`,
+  `net_authorize_peer`, `net_revoke_peer`, `net_start`, `net_stop`
 
 ## Backend Change Checklist
 
