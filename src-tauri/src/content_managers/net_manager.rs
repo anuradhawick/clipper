@@ -478,7 +478,7 @@ impl NetworkManager {
             .await
             .peers
             .get(&addr)
-            .map_or(false, |p| p.authorized)
+            .is_some_and(|p| p.authorized)
     }
 
     async fn authorized_peers(&self) -> Vec<PeerRecord> {
