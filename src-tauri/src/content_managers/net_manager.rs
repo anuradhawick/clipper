@@ -7,10 +7,9 @@ use std::env;
 use std::net::{Ipv4Addr, SocketAddr, UdpSocket as StdUdpSocket};
 use std::sync::Arc;
 use std::time::Duration;
-use tauri::{async_runtime, AppHandle, Emitter, State};
+use tauri::{async_runtime, async_runtime::JoinHandle, AppHandle, Emitter, State};
 use tokio::net::UdpSocket;
 use tokio::sync::{watch, Mutex};
-use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 const DISCOVERY_MULTICAST_HOST: Ipv4Addr = Ipv4Addr::new(239, 255, 42, 99);
