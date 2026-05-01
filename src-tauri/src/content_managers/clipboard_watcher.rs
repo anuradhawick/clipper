@@ -193,6 +193,26 @@ impl ClipboardWatcher {
                             }
                         }
                     }
+                    Ok(AppMessage::NetworkClipboardReceived(message)) => {
+                        refresh_state.set_last_text(message.text.clone()).await;
+
+                        match Clipboard::new() {
+                            Ok(mut clipboard) => {
+                                if let Err(err) = clipboard.set_text(message.text) {
+                                    log::error!(
+                                        "Unable to set clipboard text from network message: {}",
+                                        err
+                                    );
+                                }
+                            }
+                            Err(err) => {
+                                log::error!(
+                                    "Unable to access clipboard from network message: {}",
+                                    err
+                                );
+                            }
+                        }
+                    }
                     Ok(_) => {}
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
                         log::warn!("Clipboard watcher lagged and skipped {} messages", skipped);
