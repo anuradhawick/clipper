@@ -5,6 +5,7 @@ import { RouterLink } from "@angular/router";
 import { MatBadgeModule } from "@angular/material/badge";
 import { ClipboardHistoryService } from "../../../../services/clipboard-history.service";
 import { MatIconModule } from "@angular/material/icon";
+import { NetworkService } from "../../../../services/network.service";
 
 @Component({
   selector: "app-nav-pane",
@@ -15,4 +16,5 @@ import { MatIconModule } from "@angular/material/icon";
 export class NavPaneComponent {
   themeService = inject(ThemeService);
   clipboardHistoryService = inject(ClipboardHistoryService);
+  networkService = inject(NetworkService);
 }

@@ -1,0 +1,167 @@
+<div class="flex h-full min-h-0 flex-col overflow-hidden">
+  <div class="wrapper items-center">
+    <div class="m-1 flex w-full items-center justify-between">
+      <button
+        mat-mini-fab
+        (click)="networkService.refresh()"
+        matTooltip="Refresh network peers"
+        matTooltipShowDelay="1000"
+      >
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <div class="flex items-center gap-2">
+        <button
+          mat-mini-fab
+          (click)="networkService.toggle()"
+          [attr.aria-label]="
+            networkService.running()
+              ? 'Stop network sharing'
+              : 'Start network sharing'
+          "
+          [matTooltip]="
+            networkService.running()
+              ? 'Stop network sharing'
+              : 'Start network sharing'
+          "
+          matTooltipShowDelay="1000"
+        >
+          @if (networkService.running()) {
+            <mat-icon>pause</mat-icon>
+          } @else {
+            <mat-icon>play_arrow</mat-icon>
+          }
+        </button>
+      </div>
+    </div>
+    <div class="absolute mx-auto w-full px-2 text-center text-lg font-bold">
+      Network
+    </div>
+  </div>
+
+  <div class="min-h-0 flex-1 overflow-hidden">
+    <section
+      class="m-1 rounded-lg border border-solid bg-slate-50/30 p-3 shadow-lg"
+    >
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-sm opacity-80">This device</div>
+          <div class="truncate text-lg font-semibold">
+            {{ networkService.localName() }}
+          </div>
+        </div>
+        <button
+          mat-flat-button
+          (click)="networkService.generateOtp()"
+          [disabled]="!networkService.running()"
+        >
+          <mat-icon>pin</mat-icon>
+          Generate code
+        </button>
+      </div>
+
+      @if (networkService.otp()) {
+        <div
+          class="mt-3 inline-flex select-all rounded-lg border border-solid px-4 py-2 font-mono text-3xl tracking-widest"
+        >
+          {{ networkService.otp() }}
+        </div>
+      } @else {
+        <p class="mt-3 text-sm opacity-80">
+          Generate a code when another device needs permission to connect here.
+        </p>
+      }
+    </section>
+
+    @if (!networkService.running()) {
+      <div class="m-1 rounded-lg border border-solid bg-red-500/15 p-3">
+        Networking is off. Start it to discover peers and share clipboard text.
+      </div>
+    } @else if (networkService.peers().length === 0) {
+      <div class="m-1 rounded-lg border border-solid bg-slate-50/30 p-3">
+        No peers discovered yet.
+      </div>
+    } @else {
+      @if (authorizedPeers().length) {
+        <section class="mb-2">
+          <h2
+            class="m-1 text-sm font-semibold uppercase tracking-wide opacity-80"
+          >
+            Connected
+          </h2>
+          <div class="grid gap-2">
+            @for (
+              peer of authorizedPeers();
+              track trackByPeerId($index, peer)
+            ) {
+              <div
+                class="flex items-center justify-between gap-3 rounded-lg border border-solid bg-slate-50/30 p-3 shadow-lg"
+              >
+                <div class="min-w-0">
+                  <div class="truncate font-semibold">{{ peer.name }}</div>
+                  <div class="truncate text-xs opacity-70">{{ peer.id }}</div>
+                </div>
+                <button
+                  mat-stroked-button
+                  (click)="revoke(peer)"
+                  [disabled]="busyPeerId() === peer.id"
+                >
+                  <mat-icon>link_off</mat-icon>
+                  Disconnect
+                </button>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      @if (pendingPeers().length) {
+        <section>
+          <h2
+            class="m-1 text-sm font-semibold uppercase tracking-wide opacity-80"
+          >
+            Available peers
+          </h2>
+          <div class="grid gap-2">
+            @for (peer of pendingPeers(); track trackByPeerId($index, peer)) {
+              <div
+                class="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-lg border border-solid bg-slate-50/30 p-3 shadow-lg"
+              >
+                <div class="min-w-0">
+                  <div class="truncate font-semibold">{{ peer.name }}</div>
+                  <div class="truncate text-xs opacity-70">{{ peer.id }}</div>
+                </div>
+                <mat-form-field
+                  class="w-36"
+                  appearance="outline"
+                  subscriptSizing="dynamic"
+                >
+                  <input
+                    #otpInput
+                    matInput
+                    inputmode="numeric"
+                    maxlength="6"
+                    placeholder="Peer code"
+                    [value]="peerOtps()[peer.id] ?? ''"
+                    (input)="setPeerOtp(peer.id, otpInput.value)"
+                    (keyup.enter)="authorize(peer)"
+                  />
+                </mat-form-field>
+                <button
+                  mat-flat-button
+                  (click)="authorize(peer)"
+                  [disabled]="
+                    (peerOtps()[peer.id] ?? '').length !== 6 ||
+                    busyPeerId() === peer.id
+                  "
+                >
+                  <mat-icon>add_link</mat-icon>
+                  Connect
+                </button>
+              </div>
+            }
+          </div>
+        </section>
+      }
+    }
+  </div>
+</div>

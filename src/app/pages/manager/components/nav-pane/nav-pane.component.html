@@ -39,6 +39,19 @@
     </div>
     <div
       matRipple
+      class="clipper-bg m-1 flex cursor-pointer items-center gap-2 rounded-lg p-2"
+      routerLink="/manager/network"
+    >
+      <mat-icon
+        matBadge="-"
+        matBadgeSize="small"
+        [matBadgeHidden]="networkService.running()"
+        >hub</mat-icon
+      >
+      <span>Network</span>
+    </div>
+    <div
+      matRipple
       class="clipper-bg m-1 mt-auto flex cursor-pointer items-center gap-2 rounded-lg p-2"
       routerLink="/manager/tags"
     >

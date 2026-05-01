@@ -2,7 +2,7 @@ use crate::content_managers::message_bus::{AppMessage, MessageBus, NetworkClipbo
 use crate::error::{with_error_event, AppError, AppResult};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 use std::env;
 use std::net::{Ipv4Addr, SocketAddr, UdpSocket as StdUdpSocket};
 use std::sync::Arc;
@@ -17,15 +17,12 @@ const DISCOVERY_PORT: u16 = 34254;
 const CLIPBOARD_PORT: u16 = 34255;
 const DISCOVERY_ANNOUNCE_INTERVAL_SECS: u64 = 10;
 
-// ─── Wire types ───────────────────────────────────────────────────────────────
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct DiscoveryPacket {
     name: String,
     clipboard_port: u16,
 }
 
-/// All packets exchanged on CLIPBOARD_PORT are tagged with `kind`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum WirePacket {
@@ -34,14 +31,15 @@ enum WirePacket {
         text: String,
         timestamp: String,
     },
-    /// Sent by Device B to ask Device A to authorize it.
-    /// `otp` is the 6-digit code shown on Device A's UI.
-    AuthRequest { source_name: String, otp: String },
-    /// Reply from Device A after verifying the OTP.
-    AuthResponse { source_name: String, approved: bool },
+    AuthRequest {
+        source_name: String,
+        otp: String,
+    },
+    AuthResponse {
+        source_name: String,
+        approved: bool,
+    },
 }
-
-// ─── Internal state ───────────────────────────────────────────────────────────
 
 #[derive(Clone, Debug)]
 struct PeerRecord {
@@ -53,38 +51,25 @@ struct PeerRecord {
 struct NetworkManagerState {
     running: bool,
     local_name: String,
-    /// 6-digit OTP for the next inbound auth attempt.
-    /// `None` means no OTP is currently active — the frontend must call
-    /// `net_generate_otp` to issue one.  The value is consumed (set to `None`)
-    /// on the first inbound `AuthRequest`, whether it matches or not.
     local_otp: Option<String>,
     peers: HashMap<SocketAddr, PeerRecord>,
     shutdown_tx: Option<watch::Sender<bool>>,
     tasks: Vec<JoinHandle<()>>,
 }
 
-// ─── Public DTOs ──────────────────────────────────────────────────────────────
-
-/// Returned by `net_get_status`.
 #[derive(Debug, Serialize)]
 pub struct NetStatus {
     pub running: bool,
     pub local_name: String,
-    /// The active OTP if one has been generated, `None` otherwise.
-    /// The frontend should call `net_generate_otp` to obtain a fresh code.
     pub otp: Option<String>,
 }
 
-/// One element of the list returned by `net_list_peers`.
 #[derive(Clone, Debug, Serialize)]
 pub struct NetworkPeerEntry {
-    /// Stable peer identity – the stringified socket address (`ip:port`).
     pub id: String,
     pub name: String,
     pub authorized: bool,
 }
-
-// ─── Manager ──────────────────────────────────────────────────────────────────
 
 pub struct NetworkManager {
     app_handle: AppHandle,
@@ -110,8 +95,6 @@ impl NetworkManager {
         manager.start().await;
         manager
     }
-
-    // ─── Lifecycle ──────────────────────────────────────────────────────────
 
     pub async fn start(self: &Arc<Self>) {
         {
@@ -174,32 +157,22 @@ impl NetworkManager {
         }
     }
 
-    // ─── OTP ────────────────────────────────────────────────────────────────
-
     fn generate_otp() -> String {
-        // Use 6 bytes from a UUID v4 (OS CSPRNG via getrandom) to form a
-        // 6-digit code without modulo bias: pick a random value in [0, 999999]
-        // using the bottom 20 bits of the first 4 bytes (max value 1_048_575),
-        // then reject values >= 1_000_000 and retry. Expected retries < 5%.
         loop {
             let bytes = Uuid::new_v4();
             let b = bytes.as_bytes();
-            let n = u32::from_le_bytes([b[0], b[1], b[2], b[3] & 0x0F]);
+            let n = u32::from_le_bytes([b[0], b[1], b[2] & 0x0F, 0]);
             if n < 1_000_000 {
                 return format!("{n:06}");
             }
         }
     }
 
-    /// Generate a new 6-digit OTP, store it as active, and return it.
-    /// Any previously active OTP is discarded.
     pub async fn refresh_otp(&self) -> String {
         let otp = Self::generate_otp();
         self.state.lock().await.local_otp = Some(otp.clone());
         otp
     }
-
-    // ─── Queries used by Tauri commands ─────────────────────────────────────
 
     pub async fn get_status(&self) -> NetStatus {
         let s = self.state.lock().await;
@@ -224,17 +197,10 @@ impl NetworkManager {
             .collect()
     }
 
-    // ─── Authorization ────────────────────────────────────────────────────────
-
-    /// Send an auth-request packet to `peer_id` carrying the OTP shown on that
-    /// peer's UI.  The peer will verify it and respond; the response is handled
-    /// inside `run_clipboard_transport`.
     pub async fn request_auth(&self, peer_id: &str, otp: &str) -> AppResult<()> {
         let (addr, local_name) = {
             let state = self.state.lock().await;
-            let addr: SocketAddr = peer_id
-                .parse()
-                .map_err(|_| AppError::validation(format!("Invalid peer id: {peer_id}")))?;
+            let addr = Self::parse_peer_id(peer_id)?;
             if !state.peers.contains_key(&addr) {
                 return Err(AppError::validation(format!("Peer not found: {peer_id}")));
             }
@@ -249,38 +215,29 @@ impl NetworkManager {
             source_name: local_name,
             otp: otp.to_string(),
         };
-        let payload =
-            serde_json::to_vec(&packet).map_err(|e| AppError::RuntimeError(e.to_string()))?;
 
-        socket
-            .send_to(&payload, addr)
-            .await
-            .map_err(|e| AppError::NetworkError(e.to_string()))?;
+        Self::send_wire_packet(&socket, &packet, addr).await?;
 
         log::info!("Network manager sent auth request to {peer_id}");
         Ok(())
     }
 
-    /// Remove authorization from a peer so clipboard sharing stops.
     pub async fn revoke_peer(&self, peer_id: &str) -> AppResult<()> {
-        let addr: SocketAddr = peer_id
-            .parse()
-            .map_err(|_| AppError::validation(format!("Invalid peer id: {peer_id}")))?;
+        let addr = Self::parse_peer_id(peer_id)?;
+        let revoked_peer = {
+            let mut state = self.state.lock().await;
+            state.peers.get_mut(&addr).map(|peer| {
+                peer.authorized = false;
+                peer.name.clone()
+            })
+        };
 
-        let mut state = self.state.lock().await;
-        if let Some(peer) = state.peers.get_mut(&addr) {
-            peer.authorized = false;
-            log::info!("Network manager revoked peer {}", peer.name);
-        }
-        drop(state);
-
-        if self.app_handle.emit("net_peers_updated", ()).is_err() {
-            log::error!("Unable to emit: net_peers_updated");
+        if let Some(name) = revoked_peer {
+            log::info!("Network manager revoked peer {}", name);
+            self.notify_peers_updated();
         }
         Ok(())
     }
-
-    // ─── Background tasks ─────────────────────────────────────────────────────
 
     async fn run_presence_announcer(local_name: String, mut shutdown_rx: watch::Receiver<bool>) {
         let socket = match Self::create_multicast_sender() {
@@ -383,23 +340,9 @@ impl NetworkManager {
                 message = receiver.recv() => {
                     match message {
                         Ok(AppMessage::AddedToClipboard(text)) => {
-                            let packet = WirePacket::Clipboard {
-                                source_name: local_name.clone(),
-                                text,
-                                timestamp: Utc::now().to_rfc3339(),
-                            };
-                            if let Ok(payload) = serde_json::to_vec(&packet) {
-                                for peer in manager.authorized_peers().await {
-                                    if let Err(e) = socket.send_to(&payload, peer.addr).await {
-                                        log::debug!(
-                                            "Network manager failed to send clipboard to {} ({}): {}",
-                                            peer.name,
-                                            peer.addr,
-                                            e
-                                        );
-                                    }
-                                }
-                            }
+                            manager
+                                .send_clipboard_to_authorized_peers(&socket, &local_name, text)
+                                .await;
                         }
                         Ok(_) => {}
                         Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
@@ -412,25 +355,9 @@ impl NetworkManager {
                     match result {
                         Ok((len, from)) => {
                             match serde_json::from_slice::<WirePacket>(&buf[..len]) {
-                                Ok(WirePacket::Clipboard { source_name, text, .. })
-                                    if source_name != local_name =>
-                                {
-                                    if manager.is_authorized(from).await {
-                                        let payload = NetworkClipboardPayload { source_name, text };
-                                        if bus.send(AppMessage::NetworkClipboardReceived(payload)).is_err() {
-                                            log::error!("Unable to send message: NetworkClipboardReceived");
-                                        }
-                                    }
-                                }
-                                Ok(WirePacket::AuthRequest { source_name, otp }) => {
-                                    manager
-                                        .handle_auth_request(source_name, from, &otp, &socket)
-                                        .await;
-                                }
-                                Ok(WirePacket::AuthResponse { source_name, approved }) => {
-                                    manager.handle_auth_response(source_name, from, approved).await;
-                                }
-                                Ok(_) => {}
+                                Ok(packet) => manager
+                                    .handle_wire_packet(packet, from, &local_name, &bus, &socket)
+                                    .await,
                                 Err(e) => {
                                     log::debug!("Network manager ignored invalid wire packet: {}", e);
                                 }
@@ -445,30 +372,25 @@ impl NetworkManager {
         }
     }
 
-    // ─── Internal helpers ─────────────────────────────────────────────────────
-
     async fn upsert_discovered_peer(&self, name: String, addr: SocketAddr) {
         let is_new = {
             let mut state = self.state.lock().await;
-            let was_present = state.peers.contains_key(&addr);
-            if !was_present {
-                state.peers.insert(
-                    addr,
-                    PeerRecord {
+            match state.peers.entry(addr) {
+                Entry::Vacant(entry) => {
+                    entry.insert(PeerRecord {
                         name: name.clone(),
                         addr,
                         authorized: false,
-                    },
-                );
+                    });
+                    true
+                }
+                Entry::Occupied(_) => false,
             }
-            !was_present
         };
 
         if is_new {
             log::info!("Network manager discovered peer {} at {}", name, addr);
-            if self.app_handle.emit("net_peers_updated", ()).is_err() {
-                log::error!("Unable to emit: net_peers_updated");
-            }
+            self.notify_peers_updated();
         }
     }
 
@@ -492,11 +414,77 @@ impl NetworkManager {
             .collect()
     }
 
-    /// Called when we receive an `AuthRequest` on CLIPBOARD_PORT.
-    /// Verifies the OTP, updates peer state, and sends an `AuthResponse` back
-    /// to the requester's CLIPBOARD_PORT (so their transport loop receives it).
-    /// The OTP is consumed (set to `None`) on every attempt, whether it matches
-    /// or not, enforcing single-use semantics.
+    async fn send_clipboard_to_authorized_peers(
+        &self,
+        socket: &UdpSocket,
+        source_name: &str,
+        text: String,
+    ) {
+        let packet = WirePacket::Clipboard {
+            source_name: source_name.to_string(),
+            text,
+            timestamp: Utc::now().to_rfc3339(),
+        };
+
+        let payload = match serde_json::to_vec(&packet) {
+            Ok(payload) => payload,
+            Err(e) => {
+                log::warn!(
+                    "Network manager failed to serialize clipboard packet: {}",
+                    e
+                );
+                return;
+            }
+        };
+
+        for peer in self.authorized_peers().await {
+            if let Err(e) = socket.send_to(&payload, peer.addr).await {
+                log::debug!(
+                    "Network manager failed to send clipboard to {} ({}): {}",
+                    peer.name,
+                    peer.addr,
+                    e
+                );
+            }
+        }
+    }
+
+    async fn handle_wire_packet(
+        &self,
+        packet: WirePacket,
+        from: SocketAddr,
+        local_name: &str,
+        bus: &MessageBus,
+        socket: &UdpSocket,
+    ) {
+        match packet {
+            WirePacket::Clipboard {
+                source_name, text, ..
+            } if source_name != local_name => {
+                if self.is_authorized(from).await {
+                    let payload = NetworkClipboardPayload { source_name, text };
+                    if bus
+                        .send(AppMessage::NetworkClipboardReceived(payload))
+                        .is_err()
+                    {
+                        log::error!("Unable to send message: NetworkClipboardReceived");
+                    }
+                }
+            }
+            WirePacket::AuthRequest { source_name, otp } => {
+                self.handle_auth_request(source_name, from, &otp, socket)
+                    .await;
+            }
+            WirePacket::AuthResponse {
+                source_name,
+                approved,
+            } => {
+                self.handle_auth_response(source_name, from, approved).await;
+            }
+            WirePacket::Clipboard { .. } => {}
+        }
+    }
+
     async fn handle_auth_request(
         &self,
         source_name: String,
@@ -504,9 +492,9 @@ impl NetworkManager {
         otp: &str,
         socket: &UdpSocket,
     ) {
+        let peer_addr = SocketAddr::new(from.ip(), CLIPBOARD_PORT);
         let (local_otp, local_name) = {
             let mut state = self.state.lock().await;
-            // Consume the OTP regardless of whether the request succeeds.
             let consumed = state.local_otp.take();
             (consumed, state.local_name.clone())
         };
@@ -514,24 +502,13 @@ impl NetworkManager {
         let approved = local_otp.as_deref() == Some(otp);
 
         if approved {
-            let mut state = self.state.lock().await;
-            state
-                .peers
-                .entry(from)
-                .and_modify(|p| {
-                    p.authorized = true;
-                    p.name = source_name.clone();
-                })
-                .or_insert_with(|| PeerRecord {
-                    name: source_name.clone(),
-                    addr: from,
-                    authorized: true,
-                });
-            drop(state);
-            log::info!("Network manager authorized peer {} ({})", source_name, from);
-            if self.app_handle.emit("net_peers_updated", ()).is_err() {
-                log::error!("Unable to emit: net_peers_updated");
-            }
+            self.authorize_peer(source_name.clone(), peer_addr).await;
+            log::info!(
+                "Network manager authorized peer {} ({})",
+                source_name,
+                peer_addr
+            );
+            self.notify_peers_updated();
         } else {
             log::warn!(
                 "Network manager rejected auth request from {} ({}): invalid or expired OTP",
@@ -544,50 +521,74 @@ impl NetworkManager {
             source_name: local_name,
             approved,
         };
-        if let Ok(payload) = serde_json::to_vec(&response) {
-            // Respond to the peer's CLIPBOARD_PORT so their transport loop receives it.
-            let response_addr = SocketAddr::new(from.ip(), CLIPBOARD_PORT);
-            if let Err(e) = socket.send_to(&payload, response_addr).await {
-                log::warn!(
-                    "Network manager failed to send auth response to {}: {}",
-                    response_addr,
-                    e
-                );
-            }
+        if let Err(e) = Self::send_wire_packet(socket, &response, peer_addr).await {
+            log::warn!(
+                "Network manager failed to send auth response to {}: {}",
+                peer_addr,
+                e
+            );
         }
     }
 
-    /// Called when we receive an `AuthResponse` for a request we sent earlier.
     async fn handle_auth_response(&self, source_name: String, from: SocketAddr, approved: bool) {
         if approved {
-            let mut state = self.state.lock().await;
-            state
-                .peers
-                .entry(from)
-                .and_modify(|p| {
-                    p.authorized = true;
-                    p.name = source_name.clone();
-                })
-                .or_insert_with(|| PeerRecord {
-                    name: source_name.clone(),
-                    addr: from,
-                    authorized: true,
-                });
-            drop(state);
+            self.authorize_peer(source_name.clone(), from).await;
             log::info!(
                 "Network manager: peer {} ({}) approved our auth request",
                 source_name,
                 from
             );
-            if self.app_handle.emit("net_peers_updated", ()).is_err() {
-                log::error!("Unable to emit: net_peers_updated");
-            }
+            self.notify_peers_updated();
         } else {
             log::warn!(
                 "Network manager: peer {} ({}) rejected our auth request",
                 source_name,
                 from
             );
+        }
+    }
+
+    async fn authorize_peer(&self, name: String, addr: SocketAddr) {
+        let mut state = self.state.lock().await;
+        match state.peers.entry(addr) {
+            Entry::Occupied(mut entry) => {
+                let peer = entry.get_mut();
+                peer.authorized = true;
+                peer.name = name;
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(PeerRecord {
+                    name,
+                    addr,
+                    authorized: true,
+                });
+            }
+        }
+    }
+
+    fn parse_peer_id(peer_id: &str) -> AppResult<SocketAddr> {
+        peer_id
+            .parse()
+            .map_err(|_| AppError::validation(format!("Invalid peer id: {peer_id}")))
+    }
+
+    async fn send_wire_packet(
+        socket: &UdpSocket,
+        packet: &WirePacket,
+        addr: SocketAddr,
+    ) -> AppResult<()> {
+        let payload =
+            serde_json::to_vec(packet).map_err(|e| AppError::RuntimeError(e.to_string()))?;
+        socket
+            .send_to(&payload, addr)
+            .await
+            .map_err(|e| AppError::NetworkError(e.to_string()))?;
+        Ok(())
+    }
+
+    fn notify_peers_updated(&self) {
+        if self.app_handle.emit("net_peers_updated", ()).is_err() {
+            log::error!("Unable to emit: net_peers_updated");
         }
     }
 
@@ -615,42 +616,42 @@ impl NetworkManager {
     }
 }
 
-// ─── Tauri Commands ───────────────────────────────────────────────────────────
-
-/// Returns the current network manager status including the local OTP.
 #[tauri::command]
 pub async fn net_get_status(
     app_handle: tauri::AppHandle,
     state: State<'_, Arc<NetworkManager>>,
 ) -> AppResult<NetStatus> {
-    with_error_event(&app_handle, async { Ok(state.get_status().await) }).await
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Reading network status");
+        Ok(state.get_status().await)
+    })
+    .await
 }
 
-/// Returns all discovered peers with their authorization state.
 #[tauri::command]
 pub async fn net_list_peers(
     app_handle: tauri::AppHandle,
     state: State<'_, Arc<NetworkManager>>,
 ) -> AppResult<Vec<NetworkPeerEntry>> {
-    with_error_event(&app_handle, async { Ok(state.list_peers().await) }).await
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Listing network peers");
+        Ok(state.list_peers().await)
+    })
+    .await
 }
 
-/// Generates a fresh 6-digit OTP and stores it as the active one-time code.
-/// Any previously active OTP is discarded.  The frontend should call this
-/// command before showing the pairing screen, then display the returned code
-/// to the user so a remote device can enter it via `net_authorize_peer`.
-/// The OTP is automatically consumed (invalidated) after the first inbound
-/// auth attempt so it cannot be reused.
 #[tauri::command]
 pub async fn net_generate_otp(
     app_handle: tauri::AppHandle,
     state: State<'_, Arc<NetworkManager>>,
 ) -> AppResult<String> {
-    with_error_event(&app_handle, async { Ok(state.refresh_otp().await) }).await
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Generating network OTP");
+        Ok(state.refresh_otp().await)
+    })
+    .await
 }
 
-/// Sends an authorization request to the peer identified by `peer_id`
-/// (an `ip:port` string).  `otp` is the 6-digit code shown on *that peer's* UI.
 #[tauri::command]
 pub async fn net_authorize_peer(
     app_handle: tauri::AppHandle,
@@ -659,28 +660,32 @@ pub async fn net_authorize_peer(
     otp: String,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
+        log::info!("CMD:Authorizing network peer: {:#?}", peer_id);
         state.request_auth(&peer_id, &otp).await
     })
     .await
 }
 
-/// Removes authorization from a peer, stopping clipboard sharing with it.
 #[tauri::command]
 pub async fn net_revoke_peer(
     app_handle: tauri::AppHandle,
     state: State<'_, Arc<NetworkManager>>,
     peer_id: String,
 ) -> AppResult<()> {
-    with_error_event(&app_handle, async { state.revoke_peer(&peer_id).await }).await
+    with_error_event(&app_handle, async {
+        log::info!("CMD:Revoking network peer: {:#?}", peer_id);
+        state.revoke_peer(&peer_id).await
+    })
+    .await
 }
 
-/// Starts network discovery and clipboard transport workers.
 #[tauri::command]
 pub async fn net_start(
     app_handle: tauri::AppHandle,
     state: State<'_, Arc<NetworkManager>>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
+        log::info!("CMD:Starting network manager");
         let manager = Arc::clone(&*state);
         manager.start().await;
         Ok(())
@@ -688,13 +693,13 @@ pub async fn net_start(
     .await
 }
 
-/// Stops all network workers and clears the peer list.
 #[tauri::command]
 pub async fn net_stop(
     app_handle: tauri::AppHandle,
     state: State<'_, Arc<NetworkManager>>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
+        log::info!("CMD:Stopping network manager");
         state.stop().await;
         Ok(())
     })
