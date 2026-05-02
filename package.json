@@ -7,7 +7,8 @@
     "pretty": "prettier --write src/**/*.{ts,html,scss}",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "macos:dev-app": "tauri build --debug --bundles app"
   },
   "private": true,
   "dependencies": {

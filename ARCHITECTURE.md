@@ -142,7 +142,18 @@ not fatal if another active LAN interface still logs `Network manager mDNS
 discovered ...` and `Network manager discovered peer ...`. On macOS, the app
 bundle must also include `NSLocalNetworkUsageDescription` and the `_p2p._udp`
 `NSBonjourServices` entry in `src-tauri/Info.plist`, and the user must allow
-Clipper in System Settings > Privacy & Security > Local Network.
+Clipper in System Settings > Privacy & Security > Local Network. Use a debug
+`.app` bundle when testing this permission:
+
+```sh
+pnpm run macos:dev-app
+plutil -p src-tauri/target/debug/bundle/macos/clipper.app/Contents/Info.plist | grep -E "NSLocalNetworkUsageDescription|NSBonjourServices"
+open src-tauri/target/debug/bundle/macos/clipper.app
+```
+
+`tauri dev` is still useful for general UI work, but it may run networking from
+an unbundled development process, which prevents macOS from showing Clipper in
+the Local Network app list.
 
 ## Command Surface
 
