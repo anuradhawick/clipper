@@ -15,7 +15,7 @@ pub fn window_hide(window: tauri::Window) -> AppResult<()> {
 pub fn window_show_manager(app_handle: AppHandle) -> AppResult<()> {
     with_error_event_sync(&app_handle, || {
         if app_handle.get_webview_window("manager").is_none() {
-            let window = WebviewWindowBuilder::new(
+            let mut builder = WebviewWindowBuilder::new(
                 &app_handle,
                 "manager",
                 WebviewUrl::App("/manager".into()),
@@ -28,9 +28,15 @@ pub fn window_show_manager(app_handle: AppHandle) -> AppResult<()> {
             .focused(true)
             .visible(true)
             .visible_on_all_workspaces(false)
-            .center()
-            .build()
-            .map_err(AppError::from)?;
+            .center();
+
+            if let Some(icon) = app_handle.default_window_icon() {
+                builder = builder.icon(icon.clone()).map_err(AppError::from)?;
+            } else {
+                log::warn!("Default window icon unavailable for manager window");
+            }
+
+            let window = builder.build().map_err(AppError::from)?;
 
             window.show()?;
             window.set_focus()?;
@@ -47,7 +53,7 @@ pub fn window_show_qrviewer(app_handle: AppHandle, url: String) -> AppResult<()>
             .finish();
 
         if app_handle.get_webview_window("qrviewer").is_none() {
-            let window = WebviewWindowBuilder::new(
+            let mut builder = WebviewWindowBuilder::new(
                 &app_handle,
                 "qrviewer",
                 WebviewUrl::App(format!("/qrviewer?{}", encoded).into()),
@@ -58,9 +64,15 @@ pub fn window_show_qrviewer(app_handle: AppHandle, url: String) -> AppResult<()>
             .always_on_top(true)
             .focused(true)
             .visible_on_all_workspaces(true)
-            .center()
-            .build()
-            .map_err(AppError::from)?;
+            .center();
+
+            if let Some(icon) = app_handle.default_window_icon() {
+                builder = builder.icon(icon.clone()).map_err(AppError::from)?;
+            } else {
+                log::warn!("Default window icon unavailable for QR viewer window");
+            }
+
+            let window = builder.build().map_err(AppError::from)?;
 
             window.on_window_event(move |event| match event {
                 WindowEvent::Focused(true) => {
