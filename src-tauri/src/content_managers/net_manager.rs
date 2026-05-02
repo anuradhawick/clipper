@@ -20,6 +20,8 @@ use uuid::Uuid;
 
 const CLIPPER_PROTOCOL: &str = "/clipper/clipboard/1";
 const NETWORK_COMMAND_BUFFER: usize = 100;
+const MDNS_QUERY_INTERVAL_SECS: u64 = 10;
+const MDNS_RECORD_TTL_SECS: u64 = 60;
 const NETWORK_REQUEST_TIMEOUT_SECS: u64 = 10;
 
 #[derive(Clone, Debug)]
@@ -112,6 +114,11 @@ impl From<request_response::Event<NetworkRequest, NetworkResponse>> for ClipperB
 
 impl ClipperBehaviour {
     fn new(local_peer_id: PeerId) -> std::io::Result<Self> {
+        let mdns_config = mdns::Config {
+            query_interval: Duration::from_secs(MDNS_QUERY_INTERVAL_SECS),
+            ttl: Duration::from_secs(MDNS_RECORD_TTL_SECS),
+            ..mdns::Config::default()
+        };
         let request_response = request_response::json::Behaviour::new(
             [(
                 StreamProtocol::new(CLIPPER_PROTOCOL),
@@ -122,7 +129,7 @@ impl ClipperBehaviour {
         );
 
         Ok(Self {
-            mdns: mdns::tokio::Behaviour::new(mdns::Config::default(), local_peer_id)?,
+            mdns: mdns::tokio::Behaviour::new(mdns_config, local_peer_id)?,
             request_response,
         })
     }
@@ -272,7 +279,8 @@ impl NetworkManager {
     }
 
     pub async fn list_peers(&self) -> Vec<NetworkPeerEntry> {
-        self.state
+        let peers = self
+            .state
             .lock()
             .await
             .peers
@@ -282,7 +290,10 @@ impl NetworkManager {
                 name: peer.name.clone(),
                 authorized: peer.authorized,
             })
-            .collect()
+            .collect::<Vec<_>>();
+
+        log::info!("Network manager listing {} peers", peers.len());
+        peers
     }
 
     pub async fn request_auth(&self, peer_id: &str, otp: &str) -> AppResult<()> {
@@ -402,6 +413,8 @@ impl NetworkManager {
                 log::info!("Network manager listening on {}", address);
             }
             SwarmEvent::Behaviour(ClipperBehaviourEvent::Mdns(mdns::Event::Discovered(peers))) => {
+                log::info!("Network manager mDNS discovered {} addresses", peers.len());
+
                 for (peer_id, address) in peers {
                     if Some(peer_id.to_string()) == manager.local_peer_id().await {
                         continue;

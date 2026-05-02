@@ -28,17 +28,23 @@ export class NetworkService implements OnDestroy {
   private unlistenNetworkPeers: UnlistenFn | undefined;
 
   constructor() {
-    listen<boolean>("net_status_changed", (event) => {
+    const statusListener = listen<boolean>("net_status_changed", (event) => {
       this.running.set(event.payload);
       void this.refreshStatus();
       void this.refreshPeers();
-    }).then((unlisten) => (this.unlistenNetworkStatus = unlisten));
+    }).then((unlisten) => {
+      this.unlistenNetworkStatus = unlisten;
+    });
 
-    listen("net_peers_updated", () => {
+    const peersListener = listen("net_peers_updated", () => {
       void this.refreshPeers();
-    }).then((unlisten) => (this.unlistenNetworkPeers = unlisten));
+    }).then((unlisten) => {
+      this.unlistenNetworkPeers = unlisten;
+    });
 
-    void this.refresh();
+    void Promise.all([statusListener, peersListener]).finally(() => {
+      void this.refresh();
+    });
   }
 
   ngOnDestroy(): void {

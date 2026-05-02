@@ -136,7 +136,10 @@ tcp.port == <port>
 
 The request-response payloads are encrypted by libp2p transport security, so
 Wireshark can confirm discovery, connection attempts, and byte flow, but it will
-not show clipboard text or OTP contents.
+not show clipboard text or OTP contents. OS errors such as `No route to host`
+can appear when libp2p mDNS tries a VPN, bridge, or inactive interface; they are
+not fatal if another active LAN interface still logs `Network manager mDNS
+discovered ...` and `Network manager discovered peer ...`.
 
 ## Command Surface
 
