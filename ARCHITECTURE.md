@@ -139,7 +139,10 @@ Wireshark can confirm discovery, connection attempts, and byte flow, but it will
 not show clipboard text or OTP contents. OS errors such as `No route to host`
 can appear when libp2p mDNS tries a VPN, bridge, or inactive interface; they are
 not fatal if another active LAN interface still logs `Network manager mDNS
-discovered ...` and `Network manager discovered peer ...`.
+discovered ...` and `Network manager discovered peer ...`. On macOS, the app
+bundle must also include `NSLocalNetworkUsageDescription` and the `_p2p._udp`
+`NSBonjourServices` entry in `src-tauri/Info.plist`, and the user must allow
+Clipper in System Settings > Privacy & Security > Local Network.
 
 ## Command Surface
 

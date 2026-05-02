@@ -4,5 +4,11 @@
 <dict>
   <key>LSUIElement</key>
   <true/>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>Clipper discovers trusted devices on your local network to share clipboard text.</string>
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_p2p._udp</string>
+  </array>
 </dict>
 </plist>
