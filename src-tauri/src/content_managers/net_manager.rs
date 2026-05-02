@@ -593,12 +593,20 @@ impl NetworkManager {
     }
 
     fn resolve_local_name() -> String {
-        env::var("CLIPPER_DEVICE_NAME")
-            .or_else(|_| env::var("HOSTNAME"))
-            .or_else(|_| env::var("COMPUTERNAME"))
-            .ok()
-            .filter(|v| !v.trim().is_empty())
+        ["CLIPPER_DEVICE_NAME", "HOSTNAME", "COMPUTERNAME"]
+            .into_iter()
+            .find_map(|key| env::var(key).ok().and_then(Self::normalize_local_name))
+            .or_else(|| Self::normalize_local_name(tauri_plugin_os::hostname()))
             .unwrap_or_else(|| "Clipper".to_string())
+    }
+
+    fn normalize_local_name(name: impl AsRef<str>) -> Option<String> {
+        let trimmed = name.as_ref().trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
     }
 
     fn create_multicast_sender() -> std::io::Result<UdpSocket> {
@@ -613,6 +621,25 @@ impl NetworkManager {
         socket.set_nonblocking(true)?;
         socket.join_multicast_v4(&DISCOVERY_MULTICAST_HOST, &Ipv4Addr::UNSPECIFIED)?;
         UdpSocket::from_std(socket)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::NetworkManager;
+
+    #[test]
+    fn normalize_local_name_rejects_blank_values() {
+        assert_eq!(NetworkManager::normalize_local_name(""), None);
+        assert_eq!(NetworkManager::normalize_local_name("   "), None);
+    }
+
+    #[test]
+    fn normalize_local_name_trims_valid_values() {
+        assert_eq!(
+            NetworkManager::normalize_local_name("  desk-01  "),
+            Some("desk-01".to_string())
+        );
     }
 }
 
