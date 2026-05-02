@@ -1,9 +1,6 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-#[cfg(target_os = "macos")]
-extern crate objc;
-
 mod content_managers;
 mod error;
 mod utils;
@@ -44,50 +41,56 @@ use std::env;
 use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
-use tauri::{async_runtime, AppHandle, Manager};
+use tauri::{async_runtime, AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_autostart::MacosLauncher;
-use utils::monitor_utils::default_primary_monitor;
-use utils::monitor_utils::move_to_active_monitor;
+use utils::monitor_utils::{
+    default_primary_monitor, move_to_active_monitor, MAIN_WINDOW_HEIGHT, MAIN_WINDOW_WIDTH,
+};
 use utils::tray_handlers::{handle_system_tray_icon_event, handle_system_tray_menu_event};
 use utils::window_commands::{window_hide, window_show_manager, window_show_qrviewer};
-use utils::window_custom::WebviewWindowExt;
 use utils::window_handlers::handle_window_event;
-
-#[cfg(target_os = "macos")]
-use utils::window_custom::macos::WebviewWindowExtMacos;
-
-#[cfg(target_os = "macos")]
-use tauri::WebviewWindow;
-
-#[cfg(target_os = "macos")]
-use system_notification::WorkspaceListener;
 
 /// Float panel window level
 #[cfg(target_os = "macos")]
-pub static OVERLAYED_NORMAL_LEVEL: i32 = 8;
+const FLOATING_WINDOW_LEVEL: i64 = 10_000;
 
 #[cfg(target_os = "macos")]
 fn apply_macos_specifics(window: &WebviewWindow) {
-    use tauri::Manager;
-    use tauri_nspanel::ManagerExt;
+    use objc::runtime::{Object, NO};
+    use objc::{msg_send, sel, sel_impl};
 
-    window.remove_shadow();
+    unsafe {
+        let Ok(raw_window) = window.ns_window() else {
+            log::error!("Unable to access NSWindow handle");
+            return;
+        };
+        let ns_window = raw_window as *mut Object;
 
-    window.set_float_panel(OVERLAYED_NORMAL_LEVEL);
+        let _: () = msg_send![ns_window, setHasShadow: NO];
+        let _: () = msg_send![ns_window, setLevel: FLOATING_WINDOW_LEVEL];
 
-    let app_handle = window.app_handle();
-    let _ = app_handle.set_activation_policy(tauri::ActivationPolicy::Accessory);
+        // Preserve Tauri's defaults and add Space/fullscreen behavior needed by
+        // the floating widget: CanJoinAllSpaces | Stationary | FullScreenAuxiliary.
+        let existing: usize = msg_send![ns_window, collectionBehavior];
+        let _: () = msg_send![ns_window, setCollectionBehavior: existing | 1 | 16 | 256];
+    }
+}
 
-    app_handle.listen_workspace(
-        "NSWorkspaceDidActivateApplicationNotification",
-        |app_handle| {
-            if let Some(panel) = app_handle.get_webview_panel("main") {
-                panel.set_level(OVERLAYED_NORMAL_LEVEL);
-            } else {
-                log::warn!("Unable to resolve main panel while applying macOS level");
-            }
-        },
-    );
+fn create_main_window(app: &mut tauri::App) -> tauri::Result<WebviewWindow> {
+    #[cfg(target_os = "macos")]
+    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+    WebviewWindowBuilder::new(app, "main", WebviewUrl::App("/".into()))
+        .title("Clipper")
+        .decorations(false)
+        .inner_size(MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT)
+        .always_on_top(true)
+        .accept_first_mouse(true)
+        .visible(false)
+        .transparent(true)
+        .resizable(false)
+        .visible_on_all_workspaces(true)
+        .build()
 }
 
 #[tokio::main]
@@ -175,10 +178,10 @@ async fn main() {
         ])
         .on_window_event(handle_window_event)
         .setup(|app| {
-            let window = app
-                .get_webview_window("main")
-                .ok_or("Unable to load window")?;
-            window.set_document_title("Clipper - Main");
+            let window = create_main_window(app)?;
+            if let Err(error) = window.eval("document.title = 'Clipper - Main'") {
+                log::error!("Unable to set window title: {}", error);
+            }
             // reposition
             let primary_monitor = default_primary_monitor(app.app_handle())?;
             if let Err(error) = move_to_active_monitor(
@@ -230,11 +233,6 @@ async fn main() {
             });
             Ok(())
         });
-
-    #[cfg(target_os = "macos")]
-    {
-        builder = builder.plugin(tauri_nspanel::init());
-    }
 
     if let Err(error) = builder.run(tauri::generate_context!()) {
         log::error!("Error while running tauri application: {}", error);

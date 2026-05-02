@@ -1,6 +1,9 @@
 use crate::error::{AppError, AppResult};
 use tauri::{AppHandle, LogicalPosition, Monitor, Position, WebviewWindow};
 
+pub const MAIN_WINDOW_WIDTH: f64 = 800.0;
+pub const MAIN_WINDOW_HEIGHT: f64 = 400.0;
+
 fn get_monitor_for_point(window: &WebviewWindow, x: f64, y: f64, logical: bool) -> Option<Monitor> {
     let Ok(monitors) = window.available_monitors() else {
         return None;
@@ -43,24 +46,16 @@ pub fn default_primary_monitor(app: &AppHandle) -> AppResult<Monitor> {
 }
 
 pub fn move_to_active_monitor(
-    app: &AppHandle,
+    _app: &AppHandle,
     window: &WebviewWindow,
     x: f64,
     y: f64,
     logical: bool,
 ) -> AppResult<()> {
     if let Some(monitor) = get_monitor_for_point(window, x, y, logical) {
-        let window_width = app
-            .config()
-            .app
-            .windows
-            .iter()
-            .find(|w| w.label.eq("main"))
-            .ok_or_else(|| AppError::runtime("Main window config not found".to_string()))?
-            .width;
         let screen_width = monitor.size().width as f64 / monitor.scale_factor();
         let new_x = monitor.position().x as f64 / monitor.scale_factor() + screen_width / 2.0
-            - window_width / 2.0;
+            - MAIN_WINDOW_WIDTH / 2.0;
         let new_y = monitor.position().y as f64 / monitor.scale_factor();
 
         window

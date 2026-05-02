@@ -1,30 +1,10 @@
 import { ChangeDetectionStrategy, Component } from "@angular/core";
 import { RouterOutlet } from "@angular/router";
-import tauriConfig from "../../../../src-tauri/tauri.conf.json";
 import { NavBarComponent } from "./components/nav-bar/nav-bar.component";
 import { DragDropOverlayComponent } from "./components/drag-drop-overlay/drag-drop-overlay.component";
 
-interface TauriWindowConfig {
-  label?: string;
-  width?: number;
-  height?: number;
-}
-
-interface TauriAppConfig {
-  windows?: TauriWindowConfig[];
-}
-
-interface TauriConfig {
-  app?: TauriAppConfig;
-}
-
-const mainWindowConfig = (tauriConfig as TauriConfig).app?.windows?.find(
-  (windowConfig) => windowConfig.label === "main",
-);
-
-if (!mainWindowConfig?.width || !mainWindowConfig?.height) {
-  throw new Error("Unable to resolve the main Tauri window size.");
-}
+const MAIN_WINDOW_WIDTH = 800;
+const MAIN_WINDOW_HEIGHT = 400;
 
 @Component({
   selector: "app-widget",
@@ -36,7 +16,7 @@ if (!mainWindowConfig?.width || !mainWindowConfig?.height) {
 })
 export class WidgetComponent {
   protected readonly windowSize = {
-    width: mainWindowConfig.width,
-    height: mainWindowConfig.height,
+    width: MAIN_WINDOW_WIDTH,
+    height: MAIN_WINDOW_HEIGHT,
   } as const;
 }

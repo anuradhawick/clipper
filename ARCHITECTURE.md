@@ -21,8 +21,11 @@ Startup flow:
   migrations, constructs all managers, and registers them with `app.manage`.
   Pure service managers are registered directly; long-lived workers keep only
   their mutable runtime state synchronized internally.
-3. The main widget window is positioned on the active monitor, made floating or
-   always-on-top depending on platform, and wired to drag/drop and tray events.
+3. `setup()` creates the main widget window programmatically. On macOS it sets
+   accessory activation before window creation so the floating widget can join
+   fullscreen Spaces, then applies native floating-window behavior; other
+   platforms use Tauri always-on-top behavior. The window is positioned on the
+   active monitor and wired to drag/drop and tray events.
 4. Background tasks start for clipboard polling, internal bus subscribers, and
    network clipboard discovery/transport workers.
 

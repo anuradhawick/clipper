@@ -136,6 +136,11 @@ pub fn handle_system_tray_icon_event(tray: &TrayIcon, event: TrayIconEvent) {
                 emit_backend_error(app, &app_error);
                 log::error!("{}", app_error);
             }
+            if let Err(error) = window.set_focus() {
+                let app_error = AppError::runtime(format!("Unable to focus window: {error}"));
+                emit_backend_error(app, &app_error);
+                log::error!("{}", app_error);
+            }
             log::info!("window made visible");
         }
     }
