@@ -281,7 +281,7 @@ async fn setup(app: AppHandle) -> AppResult<()> {
         BookmarksManager::new(Arc::clone(&db), bus.clone(), app.clone(), initial_settings).await;
     app.manage(bookmarks_manager);
     // register network clipboard manager
-    let network_manager = NetworkManager::new(bus.clone(), app.clone()).await;
+    let network_manager = NetworkManager::new(Arc::clone(&db), bus.clone(), app.clone()).await?;
     app.manage(network_manager);
     // register file service
     let files_manager = FilesManager::new(

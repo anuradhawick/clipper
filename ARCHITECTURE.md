@@ -44,7 +44,7 @@ Startup flow:
 | Filters manager | `src-tauri/src/content_managers/filters_manager.rs` | Persists regex clipboard filters and broadcasts compiled filter updates to the clipboard watcher. |
 | Tags manager | `src-tauri/src/content_managers/tags_manager.rs` | Manages tag definitions and tag assignments for clipboard, bookmark, and note items. |
 | Files manager | `src-tauri/src/content_managers/files_manager.rs` | Copies dropped files/folders into `$HOME/clipper/`, lists managed files, and deletes one or all stored files. |
-| Network manager | `src-tauri/src/content_managers/net_manager.rs` | Advertises this device on the local network, tracks discovered peers, secures connections with a 6-digit OTP handshake, and relays clipboard text payloads to authorized peers over UDP. |
+| Network manager | `src-tauri/src/content_managers/net_manager.rs` | Discovers LAN peers with libp2p mDNS, keeps a stable persisted libp2p identity, stores trusted PeerIds, secures connections with libp2p transport encryption and a 6-digit OTP pairing flow, and relays clipboard text payloads to authorized peers. |
 | Global shortcut | `src-tauri/src/content_managers/global_shortcut.rs` | Registers the configured shortcut and toggles the widget window near the active monitor or mouse position. |
 | Window commands | `src-tauri/src/utils/window_commands.rs` | Hides the widget and creates or focuses manager and QR viewer windows. |
 | Window handlers | `src-tauri/src/utils/window_handlers.rs` | Bridges native drag/drop lifecycle events to Angular and forwards dropped paths to `FilesManager`. |
@@ -65,6 +65,8 @@ The current tables are:
 | `tags` | `TagsManager` | Tag labels and color/kind metadata. |
 | `tag_items` | `TagsManager` plus cleanup in item owners | Many-to-many tag assignments for `clipboard`, `bookmark`, and `note` items. |
 | `settings` | `SettingsManager` | Singleton row for UI preferences, history limits, and global shortcut. |
+| `network_identity` | `NetworkManager` | Singleton libp2p identity keypair used to keep the local PeerId stable across restarts. |
+| `network_trusted_peers` | `NetworkManager` | Persisted trusted libp2p PeerIds authorized through the network OTP pairing flow. |
 
 When deleting clipboard, bookmark, or note records, the owning manager also
 cleans matching `tag_items` rows so the tag assignment table does not keep
@@ -108,10 +110,33 @@ created once in `setup()` and passed to managers that need it.
 | `SetClipboardText` | text | `NotesManager` when copying a note | `ClipboardWatcher` | Writes note text into the system clipboard while updating `last_text`, preventing the watcher from re-adding the same text as a new history item. |
 | `FiltersUpdated` | compiled regex list | `FiltersManager` after filter create/update/delete/delete-all | `ClipboardWatcher` | Refreshes active clipboard filters without restarting the watcher. |
 | `SettingsUpdated` | clipboard and bookmark history limits | `SettingsManager` after settings save | `ClipboardWatcher`, `BookmarksManager` | Applies history size changes to long-lived managers. |
-| `NetworkClipboardReceived` | `{ source_name, text }` | `NetworkManager` after a remote peer sends clipboard text | future consumers | Makes inbound network clipboard entries available to other backend managers without coupling transport details into clipboard persistence yet. |
+| `NetworkClipboardReceived` | `{ source_name, text }` | `NetworkManager` after a trusted remote peer sends clipboard text | `ClipboardWatcher` | Applies inbound network clipboard text through the same backend bus path used by other clipboard writers. |
 
 Use the bus for backend-to-backend state propagation. Use Tauri events for
 backend-to-frontend synchronization.
+
+## Network Packet Debugging
+
+The network manager uses libp2p over TCP plus mDNS for LAN discovery. In
+Wireshark, capture on the active LAN interface rather than loopback. Useful
+display filters:
+
+```text
+mdns
+```
+
+shows libp2p peer discovery traffic on UDP port 5353. To inspect Clipper's
+libp2p transport after a peer is discovered, first note the TCP listen address
+from backend logs such as `Network manager listening on /ip4/.../tcp/<port>`,
+then filter for that port:
+
+```text
+tcp.port == <port>
+```
+
+The request-response payloads are encrypted by libp2p transport security, so
+Wireshark can confirm discovery, connection attempts, and byte flow, but it will
+not show clipboard text or OTP contents.
 
 ## Command Surface
 
