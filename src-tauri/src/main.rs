@@ -5,7 +5,7 @@ mod content_managers;
 mod error;
 mod utils;
 
-use crate::error::{emit_backend_error, AppResult};
+use crate::error::{backend_read_startup_error, emit_backend_error, AppResult, StartupError};
 use content_managers::bookmarks_manager::{
     bookmarks_delete_all, bookmarks_delete_one, bookmarks_read_entries, bookmarks_update_entry,
     BookmarksManager,
@@ -23,10 +23,6 @@ use content_managers::files_manager::{
 use content_managers::filters_manager::{
     filters_create_entry, filters_delete_all, filters_delete_one, filters_read_entries,
     filters_update_entry, FiltersManager,
-};
-use content_managers::net_manager::{
-    net_authorize_peer, net_generate_otp, net_get_status, net_list_peers, net_revoke_peer,
-    net_start, net_stop, NetworkManager,
 };
 use content_managers::notes_manager::{
     clipboard_add_note, create_note, delete_all_notes, delete_note, read_notes, update_note,
@@ -103,6 +99,7 @@ async fn main() {
     // define the builder
     let mut builder = tauri::Builder::default().plugin(tauri_plugin_os::init());
     builder = builder
+        .manage(StartupError::default())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(
@@ -115,6 +112,7 @@ async fn main() {
             None,
         ))
         .invoke_handler(tauri::generate_handler![
+            backend_read_startup_error,
             // clipboard related
             clipboard_pause_watcher,
             clipboard_resume_watcher,
@@ -167,14 +165,6 @@ async fn main() {
             // db related
             db_delete_dbfile,
             db_get_dbfile_path,
-            // network related
-            net_get_status,
-            net_list_peers,
-            net_generate_otp,
-            net_authorize_peer,
-            net_revoke_peer,
-            net_start,
-            net_stop,
         ])
         .on_window_event(handle_window_event)
         .setup(|app| {
@@ -227,6 +217,7 @@ async fn main() {
             let setup_handle = app.handle().clone();
             async_runtime::spawn(async move {
                 if let Err(error) = setup(setup_handle.clone()).await {
+                    let _ = setup_handle.state::<StartupError>().0.set((&error).into());
                     emit_backend_error(&setup_handle, &error);
                     log::error!("Application setup failed: {}", error);
                 }
@@ -280,9 +271,6 @@ async fn setup(app: AppHandle) -> AppResult<()> {
     let bookmarks_manager =
         BookmarksManager::new(Arc::clone(&db), bus.clone(), app.clone(), initial_settings).await;
     app.manage(bookmarks_manager);
-    // register network clipboard manager
-    let network_manager = NetworkManager::new(Arc::clone(&db), bus.clone(), app.clone()).await?;
-    app.manage(network_manager);
     // register file service
     let files_manager = FilesManager::new(
         // Arc::clone(&db),

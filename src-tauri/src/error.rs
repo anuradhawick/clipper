@@ -1,5 +1,6 @@
 use serde::{ser::SerializeStruct, Serialize, Serializer};
 use std::future::Future;
+use std::sync::OnceLock;
 use tauri::{AppHandle, Emitter};
 use thiserror::Error;
 
@@ -51,6 +52,16 @@ pub enum AppError {
 pub struct BackendErrorPayload {
     pub code: String,
     pub message: String,
+}
+
+#[derive(Default)]
+pub struct StartupError(pub OnceLock<BackendErrorPayload>);
+
+#[tauri::command]
+pub fn backend_read_startup_error(
+    state: tauri::State<'_, StartupError>,
+) -> Option<BackendErrorPayload> {
+    state.0.get().cloned()
 }
 
 impl AppError {

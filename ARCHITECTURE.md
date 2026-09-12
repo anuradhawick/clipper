@@ -26,8 +26,7 @@ Startup flow:
    fullscreen Spaces, then applies native floating-window behavior; other
    platforms use Tauri always-on-top behavior. The window is positioned on the
    active monitor and wired to drag/drop and tray events.
-4. Background tasks start for clipboard polling, internal bus subscribers, and
-   network clipboard discovery/transport workers.
+4. Background tasks start for clipboard polling and internal bus subscribers.
 
 ## Backend Components
 
@@ -44,7 +43,6 @@ Startup flow:
 | Filters manager | `src-tauri/src/content_managers/filters_manager.rs` | Persists regex clipboard filters and broadcasts compiled filter updates to the clipboard watcher. |
 | Tags manager | `src-tauri/src/content_managers/tags_manager.rs` | Manages tag definitions and tag assignments for clipboard, bookmark, and note items. |
 | Files manager | `src-tauri/src/content_managers/files_manager.rs` | Copies dropped files/folders into `$HOME/clipper/`, lists managed files, and deletes one or all stored files. |
-| Network manager | `src-tauri/src/content_managers/net_manager.rs` | Discovers LAN peers with libp2p mDNS, keeps a stable persisted libp2p identity, stores trusted PeerIds, secures connections with libp2p transport encryption and a 6-digit OTP pairing flow, and relays clipboard text payloads to authorized peers. |
 | Global shortcut | `src-tauri/src/content_managers/global_shortcut.rs` | Registers the configured shortcut and toggles the widget window near the active monitor or mouse position. |
 | Window commands | `src-tauri/src/utils/window_commands.rs` | Hides the widget and creates or focuses manager and QR viewer windows. |
 | Window handlers | `src-tauri/src/utils/window_handlers.rs` | Bridges native drag/drop lifecycle events to Angular and forwards dropped paths to `FilesManager`. |
@@ -54,6 +52,16 @@ Startup flow:
 ## Persistence Ownership
 
 SQLite migrations live in `src-tauri/migrations/` and are embedded by SQLx.
+Migration failures return `AppError::DbError` with instructions to open Settings,
+delete the database (losing its saved data), and restart Clipper. The startup
+error handler emits this through `emit_backend_error` as `backend_error` with
+code `DBERROR`, and logs the failure including the underlying migration error.
+Startup failures are retained in managed `StartupError` state before emission.
+`BackendErrorService` registers its live listener, then calls
+`backend_read_startup_error` to recover failures emitted before Angular was ready.
+It suppresses duplicate delivery of the retained error and logs and displays it
+through the same console/toast path. Reads do not consume the retained failure,
+so newly opened windows can also report it.
 The current tables are:
 
 | Table | Owner | Notes |
@@ -65,8 +73,6 @@ The current tables are:
 | `tags` | `TagsManager` | Tag labels and color/kind metadata. |
 | `tag_items` | `TagsManager` plus cleanup in item owners | Many-to-many tag assignments for `clipboard`, `bookmark`, and `note` items. |
 | `settings` | `SettingsManager` | Singleton row for UI preferences, history limits, and global shortcut. |
-| `network_identity` | `NetworkManager` | Singleton libp2p identity keypair used to keep the local PeerId stable across restarts. |
-| `network_trusted_peers` | `NetworkManager` | Persisted trusted libp2p PeerIds authorized through the network OTP pairing flow. |
 
 When deleting clipboard, bookmark, or note records, the owning manager also
 cleans matching `tag_items` rows so the tag assignment table does not keep
@@ -91,8 +97,6 @@ services through `@tauri-apps/api/event`.
 | `tag_items_updated` | `()` | `TagsManager::notify_tag_items_updated` after assignments change or a tag is deleted | `TagsService` | Invalidates per-item tag queries and the tagged-items page after assignment changes. |
 | `window_dragdrop` | `{ eventType, paths? }` | `handle_window_event` on native drag enter/drop/leave | `DropperService` | Mirrors native drag state so Angular can show or clear drop overlays. |
 | `files_added_paths` | `FileEntry[]` | `FilesManager::handle_drop` after copied dropped paths | `DropperService` | Sends the frontend the managed storage entries created from a drop. |
-| `net_status_changed` | `bool` | `NetworkManager` when started or stopped | `NetworkService` | Keeps the network-sharing toggle synchronized across windows. |
-| `net_peers_updated` | `()` | `NetworkManager` when a peer is discovered, authorized, or revoked | `NetworkService` | Invalidates the peer list so the frontend refetches via `net_list_peers`. |
 
 Most "updated" events intentionally carry no payload. They are invalidation
 signals: the frontend service owns its local signal state and refetches through
@@ -110,36 +114,9 @@ created once in `setup()` and passed to managers that need it.
 | `SetClipboardText` | text | `NotesManager` when copying a note | `ClipboardWatcher` | Writes note text into the system clipboard while updating `last_text`, preventing the watcher from re-adding the same text as a new history item. |
 | `FiltersUpdated` | compiled regex list | `FiltersManager` after filter create/update/delete/delete-all | `ClipboardWatcher` | Refreshes active clipboard filters without restarting the watcher. |
 | `SettingsUpdated` | clipboard and bookmark history limits | `SettingsManager` after settings save | `ClipboardWatcher`, `BookmarksManager` | Applies history size changes to long-lived managers. |
-| `NetworkClipboardReceived` | `{ source_name, text }` | `NetworkManager` after a trusted remote peer sends clipboard text | `ClipboardWatcher` | Applies inbound network clipboard text through the same backend bus path used by other clipboard writers. |
 
 Use the bus for backend-to-backend state propagation. Use Tauri events for
 backend-to-frontend synchronization.
-
-## Network Packet Debugging
-
-The network manager uses libp2p over TCP plus mDNS for LAN discovery. In
-Wireshark, capture on the active LAN interface rather than loopback. Useful
-display filters:
-
-```text
-mdns
-```
-
-shows libp2p peer discovery traffic on UDP port 5353. To inspect Clipper's
-libp2p transport after a peer is discovered, first note the TCP listen address
-from backend logs such as `Network manager listening on /ip4/.../tcp/<port>`,
-then filter for that port:
-
-```text
-tcp.port == <port>
-```
-
-The request-response payloads are encrypted by libp2p transport security, so
-Wireshark can confirm discovery, connection attempts, and byte flow, but it will
-not show clipboard text or OTP contents. OS errors such as `No route to host`
-can appear when libp2p mDNS tries a VPN, bridge, or inactive interface; they are
-not fatal if another active LAN interface still logs `Network manager mDNS
-discovered ...` and `Network manager discovered peer ...`.
 
 ## Command Surface
 
@@ -164,8 +141,8 @@ list and frontend `invoke(...)` calls in sync when adding or renaming commands.
   `files_delete_storage_path`, `files_delete_one_file`, `db_delete_dbfile`,
   `db_get_dbfile_path`
 - Windows: `window_hide`, `window_show_qrviewer`, `window_show_manager`
-- Network: `net_get_status`, `net_list_peers`, `net_generate_otp`,
-  `net_authorize_peer`, `net_revoke_peer`, `net_start`, `net_stop`
+- Startup diagnostics: `backend_read_startup_error` returns the retained
+  `{ code, message }` startup failure, or `null`.
 
 ## Backend Change Checklist
 

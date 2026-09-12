@@ -23,14 +23,24 @@ impl DbConnection {
         }
 
         let db_url = format!("sqlite://{}", db_path.to_string_lossy());
-        log::info!("Clipper db_url: {:?}", &db_url);
+        log::info!("Clipper db_url: {:?}", db_url);
         let connect_options = SqliteConnectOptions::from_str(&db_url)
             .context("failed to parse sqlite url")?
             .create_if_missing(true);
         let pool = SqlitePoolOptions::new()
             .connect_with(connect_options)
             .await?;
-        sqlx::migrate!("./migrations").run(&pool).await?;
+        sqlx::migrate!("./migrations")
+            .run(&pool)
+            .await
+            .map_err(|_| {
+                AppError::DbError(
+                    "Unable to initialize the database because a migration failed. \
+                     To recover, open Settings, select Delete database, and restart Clipper. \
+                     This will delete all data saved in the database."
+                        .to_string(),
+                )
+            })?;
         log::info!("Clipper db connected");
         Ok(Self { pool })
     }
