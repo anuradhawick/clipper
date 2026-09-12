@@ -5,7 +5,7 @@ mod content_managers;
 mod error;
 mod utils;
 
-use crate::error::{emit_backend_error, AppResult};
+use crate::error::{backend_read_startup_error, emit_backend_error, AppResult, StartupError};
 use content_managers::bookmarks_manager::{
     bookmarks_delete_all, bookmarks_delete_one, bookmarks_read_entries, bookmarks_update_entry,
     BookmarksManager,
@@ -99,6 +99,7 @@ async fn main() {
     // define the builder
     let mut builder = tauri::Builder::default().plugin(tauri_plugin_os::init());
     builder = builder
+        .manage(StartupError::default())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(
@@ -111,6 +112,7 @@ async fn main() {
             None,
         ))
         .invoke_handler(tauri::generate_handler![
+            backend_read_startup_error,
             // clipboard related
             clipboard_pause_watcher,
             clipboard_resume_watcher,
@@ -215,6 +217,7 @@ async fn main() {
             let setup_handle = app.handle().clone();
             async_runtime::spawn(async move {
                 if let Err(error) = setup(setup_handle.clone()).await {
+                    let _ = setup_handle.state::<StartupError>().0.set((&error).into());
                     emit_backend_error(&setup_handle, &error);
                     log::error!("Application setup failed: {}", error);
                 }

@@ -52,6 +52,16 @@ Startup flow:
 ## Persistence Ownership
 
 SQLite migrations live in `src-tauri/migrations/` and are embedded by SQLx.
+Migration failures return `AppError::DbError` with instructions to open Settings,
+delete the database (losing its saved data), and restart Clipper. The startup
+error handler emits this through `emit_backend_error` as `backend_error` with
+code `DBERROR`, and logs the failure including the underlying migration error.
+Startup failures are retained in managed `StartupError` state before emission.
+`BackendErrorService` registers its live listener, then calls
+`backend_read_startup_error` to recover failures emitted before Angular was ready.
+It suppresses duplicate delivery of the retained error and logs and displays it
+through the same console/toast path. Reads do not consume the retained failure,
+so newly opened windows can also report it.
 The current tables are:
 
 | Table | Owner | Notes |
@@ -131,6 +141,8 @@ list and frontend `invoke(...)` calls in sync when adding or renaming commands.
   `files_delete_storage_path`, `files_delete_one_file`, `db_delete_dbfile`,
   `db_get_dbfile_path`
 - Windows: `window_hide`, `window_show_qrviewer`, `window_show_manager`
+- Startup diagnostics: `backend_read_startup_error` returns the retained
+  `{ code, message }` startup failure, or `null`.
 
 ## Backend Change Checklist
 
