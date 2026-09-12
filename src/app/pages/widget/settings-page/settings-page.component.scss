@@ -55,6 +55,27 @@
   @apply h-full overflow-y-auto overflow-x-hidden pt-1 pb-2;
 }
 
+// The translucent settings panels are lightened in both themes, so use
+// charcoal text instead of the dark theme's near-white field text.
+mat-form-field {
+  @include mat.form-field-overrides(
+    (
+      outlined-input-text-color: #1f2937,
+      outlined-label-text-color: #1f2937,
+      outlined-hover-label-text-color: #1f2937,
+      outlined-focus-label-text-color: #1f2937,
+      outlined-input-text-placeholder-color: #374151,
+      outlined-caret-color: #1f2937,
+    )
+  );
+  @include mat.select-overrides(
+    (
+      enabled-trigger-text-color: #1f2937,
+      placeholder-text-color: #374151,
+    )
+  );
+}
+
 .filter-row {
   @apply flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2;
 }
