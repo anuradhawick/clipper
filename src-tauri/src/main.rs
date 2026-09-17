@@ -25,8 +25,8 @@ use content_managers::filters_manager::{
     filters_update_entry, FiltersManager,
 };
 use content_managers::notes_manager::{
-    clipboard_add_note, create_note, delete_all_notes, delete_note, read_notes, update_note,
-    NotesManager,
+    notes_clipboard_add_entry, notes_create_entry, notes_delete_all_entries,
+    notes_delete_one_entry, notes_read_entries, notes_update_entry, NotesManager,
 };
 use content_managers::settings::{settings_read, settings_update, SettingsManager};
 use content_managers::tags_manager::{
@@ -132,12 +132,12 @@ async fn main() {
             window_show_qrviewer,
             window_show_manager,
             // notes related
-            create_note,
-            delete_note,
-            read_notes,
-            update_note,
-            clipboard_add_note,
-            delete_all_notes,
+            notes_create_entry,
+            notes_delete_one_entry,
+            notes_read_entries,
+            notes_update_entry,
+            notes_clipboard_add_entry,
+            notes_delete_all_entries,
             // settings related
             settings_read,
             settings_update,

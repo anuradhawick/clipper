@@ -129,8 +129,9 @@ list and frontend `invoke(...)` calls in sync when adding or renaming commands.
   `clipboard_open_entry`, `clipboard_read_status`
 - Bookmarks: `bookmarks_read_entries`, `bookmarks_delete_one`,
   `bookmarks_delete_all`, `bookmarks_update_entry`
-- Notes: `create_note`, `delete_note`, `read_notes`, `update_note`,
-  `clipboard_add_note`, `delete_all_notes`
+- Notes: `notes_create_entry`, `notes_delete_one_entry`,
+  `notes_read_entries`, `notes_update_entry`, `notes_clipboard_add_entry`,
+  `notes_delete_all_entries`
 - Settings and filters: `settings_read`, `settings_update`,
   `filters_create_entry`, `filters_update_entry`, `filters_delete_one`,
   `filters_delete_all`, `filters_read_entries`

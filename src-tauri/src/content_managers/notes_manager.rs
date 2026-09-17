@@ -162,14 +162,14 @@ impl NotesManager {
 }
 
 #[tauri::command]
-pub async fn create_note(
+pub async fn notes_create_entry(
     app_handle: tauri::AppHandle,
     state: State<'_, NotesManager>,
     id: String,
     entry: String,
 ) -> AppResult<NoteItem> {
     with_error_event(&app_handle, async {
-        log::info!("CMD:Creating note: {:#?} {:#?}", id, entry);
+        log::info!("CMD:notes_create_entry: {:#?} {:#?}", id, entry);
         let note = NoteItem {
             id: id.clone(),
             entry,
@@ -183,14 +183,14 @@ pub async fn create_note(
 }
 
 #[tauri::command]
-pub async fn update_note(
+pub async fn notes_update_entry(
     app_handle: tauri::AppHandle,
     state: State<'_, NotesManager>,
     id: String,
     entry: String,
 ) -> AppResult<NoteItem> {
     with_error_event(&app_handle, async {
-        log::info!("CMD:Updating note: {:#?} {:#?}", id, entry);
+        log::info!("CMD:notes_update_entry: {:#?} {:#?}", id, entry);
         let note = NoteItem {
             id: id.clone(),
             entry,
@@ -204,13 +204,13 @@ pub async fn update_note(
 }
 
 #[tauri::command]
-pub async fn delete_note(
+pub async fn notes_delete_one_entry(
     app_handle: tauri::AppHandle,
     state: State<'_, NotesManager>,
     id: String,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
-        log::info!("CMD:Deleting note: {:#?}", id);
+        log::info!("CMD:notes_delete_one_entry: {:#?}", id);
         state.delete(&id).await?;
         Ok(())
     })
@@ -218,12 +218,12 @@ pub async fn delete_note(
 }
 
 #[tauri::command]
-pub async fn delete_all_notes(
+pub async fn notes_delete_all_entries(
     app_handle: tauri::AppHandle,
     state_notes_mgr: State<'_, NotesManager>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
-        log::info!("CMD:Deleting all notes");
+        log::info!("CMD:notes_delete_all_entries");
         state_notes_mgr.delete_all_notes().await?;
         Ok(())
     })
@@ -231,12 +231,12 @@ pub async fn delete_all_notes(
 }
 
 #[tauri::command]
-pub async fn read_notes(
+pub async fn notes_read_entries(
     app_handle: tauri::AppHandle,
     state: State<'_, NotesManager>,
 ) -> AppResult<Vec<NoteItem>> {
     with_error_event(&app_handle, async {
-        log::info!("CMD:Reading notes");
+        log::info!("CMD:notes_read_entries");
         let notes = state.read().await?;
         Ok(notes)
     })
@@ -244,13 +244,13 @@ pub async fn read_notes(
 }
 
 #[tauri::command]
-pub async fn clipboard_add_note(
+pub async fn notes_clipboard_add_entry(
     app_handle: tauri::AppHandle,
     id: String,
     state_notes_mgr: State<'_, NotesManager>,
 ) -> AppResult<()> {
     with_error_event(&app_handle, async {
-        log::info!("CMD:Note added to clipboard: {:#?}", id);
+        log::info!("CMD:notes_clipboard_add_entry: {:#?}", id);
         let entry = state_notes_mgr.get(&id).await?;
         let text = entry.entry;
         let bus = state_notes_mgr.bus.clone();

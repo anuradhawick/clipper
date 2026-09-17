@@ -35,7 +35,7 @@ export class NotesService implements OnDestroy {
 
   async read() {
     console.log("Reading all notes");
-    const notes = await invoke<NoteItem[]>("read_notes", {});
+    const notes = await invoke<NoteItem[]>("notes_read_entries", {});
     this.notes.set(notes);
   }
 
@@ -47,24 +47,24 @@ export class NotesService implements OnDestroy {
     console.log("Creating note", entry);
     // otherwise save without trimming
     const item: NoteItem = { id: uuidv4(), entry };
-    const savedItem = await invoke<NoteItem>("create_note", { ...item });
+    const savedItem = await invoke<NoteItem>("notes_create_entry", { ...item });
     this.notes.update((notes) => [savedItem, ...notes]);
   }
 
   async copy(id: string) {
     console.log("Copying note", id);
-    await invoke("clipboard_add_note", { id });
+    await invoke("notes_clipboard_add_entry", { id });
   }
 
   async delete(id: string) {
     console.log("Deleting note", id);
-    await invoke("delete_note", { id });
+    await invoke("notes_delete_one_entry", { id });
     this.notes.update((notes) => notes.filter((item) => item.id !== id));
   }
 
   async deleteAll() {
     console.log("Deleting all notes");
-    await invoke("delete_all_notes", {});
+    await invoke("notes_delete_all_entries", {});
     this.notes.set([]);
   }
 
@@ -76,7 +76,7 @@ export class NotesService implements OnDestroy {
       return;
     }
     // update the note with new content, no trimming
-    const savedItem = await invoke<NoteItem>("update_note", { id, entry });
+    const savedItem = await invoke<NoteItem>("notes_update_entry", { id, entry });
     this.notes.update((notes) =>
       notes.map((note) => {
         if (note.id !== id) {
