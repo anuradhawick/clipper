@@ -78,7 +78,7 @@ pub fn window_show_qrviewer(app_handle: AppHandle, url: String) -> AppResult<()>
                 WindowEvent::Focused(true) => {
                     log::info!("QR Viewer window focused");
                 }
-                WindowEvent::CloseRequested { api: _, .. } => {
+                WindowEvent::CloseRequested { .. } => {
                     log::info!("QR Viewer window close requested");
                 }
                 _ => {}
