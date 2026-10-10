@@ -1,4 +1,9 @@
-import { Component, inject, signal } from "@angular/core";
+import {
+  Component,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+} from "@angular/core";
 import { QRCodeComponent } from "angularx-qrcode";
 import { ActivatedRoute } from "@angular/router";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -7,6 +12,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
   selector: "app-qrviewer",
   imports: [QRCodeComponent],
   templateUrl: "./qrviewer.component.html",
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: "./qrviewer.component.scss",
 })
 export class QrviewerComponent {

@@ -204,7 +204,7 @@
         <mat-label>History size</mat-label>
         <mat-select
           (valueChange)="changeHistorySize($event)"
-          [value]="settings()?.clipboardHistorySize"
+          [value]="$safeNavigationMigration(settings()?.clipboardHistorySize)"
         >
           @for (size of [100, 1000, 5000]; track size) {
             <mat-option [value]="size">{{ size }}</mat-option>
@@ -223,7 +223,7 @@
         <mat-label>History size</mat-label>
         <mat-select
           (valueChange)="changeBookmarkHistorySize($event)"
-          [value]="settings()?.bookmarkHistorySize"
+          [value]="$safeNavigationMigration(settings()?.bookmarkHistorySize)"
         >
           @for (size of [100, 1000, 5000]; track size) {
             <mat-option [value]="size">{{ size }}</mat-option>
@@ -235,7 +235,7 @@
     <div class="flex flex-row justify-between items-center">
       <p class="flex">Run on startup</p>
       <mat-checkbox
-        [checked]="settings()?.autolaunch"
+        [checked]="$safeNavigationMigration(settings()?.autolaunch)"
         (change)="changeAutoLaunch($event)"
         labelPosition="before"
       >

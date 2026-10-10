@@ -5,13 +5,14 @@ import {
 } from "@angular/core";
 import { provideRouter } from "@angular/router";
 import { routes } from "./app.routes";
-import { provideHttpClient } from "@angular/common/http";
+import { provideHttpClient, withXhr } from "@angular/common/http";
 import { ClipboardHistoryService } from "./services/clipboard-history.service";
 import { ThemeService } from "./services/theme.service";
 import { DropperService } from "./services/dropper.service";
 import {
   provideClientHydration,
   withEventReplay,
+  withNoIncrementalHydration,
 } from "@angular/platform-browser";
 import { BookmarksService } from "./services/bookmarks.service";
 import { GlobalConfig, provideToastr } from "ngx-toastr";
@@ -32,7 +33,7 @@ const toastrConfig: Partial<GlobalConfig> = {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
-    provideHttpClient(),
+    provideHttpClient(withXhr()),
     provideAppInitializer(() => {
       inject(ClipboardHistoryService);
       inject(BookmarksService);
@@ -42,6 +43,6 @@ export const appConfig: ApplicationConfig = {
       inject(TagsService);
     }),
     provideToastr(toastrConfig),
-    provideClientHydration(withEventReplay()),
+    provideClientHydration(withEventReplay(), withNoIncrementalHydration()),
   ],
 };

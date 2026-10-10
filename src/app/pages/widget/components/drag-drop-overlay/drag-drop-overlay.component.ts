@@ -1,4 +1,4 @@
-import { Component, inject } from "@angular/core";
+import { Component, inject, ChangeDetectionStrategy } from "@angular/core";
 import {
   trigger,
   state,
@@ -12,6 +12,7 @@ import { DropperService } from "../../../../services/dropper.service";
   selector: "app-drag-drop-overlay",
   templateUrl: "./drag-drop-overlay.component.html",
   styleUrls: ["./drag-drop-overlay.component.scss"],
+  changeDetection: ChangeDetectionStrategy.Eager,
   animations: [
     trigger("fadeInOut", [
       state(

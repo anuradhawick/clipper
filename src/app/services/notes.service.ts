@@ -76,7 +76,10 @@ export class NotesService implements OnDestroy {
       return;
     }
     // update the note with new content, no trimming
-    const savedItem = await invoke<NoteItem>("notes_update_entry", { id, entry });
+    const savedItem = await invoke<NoteItem>("notes_update_entry", {
+      id,
+      entry,
+    });
     this.notes.update((notes) =>
       notes.map((note) => {
         if (note.id !== id) {

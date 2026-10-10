@@ -1,4 +1,10 @@
-import { Component, inject, input, viewChild } from "@angular/core";
+import {
+  Component,
+  inject,
+  input,
+  viewChild,
+  ChangeDetectionStrategy,
+} from "@angular/core";
 import {
   DropperService,
   FileEntry,
@@ -25,6 +31,7 @@ export enum FileFormat {
   selector: "app-file-icon",
   imports: [MatIconModule, MatRippleModule, MatMenuModule],
   templateUrl: "./file-icon.component.html",
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: "./file-icon.component.scss",
 })
 export class FileIconComponent {

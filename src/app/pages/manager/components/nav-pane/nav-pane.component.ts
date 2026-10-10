@@ -1,4 +1,4 @@
-import { Component, inject } from "@angular/core";
+import { Component, inject, ChangeDetectionStrategy } from "@angular/core";
 import { MatRippleModule } from "@angular/material/core";
 import { ThemeService } from "../../../../services/theme.service";
 import { RouterLink } from "@angular/router";
@@ -10,6 +10,7 @@ import { MatIconModule } from "@angular/material/icon";
   selector: "app-nav-pane",
   imports: [MatRippleModule, RouterLink, MatBadgeModule, MatIconModule],
   templateUrl: "./nav-pane.component.html",
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: "./nav-pane.component.scss",
 })
 export class NavPaneComponent {
