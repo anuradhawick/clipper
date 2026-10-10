@@ -86,6 +86,7 @@ fn create_main_window(app: &mut tauri::App) -> tauri::Result<WebviewWindow> {
         .transparent(true)
         .resizable(false)
         .visible_on_all_workspaces(true)
+        .skip_taskbar(true)
         .build()
 }
 
