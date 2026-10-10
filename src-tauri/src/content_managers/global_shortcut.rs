@@ -54,7 +54,7 @@ pub fn register_global_shortcut(app: &AppHandle, global_shortcut_keys: Shortcut)
                                             &window,
                                             x.into(),
                                             y.into(),
-                                            true,
+                                            false,
                                         ) {
                                             emit_backend_error(app, &error);
                                             log::error!("{}", error);
