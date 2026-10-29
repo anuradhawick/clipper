@@ -1,5 +1,5 @@
 use crate::error::{AppError, AppResult};
-use tauri::{AppHandle, LogicalPosition, Monitor, Position, WebviewWindow};
+use tauri::{AppHandle, LogicalPosition, Manager, Monitor, Position, WebviewWindow};
 
 pub const MAIN_WINDOW_WIDTH: f64 = 800.0;
 pub const MAIN_WINDOW_HEIGHT: f64 = 400.0;
@@ -39,10 +39,20 @@ fn get_monitor_for_point(window: &WebviewWindow, x: f64, y: f64, logical: bool) 
 }
 
 pub fn default_primary_monitor(app: &AppHandle) -> AppResult<Monitor> {
-    let primary_monitor = app
+    if let Some(primary_monitor) = app
         .primary_monitor()
-        .map_err(|error| AppError::runtime(format!("Unable to query primary monitor: {error}")))?;
-    primary_monitor.ok_or_else(|| AppError::runtime("No primary monitor available".to_string()))
+        .map_err(|error| AppError::runtime(format!("Unable to query primary monitor: {error}")))?
+    {
+        return Ok(primary_monitor);
+    }
+
+    log::warn!("Could not get the primary monitor");
+
+    // Try to get first available monitor
+    app.available_monitors()?
+        .into_iter()
+        .next()
+        .ok_or(AppError::IoError("Could not retrieve any monitor".into()))
 }
 
 pub fn move_to_active_monitor(
