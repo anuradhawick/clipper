@@ -15,7 +15,6 @@ import { TAG_COLORS, TagEntry } from "../../../../services/tags.service";
   imports: [MatButtonModule, MatIconModule, MatTooltipModule],
   templateUrl: "./tag-item.component.html",
   styleUrl: "./tag-item.component.scss",
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagItemComponent {
   readonly tag = input.required<TagEntry>();

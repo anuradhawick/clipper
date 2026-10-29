@@ -23,7 +23,6 @@ export interface ClipboardItemDialogData {
 
 @Component({
   selector: "app-manager-clipboard-item-dialog",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   imports: [
     DatePipe,

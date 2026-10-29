@@ -23,7 +23,6 @@ import {
 
 @Component({
   selector: "app-clipboard-items",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ClipboardItemComponent, ScrollingModule],
   templateUrl: "./clipboard-items-page.component.html",
   styleUrl: "./clipboard-items-page.component.scss",

@@ -50,7 +50,6 @@ export interface TagEditDialogData {
   ],
   templateUrl: "./tag-edit-dialog.component.html",
   styleUrl: "./tag-edit-dialog.component.scss",
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagEditDialogComponent {
   readonly data = inject<TagEditDialogData>(MAT_DIALOG_DATA);

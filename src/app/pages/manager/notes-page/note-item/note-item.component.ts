@@ -33,7 +33,6 @@ const ITEM_HEIGHT_PX = 120;
 
 @Component({
   selector: "app-note-item",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: "block w-full min-w-0 pb-1",
     "[style.height.px]": "itemHeightPx",

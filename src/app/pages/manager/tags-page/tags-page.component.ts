@@ -34,7 +34,6 @@ import {
   ],
   templateUrl: "./tags-page.component.html",
   styleUrl: "./tags-page.component.scss",
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagsPageComponent {
   readonly tagsService = inject(TagsService);

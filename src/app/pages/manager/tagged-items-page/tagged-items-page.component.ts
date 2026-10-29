@@ -68,7 +68,6 @@ type TaggedManagerItem =
   ],
   templateUrl: "./tagged-items-page.component.html",
   styleUrl: "./tagged-items-page.component.scss",
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaggedItemsPageComponent {
   protected readonly clipboardHistoryService = inject(ClipboardHistoryService);

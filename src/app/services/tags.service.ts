@@ -45,7 +45,7 @@ export class TagsService implements OnDestroy {
   readonly tags = signal<TagEntry[]>([]);
   readonly taggedItems = signal<TaggedItem[]>([]);
   // Incremented when tag-item assignments change; components use it to refetch.
-  readonly tagItemsVersion = signal(0);
+  readonly tagItemsVersion = signal<number>(0);
   readonly tagColors = TAG_COLORS;
   private unlistenTagsEvent: UnlistenFn | undefined;
   private unlistenTagItemsEvent: UnlistenFn | undefined;

@@ -47,7 +47,6 @@ const MAX_BUFFER_PX = 480;
   ],
   templateUrl: "./notes-page.component.html",
   styleUrl: "./notes-page.component.scss",
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotesPageComponent {
   readonly notesService = inject(NotesService);

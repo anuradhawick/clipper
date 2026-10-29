@@ -47,7 +47,6 @@ export interface TagItemDialogData {
   ],
   templateUrl: "./tag-item-dialog.component.html",
   styleUrl: "./tag-item-dialog.component.scss",
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagItemDialogComponent {
   readonly data = inject<TagItemDialogData>(MAT_DIALOG_DATA);

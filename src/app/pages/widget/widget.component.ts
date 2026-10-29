@@ -8,7 +8,6 @@ const MAIN_WINDOW_HEIGHT = 400;
 
 @Component({
   selector: "app-widget",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterOutlet, NavBarComponent, DragDropOverlayComponent],
   templateUrl: "./widget.component.html",
   styleUrl: "./widget.component.scss",

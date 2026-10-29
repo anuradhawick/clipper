@@ -20,7 +20,6 @@ export interface NoteItemDialogData {
 
 @Component({
   selector: "app-note-item-dialog",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   imports: [
     DatePipe,

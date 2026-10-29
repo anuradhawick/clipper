@@ -35,7 +35,6 @@ import { TagSwatchesComponent } from "../../../../components/tag-swatches/tag-sw
 
 @Component({
   selector: "app-clipboard-item",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: "relative block w-full min-w-0 pb-1",
     "[style.height.px]": "itemHeightPx",

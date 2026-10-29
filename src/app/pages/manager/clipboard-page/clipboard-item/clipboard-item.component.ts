@@ -36,7 +36,6 @@ const ITEM_HEIGHT_PX = 120;
 
 @Component({
   selector: "app-clipboard-item",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: "relative block w-full min-w-0 pb-1",
     "[style.height.px]": "itemHeightPx",

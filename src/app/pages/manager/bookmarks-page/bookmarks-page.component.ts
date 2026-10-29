@@ -40,7 +40,6 @@ const MAX_BUFFER_PX = 560;
   ],
   templateUrl: "./bookmarks-page.component.html",
   styleUrl: "./bookmarks-page.component.scss",
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BookmarksPageComponent {
   private searchInputRef =

@@ -18,7 +18,6 @@ import {
   imports: [MatTooltipModule],
   templateUrl: "./tag-swatches.component.html",
   styleUrl: "./tag-swatches.component.scss",
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagSwatchesComponent {
   readonly itemKind = input.required<TaggedItemKind>();

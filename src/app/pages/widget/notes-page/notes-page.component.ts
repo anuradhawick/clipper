@@ -26,7 +26,6 @@ const MAX_BUFFER_PX = 480;
 
 @Component({
   selector: "app-notes-page",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
     MatIconModule,

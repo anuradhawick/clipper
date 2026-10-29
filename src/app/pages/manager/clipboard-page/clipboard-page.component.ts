@@ -42,7 +42,6 @@ const MAX_BUFFER_PX = 480;
   ],
   templateUrl: "./clipboard-page.component.html",
   styleUrl: "./clipboard-page.component.scss",
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ClipboardPageComponent {
   protected readonly chs = inject(ClipboardHistoryService);

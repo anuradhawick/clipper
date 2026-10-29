@@ -21,7 +21,6 @@ import { NotesService } from "../../../../services/notes.service";
   imports: [MatIconModule, MatButtonModule, MatTooltipModule, RouterLink],
   templateUrl: "./new-note.component.html",
   styleUrl: "./new-note.component.scss",
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   paramsSub: Subscription | null = null;

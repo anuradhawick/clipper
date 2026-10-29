@@ -40,7 +40,6 @@ import { TitleCasePipe } from "@angular/common";
 
 @Component({
   selector: "app-settings-page",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatIconModule,
     MatButtonModule,

@@ -34,7 +34,6 @@ import { NotesService } from "../../../../services/notes.service";
 
 @Component({
   selector: "app-nav-bar",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
     MatIconModule,

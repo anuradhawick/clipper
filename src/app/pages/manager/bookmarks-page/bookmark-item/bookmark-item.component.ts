@@ -31,7 +31,6 @@ const ITEM_HEIGHT_PX = 140;
 
 @Component({
   selector: "app-bookmark-item",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: "relative block w-full min-w-0 pb-1",
     "[style.height.px]": "itemHeightPx",

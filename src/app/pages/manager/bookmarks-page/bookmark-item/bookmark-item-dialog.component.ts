@@ -19,7 +19,6 @@ export interface BookmarkItemDialogData {
 
 @Component({
   selector: "app-bookmark-item-dialog",
-  changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   imports: [
     DatePipe,
